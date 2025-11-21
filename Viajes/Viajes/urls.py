@@ -23,7 +23,6 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('uploader.urls')),
     path('accounts/', include('django.contrib.auth.urls')),  # Rutas de autenticación
-    path('__reload__/', include('django_browser_reload.urls')),
 ]
 
 # Django Browser Reload solo en desarrollo
