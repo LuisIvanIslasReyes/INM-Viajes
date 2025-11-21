@@ -27,7 +27,11 @@ urlpatterns = [
 
 # Django Browser Reload solo en desarrollo
 if settings.DEBUG:
-    urlpatterns.append(path('__reload__/', include('django_browser_reload.urls')))
+    try:
+        import django_browser_reload
+        urlpatterns.append(path('__reload__/', include('django_browser_reload.urls')))
+    except ImportError:
+        pass  # No está instalado en producción, ignorar
 
 # Servir archivos media en desarrollo
 if settings.DEBUG:
