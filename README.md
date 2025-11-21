@@ -1,6 +1,6 @@
 # Sistema de Gestión de Viajes - INM
 
-## 📋 Configuración de la Base de Datos MySQL
+## Configuración de la Base de Datos MySQL
 
 ### 1. Crear la Base de Datos en MySQL Workbench
 
@@ -9,13 +9,6 @@ Abre MySQL Workbench y ejecuta los siguientes comandos SQL:
 ```sql
 -- Crear la base de datos
 CREATE DATABASE viajes_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- Crear un usuario (opcional, o usar root)
-CREATE USER 'viajes_user'@'localhost' IDENTIFIED BY 'tu_password_seguro';
-
--- Otorgar permisos
-GRANT ALL PRIVILEGES ON viajes_db.* TO 'viajes_user'@'localhost';
-FLUSH PRIVILEGES;
 ```
 
 ### 2. Configurar Django para MySQL
@@ -26,8 +19,8 @@ Edita el archivo `Viajes/settings.py` y actualiza la configuración de DATABASES
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'viajes_db',
-        'USER': 'root',  # O 'viajes_user' si creaste un usuario nuevo
+        'NAME': 'viajes_db', # O cualquier nombre que identifiques la BD
+        'USER': 'root',  
         'PASSWORD': 'tu_password',  # Reemplaza con tu password de MySQL
         'HOST': 'localhost',
         'PORT': '3306',
@@ -43,8 +36,11 @@ DATABASES = {
 Ejecuta estos comandos en PowerShell desde la carpeta `Viajes`:
 
 ```powershell
+# Crear entorno virtual, en la carpeta de raíz o donde la ubique.
+python -m venv env # <- Cualquier nombre para tu entorno virtual
+
 # Activar el entorno virtual
-C:/Users/alberto/Documents/GitHub/INM-Viajes/env/Scripts/Activate.ps1
+C:/turuta/env/Scripts/Activate.ps1
 
 # Aplicar migraciones
 python manage.py migrate
@@ -63,7 +59,7 @@ Accede a: `http://127.0.0.1:8000/`
 
 ---
 
-## 🚀 Uso del Sistema
+## Uso del Sistema
 
 ### Para Usuarios Normales:
 1. Iniciar sesión en `http://127.0.0.1:8000/admin/` con tus credenciales
