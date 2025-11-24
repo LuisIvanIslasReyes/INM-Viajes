@@ -1,0 +1,124 @@
+<!-- filepath: c:\Users\alberto\Documents\GitHub\INM-Viajes\Viajes\uploader\templates\uploader\create_user.html -->
+{% extends 'uploader/base_admin.html' %}
+
+{% block title %}Crear Usuario - INM Viajes{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex items-center gap-4">
+        <a href="{% url 'admin_list' %}" class="btn btn-ghost btn-sm">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
+            </svg>
+            Volver
+        </a>
+        <h2 class="text-3xl font-bold">Gestión de Usuarios</h2>
+    </div>
+    <p class="text-gray-600 mt-2">Crear y administrar usuarios del sistema</p>
+
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        <!-- Formulario de Creación -->
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body">
+                <h3 class="card-title"> Crear Nuevo Usuario</h3>
+                
+                <form method="post" class="space-y-4">
+                    {% csrf_token %}
+                    
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">{{ form.username.label }}</span>
+                        </label>
+                        {{ form.username }}
+                        {% if form.username.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.username.errors.0 }}</span>
+                        </label>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">{{ form.password1.label }}</span>
+                        </label>
+                        {{ form.password1 }}
+                        {% if form.password1.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.password1.errors.0 }}</span>
+                        </label>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="form-control">
+                        <label class="label">
+                            <span class="label-text font-semibold">{{ form.password2.label }}</span>
+                        </label>
+                        {{ form.password2 }}
+                        {% if form.password2.errors %}
+                        <label class="label">
+                            <span class="label-text-alt text-error">{{ form.password2.errors.0 }}</span>
+                        </label>
+                        {% endif %}
+                    </div>
+                    
+                    <button type="submit" class="btn btn-primary btn-block">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
+                        </svg>
+                        Crear Usuario
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Lista de Usuarios -->
+        <div class="card bg-base-100 shadow-md">
+            <div class="card-body">
+                <h3 class="card-title">Usuarios Registrados</h3>
+                
+                {% if usuarios %}
+                <div class="overflow-x-auto">
+                    <table class="table table-zebra table-sm">
+                        <thead>
+                            <tr>
+                                <th>Usuario</th>
+                                <th>Fecha Registro</th>
+                                <th>Cargas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for usuario in usuarios %}
+                            <tr>
+                                <td>
+                                    <div class="flex items-center gap-2">
+                                        <div class="avatar placeholder">
+                                            <div class="bg-neutral text-neutral-content rounded-full w-8">
+                                                <span class="text-xs">{{ usuario.username|first|upper }}</span>
+                                            </div>
+                                        </div>
+                                        <strong>{{ usuario.username }}</strong>
+                                    </div>
+                                </td>
+                                <td>{{ usuario.date_joined|date:"d/m/Y" }}</td>
+                                <td>
+                                    <span class="badge badge-primary">
+                                        {{ usuario.uploadbatch_set.count }} archivo(s)
+                                    </span>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+                {% else %}
+                <div class="text-center py-8">
+                    <p class="text-gray-500">No hay usuarios registrados aún</p>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

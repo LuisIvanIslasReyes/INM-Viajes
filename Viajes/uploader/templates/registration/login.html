@@ -1,0 +1,68 @@
+<!-- filepath: c:\Users\alberto\Documents\GitHub\INM-Viajes\Viajes\uploader\templates\registration\login.html -->
+{% load static %}
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Iniciar Sesión - INM Viajes</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="min-h-screen bg-white flex items-center justify-center p-4">
+    <div class="card w-full max-w-md border border-gray-200 shadow-lg">
+        <div class="card-body">
+            <!-- Logo/Header -->
+            <div class="text-center mb-8">
+                <h1 class="text-2xl font-bold text-gray-800">INM Viajes</h1>
+                <p class="text-gray-500 text-sm mt-2">Iniciar Sesión</p>
+            </div>
+            
+            <!-- Error Message -->
+            {% if form.errors %}
+            <div class="alert alert-error mb-4">
+                <span>Usuario o contraseña incorrectos</span>
+            </div>
+            {% endif %}
+            
+            <!-- Login Form -->
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Usuario</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="username" 
+                        placeholder="Tu usuario" 
+                        class="input input-bordered w-full" 
+                        required 
+                        autofocus
+                    />
+                </div>
+                
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Contraseña</span>
+                    </label>
+                    <input 
+                        type="password" 
+                        name="password" 
+                        placeholder="Tu contraseña" 
+                        class="input input-bordered w-full" 
+                        required
+                    />
+                </div>
+                
+                <input type="hidden" name="next" value="{{ next }}">
+                
+                <button type="submit" class="btn btn-neutral w-full mt-6">
+                    Iniciar Sesión
+                </button>
+            </form>
+        </div>
+    </div>
+</body>
+</html>
