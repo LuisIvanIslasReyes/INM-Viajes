@@ -1,0 +1,114 @@
+{% extends 'uploader/base_admin.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold"> Gestión de Cargas de Archivos</h1>
+        <a href="{% url 'admin_list' %}" class="btn btn-ghost">
+            ← Volver a Registros
+        </a>
+    </div>
+
+    <!-- Tabla de Cargas -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra w-full">
+                    <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Archivo</th>
+                            <th>Usuario</th>
+                            <th>Fecha de Carga</th>
+                            <th>Registros</th>
+                            <th>Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for batch in page_obj %}
+                        <tr>
+                            <td>{{ batch.id }}</td>
+                            <td>
+                                <div class="flex items-center gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                                    </svg>
+                                    <span class="font-mono text-sm">{{ batch.archivo.name|truncatechars:50 }}</span>
+                                </div>
+                            </td>
+                            <td>
+                                <div class="badge badge-info">{{ batch.usuario.username }}</div>
+                            </td>
+                            <td>{{ batch.fecha_carga|date:"d/m/Y H:i" }}</td>
+                            <td>
+                                <div class="badge badge-primary">{{ batch.total_registros }} registros</div>
+                            </td>
+                            <td>
+                                <div class="flex gap-2">
+                                    <a href="{% url 'admin_list' %}?batch={{ batch.id }}" class="btn btn-sm btn-info">
+                                        👁️ Ver Registros
+                                    </a>
+                                    <button onclick="confirmDelete({{ batch.id }}, '{{ batch.archivo.name|escapejs }}')" class="btn btn-sm btn-error">
+                                        🗑️ Eliminar
+                                    </button>
+                                </div>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="6" class="text-center text-gray-500 py-8">
+                                📭 No hay cargas de archivos registradas
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Paginación -->
+            {% if page_obj.has_other_pages %}
+            <div class="flex justify-center mt-6">
+                <div class="join">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}" class="join-item btn">«</a>
+                    {% endif %}
+                    
+                    <button class="join-item btn btn-active">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</button>
+                    
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}" class="join-item btn">»</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- Modal de confirmación -->
+<dialog id="delete_modal" class="modal">
+    <div class="modal-box">
+        <h3 class="font-bold text-lg">⚠️ Confirmar Eliminación</h3>
+        <p class="py-4">
+            ¿Está seguro que desea eliminar la carga <strong id="batch_name"></strong>?
+            <br><br>
+            Esta acción <span class="text-error font-bold">eliminará todos los registros asociados</span> y no se puede deshacer.
+        </p>
+        <div class="modal-action">
+            <form id="delete_form" method="post">
+                {% csrf_token %}
+                <button type="button" class="btn" onclick="delete_modal.close()">Cancelar</button>
+                <button type="submit" class="btn btn-error">Sí, Eliminar</button>
+            </form>
+        </div>
+    </div>
+</dialog>
+
+<script>
+function confirmDelete(batchId, fileName) {
+    document.getElementById('batch_name').textContent = fileName;
+    document.getElementById('delete_form').action = "{% url 'delete_batch' 0 %}".replace('0', batchId);
+    delete_modal.showModal();
+}
+</script>
+{% endblock %}

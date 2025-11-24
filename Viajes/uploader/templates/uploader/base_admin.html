@@ -15,7 +15,7 @@
     <!-- Navbar Admin -->
     <div class="navbar bg-primary text-primary-content shadow-lg">
         <div class="flex-1">
-            <a class="btn btn-ghost text-xl">INM Viajes - Panel Administrativo</a>
+            <a href="{% url 'admin_list' %}" class="btn btn-ghost text-xl">INM Viajes - Panel Administrativo</a>
         </div>
         <div class="flex-none">
             <div class="dropdown dropdown-end">
@@ -30,6 +30,7 @@
                 </div>
                 <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52 text-base-content">
                     <li><a href="{% url 'admin_list' %}">Ver Registros</a></li>
+                    <li><a href="{% url 'batch_list' %}">Cargas de Archivos</a></li>
                     <li><a href="{% url 'create_user' %}">Crear Usuario</a></li>
                     <li><a href="/admin/">Django Admin</a></li>
                     <li>

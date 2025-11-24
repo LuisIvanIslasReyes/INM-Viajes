@@ -1,6 +1,7 @@
 from django import forms
 from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
+import os
 
 
 class ExcelUploadForm(forms.Form):
@@ -24,6 +25,16 @@ class ExcelUploadForm(forms.Form):
             # Validar tamaño (max 10MB)
             if archivo.size > 10 * 1024 * 1024:
                 raise forms.ValidationError('El archivo no puede ser mayor a 10MB')
+            
+            #Validar si ya existe un archivo con el mismo nombre en el servidor
+            from django.core.files.storage import default_storage
+            ruta_archivo = f'uploads/{archivo.name}'
+
+            if default_storage.exists(ruta_archivo):
+                raise forms.ValidationError(
+                    f'El archivo "{archivo.name}" ya existe en el servidor.'
+                    f'Por favor, suba otro archivo e intente de nuevo.'
+                )
         
         return archivo
 
