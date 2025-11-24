@@ -1,0 +1,236 @@
+{% extends 'uploader/base_user.html' %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">
+            {% if is_superuser %}
+                📊 Gestión de Registros (Admin)
+            {% else %}
+                📊 Mis Registros
+            {% endif %}
+        </h1>
+        <div class="flex gap-2">
+            <a href="{% url 'upload_excel' %}" class="btn btn-ghost">
+                ← Volver a Subir Archivos
+            </a>
+            {% if is_superuser %}
+            <a href="{% url 'batch_list' %}" class="btn btn-primary">
+                📦 Ver Cargas
+            </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Mensajes -->
+    {% if messages %}
+        <div class="space-y-2 mb-6">
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    <span>{{ message }}</span>
+                </div>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    <!-- Filtros y Búsqueda -->
+    <div class="card bg-base-100 shadow-xl mb-6">
+        <div class="card-body">
+            <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <!-- Búsqueda -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Buscar</span>
+                    </label>
+                    <input 
+                        type="text" 
+                        name="search" 
+                        value="{{ request.GET.search }}"
+                        placeholder="Documento o nombre..." 
+                        class="input input-bordered"
+                    >
+                </div>
+
+                <!-- Filtro por Carga -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Carga</span>
+                    </label>
+                    <select name="batch" class="select select-bordered">
+                        <option value="">Todas</option>
+                        {% for batch in batches %}
+                        <option value="{{ batch.id }}" {% if request.GET.batch == batch.id|stringformat:"s" %}selected{% endif %}>
+                            {{ batch.archivo.name|truncatechars:30 }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Filtro Confirmado -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">Estado</span>
+                    </label>
+                    <select name="confirmado" class="select select-bordered">
+                        <option value="">Todos</option>
+                        <option value="true" {% if request.GET.confirmado == 'true' %}selected{% endif %}>Confirmados</option>
+                        <option value="false" {% if request.GET.confirmado == 'false' %}selected{% endif %}>Sin confirmar</option>
+                    </select>
+                </div>
+
+                <!-- Botones -->
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text">&nbsp;</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <button type="submit" class="btn btn-primary flex-1">🔍 Filtrar</button>
+                        <a href="{% url 'admin_list' %}" class="btn btn-ghost">↻</a>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Tabla de Registros -->
+    <div class="card bg-base-100 shadow-xl">
+        <div class="card-body overflow-x-auto">
+            <table class="table table-zebra table-sm">
+                <thead>
+                    <tr>
+                        <th>Vuelo</th>
+                        <th>Fecha</th>
+                        <th>Pasajero</th>
+                        <th>Documento</th>
+                        <th>Origen → Destino</th>
+                        <th>Estado</th>
+                        <th>Acciones</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in page_obj %}
+                    <tr>
+                        <td>{{ registro.vuelo_numero }}</td>
+                        <td>{{ registro.vuelo_fecha|date:"d/m/Y" }}</td>
+                        <td>{{ registro.nombre_pasajero|truncatechars:25 }}</td>
+                        <td class="font-mono text-sm">{{ registro.numero_documento }}</td>
+                        <td>
+                            <span class="text-xs">
+                                {{ registro.aeropuerto_salida }} → {{ registro.aeropuerto_llegada }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="flex gap-1">
+                                {% if registro.confirmado %}
+                                <span class="badge badge-success badge-sm">✓ Confirmado</span>
+                                {% endif %}
+                                {% if registro.inadmitido %}
+                                <span class="badge badge-error badge-sm">✗ Inadmitido</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                        <td>
+                            <button onclick="editModal{{ registro.id }}.showModal()" class="btn btn-xs btn-info">
+                                ✏️ Editar
+                            </button>
+                        </td>
+                    </tr>
+
+                    <!-- Modal de edición para cada registro -->
+                    <dialog id="editModal{{ registro.id }}" class="modal">
+                        <div class="modal-box">
+                            <h3 class="font-bold text-lg">Editar Registro</h3>
+                            <form method="post" action="{% url 'update_registro' registro.id %}">
+                                {% csrf_token %}
+                                
+                                <div class="py-4 space-y-4">
+                                    <!-- Info del pasajero -->
+                                    <div class="bg-base-200 p-3 rounded">
+                                        <p><strong>Vuelo:</strong> {{ registro.vuelo_numero }}</p>
+                                        <p><strong>Pasajero:</strong> {{ registro.nombre_pasajero }}</p>
+                                        <p><strong>Documento:</strong> {{ registro.numero_documento }}</p>
+                                    </div>
+
+                                    <!-- Checkboxes -->
+                                    <div class="form-control">
+                                        <label class="label cursor-pointer">
+                                            <span class="label-text">Confirmado</span>
+                                            <input 
+                                                type="checkbox" 
+                                                name="confirmado" 
+                                                value="true"
+                                                {% if registro.confirmado %}checked{% endif %}
+                                                class="checkbox checkbox-success"
+                                            >
+                                        </label>
+                                    </div>
+
+                                    <div class="form-control">
+                                        <label class="label cursor-pointer">
+                                            <span class="label-text">Inadmitido</span>
+                                            <input 
+                                                type="checkbox" 
+                                                name="inadmitido" 
+                                                value="true"
+                                                {% if registro.inadmitido %}checked{% endif %}
+                                                class="checkbox checkbox-error"
+                                            >
+                                        </label>
+                                    </div>
+
+                                    <!-- Comentario -->
+                                    <div class="form-control">
+                                        <label class="label">
+                                            <span class="label-text">Comentario</span>
+                                        </label>
+                                        <textarea 
+                                            name="comentario" 
+                                            class="textarea textarea-bordered"
+                                            rows="3"
+                                        >{{ registro.comentario }}</textarea>
+                                    </div>
+                                </div>
+
+                                <div class="modal-action">
+                                    <button type="button" class="btn" onclick="editModal{{ registro.id }}.close()">
+                                        Cancelar
+                                    </button>
+                                    <button type="submit" class="btn btn-primary">
+                                        💾 Guardar
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </dialog>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7" class="text-center text-gray-500 py-8">
+                            📭 No hay registros para mostrar
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+
+            <!-- Paginación -->
+            {% if page_obj.has_other_pages %}
+            <div class="flex justify-center mt-6">
+                <div class="join">
+                    {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}&{{ request.GET.urlencode }}" class="join-item btn">«</a>
+                    {% endif %}
+                    
+                    <button class="join-item btn btn-active">
+                        Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
+                    </button>
+                    
+                    {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&{{ request.GET.urlencode }}" class="join-item btn">»</a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

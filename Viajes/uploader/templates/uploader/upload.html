@@ -1,14 +1,19 @@
 <!-- filepath: c:\Users\alberto\Documents\GitHub\INM-Viajes\Viajes\uploader\templates\uploader\upload.html -->
-{% extends 'uploader/base_user.html' %}
+{% extends 'uploader/base.html' %}
 
 {% block title %}Subir Excel - INM Viajes{% endblock %}
 
 {% block content %}
 <div class="space-y-6">
     <!-- Header -->
-    <div class="text-center">
-        <h2 class="text-3xl font-bold text-gray-800">Cargar Archivo Excel</h2>
-        <p class="text-gray-600 mt-2">Sube archivos Excel con registros de viajes</p>
+    <div class="flex justify-between items-center mb-6">
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">Cargar Archivo Excel</h2>
+            <p class="text-gray-600 mt-2">Sube archivos Excel con registros de viajes</p>
+        </div>
+        <a href="{% url 'admin_list' %}" class="btn btn-primary">
+            Ver Mis Registros
+        </a>
     </div>
 
     <!-- Upload Form -->
@@ -42,7 +47,7 @@
     <!-- Mis Cargas Recientes -->
     {% if mis_cargas %}
     <div class="mt-8">
-        <h3 class="text-xl font-bold mb-4">📋 Mis Cargas Recientes</h3>
+        <h3 class="text-xl font-bold mb-4">Mis Cargas Recientes</h3>
         <div class="overflow-x-auto">
             <table class="table table-zebra">
                 <thead>
@@ -50,6 +55,7 @@
                         <th>Fecha</th>
                         <th>Archivo</th>
                         <th>Registros</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -58,6 +64,11 @@
                         <td>{{ carga.fecha_carga|date:"d/m/Y H:i" }}</td>
                         <td>{{ carga.archivo.name }}</td>
                         <td><span class="badge badge-primary">{{ carga.registros.count }} registros</span></td>
+                        <td>
+                            <a href="{% url 'admin_list' %}?batch={{ carga.id }}" class="btn btn-xs btn-info">
+                                 Ver
+                            </a>
+                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>

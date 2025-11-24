@@ -1,0 +1,87 @@
+    /* Estilo para columnas fijas */
+    .sticky {
+        position: sticky;
+    }
+    
+    /* Sombra para separar las columnas fijas */
+    th.sticky:nth-child(4),
+    td.sticky:nth-child(4) {
+        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+    }
+    
+    /* Asegurar que el scroll horizontal funcione */
+    .overflow-x-auto {
+        max-width: 100%;
+    }
+    
+    /* Ancho mínimo para columnas fijas */
+    th.sticky:nth-child(1), td.sticky:nth-child(1),
+    th.sticky:nth-child(2), td.sticky:nth-child(2) {
+        min-width: 70px;
+        width: 70px;
+        max-width: 70px;
+    }
+    
+    th.sticky:nth-child(3), td.sticky:nth-child(3) {
+        min-width: 200px;
+    }
+    
+    th.sticky:nth-child(4), td.sticky:nth-child(4) {
+        min-width: 100px;
+    }
+    
+    /* 🔥 TAMAÑO DE FUENTE MÁS GRANDE */
+    .table {
+        font-size: 1.1rem; /* Aumentado de 1rem */
+    }
+    
+    .table thead th {
+        font-size: 1.25rem; /* Aumentado de 1.1rem */
+        font-weight: 700;
+        padding: 1rem 0.75rem;
+    }
+    
+    .table tbody td {
+        font-size: 1.1rem; /* Aumentado de 1rem */
+        padding: 1rem 0.75rem;
+    }
+    
+    /* Badges más grandes */
+    .badge {
+        font-size: 1rem;
+        padding: 0.5rem 0.75rem;
+    }
+    
+    /* Botones más grandes */
+    .btn-md {
+        height: 3rem;
+        min-height: 3rem;
+        padding-left: 1rem;
+        padding-right: 1rem;
+    }
+    
+    .btn-sm {
+        height: 2.5rem;
+        min-height: 2.5rem;
+        font-size: 1rem;
+    }
+    
+    /* Background para columnas sticky - zebra striping */
+    tbody tr:nth-child(even) td.sticky {
+        background-color: oklch(var(--b2));
+    }
+    
+    tbody tr:nth-child(odd) td.sticky {
+        background-color: oklch(var(--b1));
+    }
+    
+    /* Asegurar que los headers tengan el color correcto */
+    thead th.sticky {
+        background-color: hsl(var(--p));
+    }
+    
+    /* Iconos SVG más grandes */
+    .table svg {
+        width: 1.5rem;
+        height: 1.5rem;
+    }

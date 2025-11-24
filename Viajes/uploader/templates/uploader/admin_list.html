@@ -1,70 +1,18 @@
 <!-- filepath: c:\Users\alberto\Documents\GitHub\INM-Viajes\Viajes\uploader\templates\uploader\admin_list.html -->
-{% extends 'uploader/base_admin.html' %}
+{% extends 'uploader/base.html' %}
+{% load static %}
 
-{% block title %}Registros - Viajes INM{% endblock %}
+{% block title %}
+    {% if is_superuser %}
+        Registros - Admin | Viajes INM
+    {% else %}
+        Mis registros | Viajes INM
+    {% endif %}
+{% endblock %}
+
 
 {% block extra_css %}
-<style>
-    /* Estilo para columnas fijas */
-    .sticky {
-        position: sticky;
-    }
-    
-    /* Sombra para separar las columnas fijas */
-    th.sticky:nth-child(4),
-    td.sticky:nth-child(4) {
-        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    }
-    
-    /* Asegurar que el scroll horizontal funcione */
-    .overflow-x-auto {
-        max-width: 100%;
-    }
-    
-    /* Ancho mínimo para columnas fijas */
-    th.sticky:nth-child(1), td.sticky:nth-child(1),
-    th.sticky:nth-child(2), td.sticky:nth-child(2) {
-        min-width: 60px;
-        width: 60px;
-        max-width: 60px;
-    }
-    
-    th.sticky:nth-child(3), td.sticky:nth-child(3) {
-        min-width: 180px;
-    }
-    
-    th.sticky:nth-child(4), td.sticky:nth-child(4) {
-        min-width: 90px;
-    }
-    
-    /* Tamaño de fuente más grande para toda la tabla */
-    .table {
-        font-size: 1rem;
-    }
-    
-    .table thead th {
-        font-size: 1.1rem;
-        font-weight: 600;
-    }
-    
-    .table tbody td {
-        font-size: 1rem;
-    }
-    
-    /* Background para columnas sticky - zebra striping */
-    tbody tr:nth-child(even) td.sticky {
-        background-color: oklch(var(--b2));
-    }
-    
-    tbody tr:nth-child(odd) td.sticky {
-        background-color: oklch(var(--b1));
-    }
-    
-    /* Asegurar que los headers tengan el color correcto */
-    thead th.sticky {
-        background-color: hsl(var(--p));
-    }
-</style>
+<link rel="stylesheet" href="{% static 'css/admin_list.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -73,20 +21,51 @@
     <div class="flex justify-between items-center">
         <div>
             <h2 class="text-3xl font-bold">Gestión de Registros de Viaje</h2>
-            <p class="text-gray-600 mt-2">Total: {{ page_obj.paginator.count }} registros</p>
+            <p class="text-gray-600 mt-2">Total: <span id="total-registros">{{ page_obj.paginator.count }}</span> registros</p>
         </div>
+        <a href="{% url 'upload_excel' %}" class="btn btn-primary btn-lg gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+            </svg>
+            Subir Excel
+        </a>
     </div>
 
-    <!-- Filtros -->
+     <!-- Filtros Mejorados -->
     <div class="card bg-base-100 shadow-md">
         <div class="card-body">
-            <h3 class="card-title text-lg">Filtros</h3>
-            <form method="get" class="flex flex-wrap gap-4 items-end">
+            <div class="flex flex-wrap gap-4 items-center">
+                <!-- Buscador de Documento (Principal) -->
+                <div class="form-control flex-1 min-w-[300px]">
+                    <label class="label">
+                        <span class="label-text font-semibold">Buscar por Documento o Pasajero</span>
+                    </label>
+                    <div class="relative">
+                        <input 
+                            type="text" 
+                            id="searchInput" 
+                            placeholder="Escribe número de documento o nombre..." 
+                            class="input input-bordered w-full pr-10"
+                            value="{{ request.GET.search }}"
+                        >
+                        <button 
+                            id="clearSearch" 
+                            class="btn btn-ghost btn-sm absolute right-1 top-1/2 -translate-y-1/2 hidden"
+                            onclick="clearSearchFilter()"
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Lote de Carga -->
                 <div class="form-control w-full max-w-xs">
                     <label class="label">
-                        <span class="label-text">Lote de Carga</span>
+                        <span class="label-text font-semibold">Lote de Carga</span>
                     </label>
-                    <select name="batch" class="select select-bordered" onchange="this.form.submit()">
+                    <select name="batch" id="batchFilter" class="select select-bordered">
                         <option value="">Todos los lotes</option>
                         {% for batch in batches %}
                         <option value="{{ batch.id }}" {% if request.GET.batch == batch.id|stringformat:"s" %}selected{% endif %}>
@@ -95,38 +74,50 @@
                         {% endfor %}
                     </select>
                 </div>
-                
-                <div class="form-control w-full max-w-xs">
-                    <label class="label">
-                        <span class="label-text">Confirmado</span>
-                    </label>
-                    <select name="confirmado" class="select select-bordered" onchange="this.form.submit()">
-                        <option value="">Todos</option>
-                        <option value="true" {% if request.GET.confirmado == 'true' %}selected{% endif %}>✅ Confirmados</option>
-                        <option value="false" {% if request.GET.confirmado == 'false' %}selected{% endif %}>⬜ No confirmados</option>
-                    </select>
-                </div>
-                
-                <div class="form-control w-full max-w-xs">
-                    <label class="label">
-                        <span class="label-text">Inadmitido</span>
-                    </label>
-                    <select name="inadmitido" class="select select-bordered" onchange="this.form.submit()">
-                        <option value="">Todos</option>
-                        <option value="true" {% if request.GET.inadmitido == 'true' %}selected{% endif %}>❌ Inadmitidos</option>
-                        <option value="false" {% if request.GET.inadmitido == 'false' %}selected{% endif %}>⬜ No inadmitidos</option>
-                    </select>
-                </div>
-                
+
+                <!-- Filtros Rápidos (Checkboxes Minimalistas) -->
                 <div class="form-control">
-                    <a href="{% url 'admin_list' %}" class="btn btn-ghost">
+                    <label class="label">
+                        <span class="label-text font-semibold">Filtros Rápidos</span>
+                    </label>
+                    <div class="flex gap-2">
+                        <!-- Confirmado -->
+                        <label class="btn btn-sm {% if request.GET.confirmado == 'true' %}btn-success{% else %}btn-ghost{% endif %} gap-2 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                id="confirmadoFilter" 
+                                class="checkbox checkbox-xs"
+                                {% if request.GET.confirmado == 'true' %}checked{% endif %}
+                            >
+                            <span>Confirmados</span>
+                        </label>
+
+                        <!-- Inadmitido -->
+                        <label class="btn btn-sm {% if request.GET.inadmitido == 'true' %}btn-error{% else %}btn-ghost{% endif %} gap-2 cursor-pointer">
+                            <input 
+                                type="checkbox" 
+                                id="inadmitidoFilter" 
+                                class="checkbox checkbox-xs"
+                                {% if request.GET.inadmitido == 'true' %}checked{% endif %}
+                            >
+                            <span>Inadmitidos</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- Botón Limpiar -->
+                <div class="form-control">
+                    <label class="label opacity-0">
+                        <span class="label-text">-</span>
+                    </label>
+                    <a href="{% url 'admin_list' %}" class="btn btn-ghost gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                         </svg>
-                        Limpiar
+                        Limpiar Todo
                     </a>
                 </div>
-            </form>
+            </div>
         </div>
     </div>
 
@@ -134,7 +125,7 @@
     <div class="card bg-base-100 shadow-md">
         <div class="card-body p-0">
             <div class="overflow-x-auto">
-                <table class="table table-zebra">
+                <table class="table table-zebra" id="registrosTable">
                     <thead>
                         <tr class="bg-primary text-primary-content">
                             <!-- Campos Administrativos (Izquierda) -->
@@ -178,7 +169,10 @@
                     </thead>
                     <tbody>
                         {% for registro in page_obj %}
-                        <tr id="registro-{{ registro.id }}">
+                        <tr id="registro-{{ registro.id }}"
+                            data-documento="{{ registro.numero_documento|default:'' }}" 
+                            data-pasajero="{{ registro.nombre_pasajero|default:''|lower }}">
+
                             <!-- CAMPOS ADMINISTRATIVOS (FIJOS A LA IZQUIERDA) -->
                             <td class="sticky left-0 z-10 text-center">
                                 <form method="post" action="{% url 'update_registro' registro.id %}" class="inline">
@@ -248,7 +242,7 @@
                             <td><span class="badge badge-outline badge-sm">{{ registro.aeropuerto_llegada }}</span></td>
                             <td class="text-xs">{{ registro.salida_planificada|default:"-" }}</td>
                             <td class="font-semibold">{{ registro.nombre_pasajero }}</td>
-                            <td><code class="text-xs">{{ registro.numero_documento }}</code></td>
+                            <td><code class="text-md">{{ registro.numero_documento }}</code></td>
                             <td><span class="badge badge-primary badge-sm">{{ registro.numero_asiento }}</span></td>
                             <td class="text-xs max-w-[200px] truncate" title="{{ registro.numero_equipaje }}">
                                 {{ registro.numero_equipaje|default:"-" }}
@@ -282,7 +276,7 @@
                             <td>{{ registro.pais_emision }}</td>
                         </tr>
                         {% empty %}
-                        <tr>
+                        <tr id="noResults" style="display: none;">
                             <td colspan="24" class="text-center py-8">
                                 <div class="flex flex-col items-center gap-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -365,16 +359,5 @@
 {% endblock %}
 
 {% block extra_js %}
-<script>
-function openEditModal(registroId, comentario) {
-    const modal = document.getElementById('editModal');
-    document.getElementById('editForm').action = '/update/' + registroId + '/';
-    document.getElementById('comentario').value = comentario;
-    modal.showModal();
-}
-
-function closeEditModal() {
-    document.getElementById('editModal').close();
-}
-</script>
+<script src="{% static 'js/admin_list.js' %}"></script>
 {% endblock %}
