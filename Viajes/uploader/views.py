@@ -1,11 +1,12 @@
 from django.contrib.auth.decorators import login_required, user_passes_test
 from .forms import ExcelUploadForm, CreateUserForm
-from django.shortcuts import render, redirect
+from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
 from .models import UploadBatch, Registro
 from django.contrib import messages
 from django.db import models
+from django.http import FileResponse, Http404
 from datetime import datetime
 import pandas as pd
 import os
@@ -294,3 +295,26 @@ def create_user(request):
         'usuarios': usuarios,
     }
     return render(request, 'uploader/create_user.html', context)
+
+
+@login_required
+def download_batch_file(request, batch_id):
+    """Vista para descargar el archivo Excel de un batch"""
+    batch = get_object_or_404(UploadBatch, id=batch_id)
+    
+    # Verificar que el archivo existe
+    if not batch.archivo or not os.path.exists(batch.archivo.path):
+        messages.error(request, '❌ El archivo no existe en el servidor.')
+        return redirect('batch_list')
+    
+    try:
+        # Abrir el archivo para descarga
+        response = FileResponse(
+            open(batch.archivo.path, 'rb'),
+            as_attachment=True,
+            filename=os.path.basename(batch.archivo.name)
+        )
+        return response
+    except Exception as e:
+        messages.error(request, f'❌ Error al descargar el archivo: {str(e)}')
+        return redirect('batch_list')
