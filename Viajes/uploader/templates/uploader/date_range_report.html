@@ -1,0 +1,168 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/date_range_report.css' %}">
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'js/date_range_report.js' %}"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold mb-2">📅 Búsqueda por Rango de Fechas</h1>
+        <p class="text-base-content/70">
+            Busca y visualiza registros de vuelos por período de tiempo
+        </p>
+    </div>
+
+    <!-- Formulario de búsqueda -->
+    <form method="GET" class="card bg-base-200 shadow-xl mb-6">
+        <div class="card-body">
+            <h2 class="card-title">🔍 Seleccionar Rango de Fechas</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">📆 Fecha Inicio</span>
+                    </label>
+                    <input 
+                        type="date" 
+                        name="fecha_inicio" 
+                        id="fecha_inicio"
+                        class="input input-bordered" 
+                        value="{{ fecha_inicio }}"
+                        min="2025-11-10"
+                        required
+                    >
+                    <label class="label">
+                        <span class="label-text-alt">Mínimo: 10/11/2025</span>
+                    </label>
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">📆 Fecha Fin</span>
+                    </label>
+                    <input 
+                        type="date" 
+                        name="fecha_fin" 
+                        id="fecha_fin"
+                        class="input input-bordered" 
+                        value="{{ fecha_fin }}"
+                        min="2025-11-10"
+                        required
+                    >
+                    <label class="label">
+                        <span class="label-text-alt">Mínimo: 10/11/2025</span>
+                    </label>
+                </div>
+            </div>
+
+            <div class="card-actions justify-end">
+                <button type="submit" class="btn btn-primary">
+                    🔎 Buscar Registros
+                </button>
+                {% if fecha_inicio or fecha_fin %}
+                <a href="{% url 'date_range_report' %}" class="btn btn-ghost">
+                    🔄 Limpiar Filtros
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    <!-- Resultados -->
+    {% if estadisticas_por_fecha %}
+    <div class="alert alert-success mb-6">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+        </svg>
+        <span>
+            Se encontraron <strong>{{ total_registros }}</strong> registro(s) 
+            {% if fecha_inicio %}desde {{ fecha_inicio|date:"d/m/Y" }}{% endif %}
+            {% if fecha_fin %}hasta {{ fecha_fin|date:"d/m/Y" }}{% endif %}
+        </span>
+    </div>
+
+    <!-- Agrupación por fecha -->
+    {% for stat in estadisticas_por_fecha %}
+    <div class="fecha-grupo mb-6">
+        <!-- Encabezado de fecha -->
+        <div class="fecha-header">
+            <div class="flex items-center gap-3">
+                <span class="fecha-icono">📅</span>
+                <h3 class="fecha-titulo">{{ stat.fecha|date:"l, d \d\e F \d\e Y"|title }}</h3>
+            </div>
+            <div class="flex gap-2">
+                <span class="badge badge-primary badge-lg">Total: {{ stat.total }}</span>
+                {% if stat.confirmados > 0 %}
+                <span class="badge badge-success badge-lg">✓ {{ stat.confirmados }}</span>
+                {% endif %}
+                {% if stat.inadmitidos > 0 %}
+                <span class="badge badge-error badge-lg">✗ {{ stat.inadmitidos }}</span>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Tabla de registros -->
+        <div class="overflow-x-auto">
+            <table class="table table-sm table-zebra">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Vuelo</th>
+                        <th>Pasajero</th>
+                        <th>Documento</th>
+                        <th>Asiento</th>
+                        <th>Salida → Llegada</th>
+                        <th>Estado</th>
+                        <th>Archivo</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in stat.registros %}
+                    <tr>
+                        <td>{{ registro.id }}</td>
+                        <td class="font-bold">{{ registro.vuelo_numero }}</td>
+                        <td>{{ registro.nombre_pasajero }}</td>
+                        <td>{{ registro.numero_documento }}</td>
+                        <td>{{ registro.numero_asiento }}</td>
+                        <td>
+                            <span class="text-xs">
+                                {{ registro.aeropuerto_salida }} → {{ registro.aeropuerto_llegada }}
+                            </span>
+                        </td>
+                        <td>
+                            {% if registro.confirmado %}
+                                <span class="badge badge-success badge-sm">✓ Confirmado</span>
+                            {% elif registro.inadmitido %}
+                                <span class="badge badge-error badge-sm">✗ Inadmitido</span>
+                            {% else %}
+                                <span class="badge badge-ghost badge-sm">⏳ Pendiente</span>
+                            {% endif %}
+                        </td>
+                        <td class="text-xs">
+                            {{ registro.batch.archivo.name|slice:"8:" }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endfor %}
+
+    {% elif fecha_inicio or fecha_fin %}
+    <div class="alert alert-warning">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <span>No se encontraron registros para el rango de fechas especificado.</span>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

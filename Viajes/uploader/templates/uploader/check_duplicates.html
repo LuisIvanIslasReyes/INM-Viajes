@@ -1,0 +1,212 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}Verificar Duplicados | Viajes INM{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="flex justify-between items-center">
+        <div>
+            <h2 class="text-3xl font-bold flex items-center gap-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                Análisis de Duplicados
+            </h2>
+            <p class="text-gray-600 mt-2">Personas con múltiples registros en el sistema</p>
+        </div>
+        <a href="{% url 'admin_list' %}" class="btn btn-ghost gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Volver
+        </a>
+    </div>
+
+    <!-- Resumen -->
+    <div class="stats shadow w-full bg-warning text-warning-content">
+        <div class="stat">
+            <div class="stat-figure text-warning-content">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+            </div>
+            <div class="stat-title text-warning-content opacity-80">Pasajeros con Múltiples Registros</div>
+            <div class="stat-value">{{ total_duplicados }}</div>
+            <div class="stat-desc text-warning-content opacity-70">
+                {% if total_duplicados > 0 %}
+                    Estos pueden ser vuelos diferentes de la misma persona
+                {% else %}
+                    No hay duplicados detectados
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Lista de Duplicados -->
+    {% if duplicados_detalle %}
+        {% for duplicado in duplicados_detalle %}
+        <div class="card bg-base-100 shadow-lg border-l-4 border-warning">
+            <div class="card-body">
+                <!-- Encabezado del pasajero -->
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
+                            </svg>
+                            {{ duplicado.pasajero }}
+                        </h3>
+                        <p class="text-gray-600 mt-1">
+                            <span class="font-semibold">Documento:</span> 
+                            <code class="bg-gray-100 px-2 py-1 rounded">{{ duplicado.documento }}</code>
+                        </p>
+                    </div>
+                    <div class="badge badge-warning badge-lg gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                        {{ duplicado.total }} registros
+                    </div>
+                </div>
+
+                <!-- Tabla de registros -->
+                <div class="overflow-x-auto">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr class="bg-base-200">
+                                <th class="text-center">Estado</th>
+                                <th>Vuelo</th>
+                                <th>Fecha Vuelo</th>
+                                <th>Ruta</th>
+                                <th>Asiento</th>
+                                <th>Archivo Cargado</th>
+                                <th>Fecha de Carga</th>
+                                <th>Usuario</th>
+                                <th class="text-center">Acciones</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for registro in duplicado.registros %}
+                            <tr class="hover">
+                                <td class="text-center">
+                                    <div class="flex gap-1 justify-center">
+                                        {% if registro.confirmado %}
+                                        <div class="tooltip" data-tip="Confirmado">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        {% endif %}
+                                        {% if registro.inadmitido %}
+                                        <div class="tooltip" data-tip="Inadmitido">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        {% endif %}
+                                        {% if not registro.confirmado and not registro.inadmitido %}
+                                        <div class="tooltip" data-tip="Pendiente">
+                                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </td>
+                                <td><strong class="text-primary">{{ registro.vuelo_numero }}</strong></td>
+                                <td>
+                                    {% if registro.vuelo_fecha %}
+                                    <span class="badge badge-sm">{{ registro.vuelo_fecha|date:"d/m/Y" }}</span>
+                                    {% else %}
+                                    <span class="text-gray-400">-</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge badge-outline badge-xs">{{ registro.aeropuerto_salida }}</span>
+                                    →
+                                    <span class="badge badge-outline badge-xs">{{ registro.aeropuerto_llegada }}</span>
+                                </td>
+                                <td><span class="badge badge-sm">{{ registro.numero_asiento }}</span></td>
+                                <td class="text-xs font-mono">{{ registro.batch.archivo.name|truncatechars:30 }}</td>
+                                <td class="text-xs">{{ registro.batch.fecha_carga|date:"d/m/Y H:i" }}</td>
+                                <td><span class="badge badge-ghost badge-sm">{{ registro.batch.usuario.username }}</span></td>
+                                <td class="text-center">
+                                    <a href="{% url 'admin_list' %}?search={{ registro.numero_documento }}" class="btn btn-xs btn-info">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+                                        </svg>
+                                    </a>
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Análisis -->
+                <div class="alert alert-info mt-4">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <div class="text-sm">
+                        <strong>Análisis:</strong>
+                        {% if duplicado.registros|length > 1 %}
+                            {% with first=duplicado.registros.0 %}
+                            {% if duplicado.registros|length == 2 %}
+                                Este pasajero aparece en archivos cargados el 
+                                {% for reg in duplicado.registros %}
+                                    {{ reg.batch.fecha_carga|date:"d/m/Y" }}{% if not forloop.last %} y {% endif %}
+                                {% endfor %}
+                                {% if duplicado.registros.0.vuelo_fecha == duplicado.registros.1.vuelo_fecha and duplicado.registros.0.vuelo_numero == duplicado.registros.1.vuelo_numero %}
+                                    - <span class="text-error font-bold">⚠️ POSIBLE DUPLICADO REAL</span> (mismo vuelo y fecha)
+                                {% else %}
+                                    - ✅ Probablemente son <strong>vuelos diferentes</strong>
+                                {% endif %}
+                            {% else %}
+                                Este pasajero tiene {{ duplicado.registros|length }} registros. Revisa si corresponden a vuelos diferentes.
+                            {% endif %}
+                            {% endwith %}
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    {% else %}
+    <!-- No hay duplicados -->
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body">
+            <div class="flex flex-col items-center justify-center py-12 gap-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-24 w-24 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div class="text-center">
+                    <h3 class="text-xl font-bold text-success">¡No se encontraron duplicados!</h3>
+                    <p class="text-gray-500 mt-2">Todos los registros tienen números de documento únicos</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Nota informativa -->
+    <div class="alert alert-warning shadow-lg">
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+        </svg>
+        <div>
+            <h3 class="font-bold">Nota importante</h3>
+            <div class="text-sm">
+                Esta página muestra personas que aparecen múltiples veces. <strong>No todos son duplicados reales</strong>:
+                <ul class="list-disc list-inside mt-2">
+                    <li>✅ <strong>Normal:</strong> Misma persona en diferentes vuelos o fechas</li>
+                    <li>⚠️ <strong>Duplicado:</strong> Mismo vuelo, misma fecha, mismo documento = Error de carga</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

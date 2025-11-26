@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import UploadBatch, Registro
+from .models import UploadBatch, Registro, CasoEspecial
 
 
 @admin.register(UploadBatch)
@@ -67,3 +67,34 @@ class RegistroAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('batch', 'batch__usuario')
+
+
+@admin.register(CasoEspecial)
+class CasoEspecialAdmin(admin.ModelAdmin):
+    list_display = (
+        'id', 'registro', 'documento_original', 'razon', 
+        'estado', 'fecha_creacion', 'resuelto_por'
+    )
+    list_filter = ('estado', 'razon', 'fecha_creacion', 'fecha_resolucion')
+    search_fields = ('documento_original', 'documento_nuevo', 'registro__nombre_pasajero')
+    readonly_fields = ('fecha_creacion', 'fecha_resolucion')
+    
+    fieldsets = (
+        ('Información del Caso', {
+            'fields': ('registro', 'razon', 'estado', 'documento_original', 'documento_nuevo')
+        }),
+        ('Registros Conflictivos', {
+            'fields': ('registros_conflictivos_ids',)
+        }),
+        ('Resolución', {
+            'fields': ('resuelto_por', 'fecha_resolucion', 'notas_admin')
+        }),
+        ('Metadatos', {
+            'fields': ('fecha_creacion',),
+            'classes': ('collapse',)
+        }),
+    )
+    
+    def get_queryset(self, request):
+        qs = super().get_queryset(request)
+        return qs.select_related('registro', 'registro__batch', 'resuelto_por')

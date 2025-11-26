@@ -60,3 +60,116 @@ class Registro(models.Model):
     
     def __str__(self):
         return f"{self.nombre_pasajero} - {self.vuelo_numero} - {self.numero_documento}"
+
+
+class CasoEspecial(models.Model):
+    """Casos especiales de registros con documentos duplicados que requieren validación"""
+    
+    ESTADO_CHOICES = [
+        ('pendiente', 'Pendiente de Revisión'),
+        ('aceptado', 'Aceptado por Admin'),
+        ('editado', 'Documento Editado'),
+        ('inadmitido', 'Marcado como Inadmitido'),
+        ('eliminado', 'Eliminado'),
+    ]
+    
+    RAZON_CHOICES = [
+        ('documento_duplicado', 'Número de Documento Duplicado'),
+        ('mismo_vuelo_fecha', 'Mismo Vuelo y Fecha'),
+        ('datos_sospechosos', 'Datos Sospechosos'),
+    ]
+    
+    # Registro afectado
+    registro = models.OneToOneField(
+        Registro, 
+        on_delete=models.CASCADE, 
+        related_name='caso_especial',
+        verbose_name='Registro'
+    )
+    
+    # Motivo del caso especial
+    razon = models.CharField(
+        max_length=50, 
+        choices=RAZON_CHOICES, 
+        default='documento_duplicado',
+        verbose_name='Razón'
+    )
+    
+    # Estado actual
+    estado = models.CharField(
+        max_length=20, 
+        choices=ESTADO_CHOICES, 
+        default='pendiente',
+        verbose_name='Estado'
+    )
+    
+    # Registro(s) conflictivo(s) - IDs de los registros que tienen el mismo documento
+    registros_conflictivos_ids = models.JSONField(
+        default=list,
+        verbose_name='IDs de Registros Conflictivos',
+        help_text='Lista de IDs de registros con el mismo documento'
+    )
+    
+    # Información adicional
+    documento_original = models.CharField(
+        max_length=100, 
+        verbose_name='Documento Original',
+        help_text='Número de documento que causó el conflicto'
+    )
+    
+    documento_nuevo = models.CharField(
+        max_length=100, 
+        blank=True, 
+        null=True,
+        verbose_name='Documento Nuevo',
+        help_text='Nuevo número de documento si fue editado'
+    )
+    
+    # Notas administrativas
+    notas_admin = models.TextField(
+        blank=True, 
+        null=True,
+        verbose_name='Notas del Administrador'
+    )
+    
+    # Usuario que resolvió el caso
+    resuelto_por = models.ForeignKey(
+        User, 
+        on_delete=models.SET_NULL, 
+        null=True, 
+        blank=True,
+        related_name='casos_resueltos',
+        verbose_name='Resuelto Por'
+    )
+    
+    # Timestamps
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Creación')
+    fecha_resolucion = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de Resolución')
+    
+    class Meta:
+        verbose_name = 'Caso Especial'
+        verbose_name_plural = 'Casos Especiales'
+        ordering = ['-fecha_creacion']
+        indexes = [
+            models.Index(fields=['estado']),
+            models.Index(fields=['documento_original']),
+            models.Index(fields=['fecha_creacion']),
+        ]
+    
+    def __str__(self):
+        return f"Caso #{self.id} - {self.registro.nombre_pasajero} ({self.get_estado_display()})"
+    
+    @property
+    def registros_conflictivos(self):
+        """Obtener los registros conflictivos reales"""
+        if self.registros_conflictivos_ids:
+            return Registro.objects.filter(id__in=self.registros_conflictivos_ids)
+        return Registro.objects.none()
+    
+    @property
+    def es_pendiente(self):
+        return self.estado == 'pendiente'
+    
+    @property
+    def esta_resuelto(self):
+        return self.estado in ['aceptado', 'editado', 'inadmitido', 'eliminado']

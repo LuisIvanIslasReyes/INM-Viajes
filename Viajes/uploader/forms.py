@@ -20,20 +20,22 @@ class ExcelUploadForm(forms.Form):
         if archivo:
             # Validar extensión
             if not archivo.name.endswith(('.xlsx', '.xls')):
-                raise forms.ValidationError('El archivo debe ser un Excel (.xlsx o .xls)')
+                raise forms.ValidationError('📋 El archivo debe ser un Excel (.xlsx o .xls)')
             
             # Validar tamaño (max 10MB)
             if archivo.size > 10 * 1024 * 1024:
-                raise forms.ValidationError('El archivo no puede ser mayor a 10MB')
+                tamanio_mb = archivo.size / (1024 * 1024)
+                raise forms.ValidationError(f'📦 El archivo es muy grande ({tamanio_mb:.1f}MB). El tamaño máximo permitido es 10MB.')
             
-            #Validar si ya existe un archivo con el mismo nombre en el servidor
+            # Validar si ya existe un archivo con el mismo nombre en el servidor
             from django.core.files.storage import default_storage
             ruta_archivo = f'uploads/{archivo.name}'
 
             if default_storage.exists(ruta_archivo):
                 raise forms.ValidationError(
-                    f'El archivo "{archivo.name}" ya existe en el servidor.'
-                    f'Por favor, suba otro archivo e intente de nuevo.'
+                    f'⚠️ El archivo "{archivo.name}" ya existe en el servidor. '
+                    f'Si continúas, el sistema procesará el archivo pero omitirá los registros duplicados automáticamente. '
+                    f'¿Estás seguro de que deseas continuar?'
                 )
         
         return archivo

@@ -3,10 +3,11 @@ from .forms import ExcelUploadForm, CreateUserForm
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.contrib.auth.models import User
-from .models import UploadBatch, Registro
+from .models import UploadBatch, Registro, CasoEspecial
 from django.contrib import messages
 from django.db import models
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, JsonResponse
+from django.utils import timezone
 from datetime import datetime
 import pandas as pd
 import os
@@ -22,6 +23,12 @@ def upload_excel(request):
     
     if request.method == 'POST':
         form = ExcelUploadForm(request.POST, request.FILES)
+        
+        # Validar que se haya seleccionado un archivo
+        if 'archivo' not in request.FILES or not request.FILES['archivo']:
+            messages.error(request, '📁 Por favor, selecciona un archivo Excel antes de subir.')
+            return redirect('upload_excel')
+        
         if form.is_valid():
             archivo = request.FILES['archivo']
             
@@ -63,8 +70,8 @@ def upload_excel(request):
                 }
                 
                 registros_creados = 0
-                registros_duplicados = 0
                 registros_error = 0
+                casos_especiales_creados = 0
                 
                 for index, row in df.iterrows():
                     try:
@@ -97,36 +104,73 @@ def upload_excel(request):
                                 
                                 registro_data[model_field] = value
                         
+                        # Verificar duplicados
                         numero_doc = registro_data.get('numero_documento')
-                        if numero_doc and Registro.objects.filter(numero_documento=numero_doc).exists():
-                            registros_duplicados += 1
-                            continue
+                        vuelo_num = registro_data.get('vuelo_numero')
+                        vuelo_fecha = registro_data.get('vuelo_fecha')
+                        nombre = registro_data.get('nombre_pasajero')
                         
-                        Registro.objects.create(**registro_data)
+                        # Crear el registro SIEMPRE (no bloqueamos nada)
+                        nuevo_registro = Registro.objects.create(**registro_data)
                         registros_creados += 1
+                        
+                        # DESPUÉS de crear, verificar si es un Caso Especial
+                        if numero_doc and vuelo_num and vuelo_fecha:
+                            # Buscar registros con mismo documento + mismo vuelo + misma fecha
+                            # (sin importar el nombre - pueden ser hermanos o datos duplicados)
+                            registros_mismo_vuelo_doc = Registro.objects.filter(
+                                numero_documento=numero_doc,
+                                vuelo_numero=vuelo_num,
+                                vuelo_fecha=vuelo_fecha
+                            ).exclude(
+                                id=nuevo_registro.id  # Excluir el que acabamos de crear
+                            )
+                            
+                            # Si encontramos coincidencias, es un Caso Especial
+                            if registros_mismo_vuelo_doc.exists():
+                                # Determinar razón basado en si el nombre es igual o diferente
+                                mismo_nombre = registros_mismo_vuelo_doc.filter(nombre_pasajero=nombre).exists()
+                                
+                                CasoEspecial.objects.create(
+                                    registro=nuevo_registro,
+                                    razon='mismo_vuelo_fecha' if mismo_nombre else 'documento_duplicado',
+                                    estado='pendiente',
+                                    documento_original=numero_doc,
+                                    registros_conflictivos_ids=list(registros_mismo_vuelo_doc.values_list('id', flat=True))
+                                )
+                                casos_especiales_creados += 1
                     
                     except Exception as e:
                         registros_error += 1
                         continue
                 
+                # Mensajes de resultado
                 if registros_creados > 0:
-                    messages.success(request, f'✅ ¡Archivo procesado exitosamente! Se agregaron {registros_creados} nuevo(s) registro(s).')
+                    messages.success(request, f'✅ ¡Archivo procesado exitosamente! Se agregaron {registros_creados} registro(s).')
                 
-                if registros_duplicados > 0:
-                    messages.warning(request, f'⚠️ Se encontraron {registros_duplicados} registro(s) que ya existían y fueron omitidos.')
+                if casos_especiales_creados > 0:
+                    messages.warning(request, f'🔔 IMPORTANTE: Se crearon {casos_especiales_creados} Caso(s) Especial(es) que requieren tu revisión. Pueden ser: hermanos con mismo documento, datos duplicados por error, u otros casos especiales. Ve a "Casos Especiales" en el menú para revisarlos y tomar una decisión.')
                 
                 if registros_error > 0:
                     messages.info(request, f'ℹ️ {registros_error} registro(s) tuvieron errores y no se pudieron procesar.')
                 
-                if registros_creados == 0 and registros_duplicados > 0:
-                    messages.warning(request, '🔄 Todos los registros del archivo ya existían en el sistema. No se agregó información nueva.')
+                if registros_creados == 0:
+                    messages.warning(request, '⚠️ No se pudo procesar ningún registro. Verifica el formato del archivo.')
                 
                 return redirect('admin_list')
                 
             except Exception as e:
-                messages.error(request, '❌ Ocurrió un problema al procesar el archivo. Por favor, verifique que el formato sea correcto e intente nuevamente.')
+                messages.error(request, f'❌ Ocurrió un problema al procesar el archivo: {str(e)}. Por favor, verifique que el formato sea correcto e intente nuevamente.')
                 if 'batch' in locals():
                     batch.delete()
+        else:
+            # El formulario no es válido, mostrar errores
+            if form.errors:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f'❌ {error}')
+            else:
+                messages.error(request, '❌ El formulario contiene errores. Por favor, revisa los datos e intenta nuevamente.')
     else:
         form = ExcelUploadForm()
     
@@ -213,6 +257,52 @@ def admin_list(request):
     }
     
     return render(request, 'uploader/admin_list.html', context)
+
+
+@login_required
+def date_range_report(request):
+    """Vista de reporte por rango de fechas con agrupación por día"""
+    from collections import OrderedDict
+    
+    fecha_inicio = request.GET.get('fecha_inicio')
+    fecha_fin = request.GET.get('fecha_fin')
+    
+    registros = Registro.objects.all().select_related('batch', 'batch__usuario').order_by('vuelo_fecha', 'vuelo_numero')
+    
+    # Aplicar filtros de fecha
+    if fecha_inicio:
+        registros = registros.filter(vuelo_fecha__gte=fecha_inicio)
+    if fecha_fin:
+        registros = registros.filter(vuelo_fecha__lte=fecha_fin)
+    
+    # Agrupar por fecha
+    registros_por_fecha = OrderedDict()
+    for registro in registros:
+        fecha = registro.vuelo_fecha
+        if fecha not in registros_por_fecha:
+            registros_por_fecha[fecha] = []
+        registros_por_fecha[fecha].append(registro)
+    
+    # Calcular totales por fecha
+    estadisticas_por_fecha = []
+    for fecha, regs in registros_por_fecha.items():
+        estadisticas_por_fecha.append({
+            'fecha': fecha,
+            'registros': regs,
+            'total': len(regs),
+            'confirmados': sum(1 for r in regs if r.confirmado),
+            'inadmitidos': sum(1 for r in regs if r.inadmitido),
+        })
+    
+    context = {
+        'fecha_inicio': fecha_inicio,
+        'fecha_fin': fecha_fin,
+        'estadisticas_por_fecha': estadisticas_por_fecha,
+        'total_registros': registros.count(),
+        'is_superuser': request.user.is_superuser,
+    }
+    
+    return render(request, 'uploader/date_range_report.html', context)
 
 
 # ============================================
@@ -318,3 +408,187 @@ def download_batch_file(request, batch_id):
     except Exception as e:
         messages.error(request, f'❌ Error al descargar el archivo: {str(e)}')
         return redirect('batch_list')
+
+
+@login_required
+def check_duplicates(request):
+    """Vista para identificar registros duplicados"""
+    # Encontrar documentos que aparecen más de una vez
+    from django.db.models import Count
+    
+    duplicados = Registro.objects.values('numero_documento', 'nombre_pasajero').annotate(
+        total=Count('id')
+    ).filter(total__gt=1).order_by('-total')
+    
+    # Obtener detalles completos de los duplicados
+    duplicados_detalle = []
+    for dup in duplicados:
+        registros = Registro.objects.filter(
+            numero_documento=dup['numero_documento']
+        ).select_related('batch', 'batch__usuario').order_by('vuelo_fecha', 'batch__fecha_carga')
+        
+        duplicados_detalle.append({
+            'documento': dup['numero_documento'],
+            'pasajero': dup['nombre_pasajero'],
+            'total': dup['total'],
+            'registros': list(registros)
+        })
+    
+    context = {
+        'duplicados_detalle': duplicados_detalle,
+        'total_duplicados': len(duplicados_detalle),
+        'is_superuser': request.user.is_superuser,
+    }
+    
+    return render(request, 'uploader/check_duplicates.html', context)
+
+
+@login_required
+def casos_especiales_list(request):
+    """Vista para listar todos los casos especiales pendientes y resueltos"""
+    filtro_estado = request.GET.get('estado', 'pendiente')
+    
+    if filtro_estado == 'todos':
+        casos = CasoEspecial.objects.all()
+    else:
+        casos = CasoEspecial.objects.filter(estado=filtro_estado)
+    
+    casos = casos.select_related('registro', 'registro__batch', 'resuelto_por').order_by('-fecha_creacion')
+    
+    # Paginar
+    paginator = Paginator(casos, 20)
+    page = request.GET.get('page', 1)
+    casos_paginados = paginator.get_page(page)
+    
+    # Enriquecer cada caso con los registros conflictivos
+    for caso in casos_paginados:
+        caso.conflictivos = caso.registros_conflictivos
+    
+    context = {
+        'casos': casos_paginados,
+        'filtro_estado': filtro_estado,
+        'total_pendientes': CasoEspecial.objects.filter(estado='pendiente').count(),
+        'is_superuser': request.user.is_superuser,
+    }
+    
+    return render(request, 'uploader/casos_especiales_list.html', context)
+
+
+@login_required
+def resolver_caso_aceptar(request, caso_id):
+    """Aceptar ambos registros como válidos"""
+    if request.method == 'POST':
+        caso = get_object_or_404(CasoEspecial, id=caso_id)
+        
+        # Marcar como resuelto
+        caso.estado = 'aceptado'
+        caso.resuelto_por = request.user
+        caso.fecha_resolucion = timezone.now()
+        caso.notas_admin = request.POST.get('notas', 'Ambos registros aceptados como válidos')
+        caso.save()
+        
+        # Confirmar todos los registros
+        caso.registro.confirmado = True
+        caso.registro.save()
+        
+        for reg_conf in caso.registros_conflictivos:
+            reg_conf.confirmado = True
+            reg_conf.save()
+        
+        messages.success(request, f'✅ Caso #{caso.id} aceptado. Todos los registros se confirmaron como válidos.')
+        return redirect('casos_especiales_list')
+    
+    return redirect('casos_especiales_list')
+
+
+@login_required
+def resolver_caso_editar(request, caso_id, registro_id):
+    """Editar el número de documento de uno de los registros"""
+    if request.method == 'POST':
+        caso = get_object_or_404(CasoEspecial, id=caso_id)
+        registro = get_object_or_404(Registro, id=registro_id)
+        
+        nuevo_documento = request.POST.get('nuevo_documento', '').strip()
+        
+        if not nuevo_documento:
+            messages.error(request, '❌ Debe proporcionar un número de documento nuevo.')
+            return redirect('casos_especiales_list')
+        
+        # Verificar que el nuevo documento no exista
+        duplicado = Registro.objects.filter(
+            numero_documento=nuevo_documento,
+            vuelo_numero=registro.vuelo_numero,
+            vuelo_fecha=registro.vuelo_fecha
+        ).exists()
+        
+        if duplicado:
+            messages.error(request, f'❌ El documento {nuevo_documento} ya existe para este vuelo y fecha.')
+            return redirect('casos_especiales_list')
+        
+        # Actualizar documento
+        documento_anterior = registro.numero_documento
+        registro.numero_documento = nuevo_documento
+        registro.save()
+        
+        # Marcar caso como resuelto
+        caso.estado = 'editado'
+        caso.documento_nuevo = nuevo_documento
+        caso.resuelto_por = request.user
+        caso.fecha_resolucion = timezone.now()
+        caso.notas_admin = f'Documento cambiado de {documento_anterior} a {nuevo_documento}'
+        caso.save()
+        
+        messages.success(request, f'✅ Caso #{caso.id} resuelto. Documento actualizado a {nuevo_documento}.')
+        return redirect('casos_especiales_list')
+    
+    return redirect('casos_especiales_list')
+
+
+@login_required
+def resolver_caso_inadmitir(request, caso_id, registro_id):
+    """Marcar un registro como inadmitido"""
+    if request.method == 'POST':
+        caso = get_object_or_404(CasoEspecial, id=caso_id)
+        registro = get_object_or_404(Registro, id=registro_id)
+        
+        # Marcar como inadmitido
+        registro.inadmitido = True
+        registro.comentario = request.POST.get('motivo', 'Marcado como inadmitido por documento duplicado')
+        registro.save()
+        
+        # Marcar caso como resuelto
+        caso.estado = 'inadmitido'
+        caso.resuelto_por = request.user
+        caso.fecha_resolucion = timezone.now()
+        caso.notas_admin = f'Registro {registro.nombre_pasajero} marcado como inadmitido'
+        caso.save()
+        
+        messages.success(request, f'✅ Caso #{caso.id} resuelto. Registro marcado como inadmitido.')
+        return redirect('casos_especiales_list')
+    
+    return redirect('casos_especiales_list')
+
+
+@login_required
+def resolver_caso_eliminar(request, caso_id, registro_id):
+    """Eliminar un registro duplicado"""
+    if request.method == 'POST':
+        caso = get_object_or_404(CasoEspecial, id=caso_id)
+        registro = get_object_or_404(Registro, id=registro_id)
+        
+        nombre_eliminado = registro.nombre_pasajero
+        
+        # Eliminar el registro
+        registro.delete()
+        
+        # Marcar caso como resuelto
+        caso.estado = 'eliminado'
+        caso.resuelto_por = request.user
+        caso.fecha_resolucion = timezone.now()
+        caso.notas_admin = f'Registro de {nombre_eliminado} eliminado del sistema'
+        caso.save()
+        
+        messages.success(request, f'✅ Caso #{caso.id} resuelto. Registro eliminado.')
+        return redirect('casos_especiales_list')
+    
+    return redirect('casos_especiales_list')

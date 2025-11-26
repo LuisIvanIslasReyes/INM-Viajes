@@ -1,0 +1,129 @@
+    .caso-card {
+        background: white;
+        border: 2px solid #e5e7eb;
+        border-radius: 16px;
+        padding: 24px;
+        margin-bottom: 32px;
+        box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+    }
+    
+    .caso-header-custom {
+        background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+        padding: 20px 24px;
+        border-radius: 12px;
+        margin-bottom: 24px;
+        color: white;
+        box-shadow: 0 4px 6px -1px rgba(251, 191, 36, 0.3);
+    }
+    
+    .registro-nuevo-section {
+        background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+        border: 3px solid #fbbf24;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 24px;
+    }
+    
+    .registro-conflictivo-section {
+        background: #f3f4f6;
+        border: 2px solid #d1d5db;
+        border-radius: 12px;
+        padding: 20px;
+        margin-bottom: 16px;
+    }
+    
+    .registro-info {
+        background: white;
+        border-radius: 8px;
+        padding: 16px;
+        margin-top: 12px;
+        box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1);
+    }
+    
+    .info-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 12px;
+    }
+    
+    .info-item {
+        padding: 8px 0;
+    }
+    
+    .info-label {
+        font-weight: 600;
+        color: #374151;
+        margin-right: 8px;
+    }
+    
+    .info-value {
+        color: #6b7280;
+    }
+    
+    .section-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: #1f2937;
+        margin-bottom: 16px;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .alert-warning-custom {
+        background: #fef3c7;
+        border: 2px solid #fbbf24;
+        border-radius: 12px;
+        padding: 16px;
+        margin-bottom: 24px;
+    }
+    
+    .acciones-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 12px;
+        margin-top: 20px;
+    }
+    
+    .divider-custom {
+        border-top: 2px dashed #d1d5db;
+        margin: 24px 0;
+    }
+    
+    .badge-pendiente {
+        @apply badge badge-warning badge-lg;
+    }
+    
+    .badge-aceptado {
+        @apply badge badge-success badge-lg;
+    }
+    
+    .badge-editado {
+        @apply badge badge-info badge-lg;
+    }
+    
+    .badge-inadmitido {
+        @apply badge badge-error badge-lg;
+    }
+    
+    .badge-eliminado {
+        @apply badge badge-ghost badge-lg;
+    }
+
+    .icon-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: rgba(255, 255, 255, 0.2);
+        margin-right: 8px;
+    }
+    
+    .info-icon {
+        width: 20px;
+        text-align: center;
+        margin-right: 8px;
+        color: #6b7280;
+    }

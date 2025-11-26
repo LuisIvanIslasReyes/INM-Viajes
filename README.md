@@ -121,9 +121,15 @@ Accede a: `http://127.0.0.1:8000/`
 
 ✅ **Carga de Excel con Pandas**: Lee y procesa archivos Excel automáticamente
 ✅ **Validación de Archivos**: Solo acepta .xlsx/.xls, máximo 10MB
-✅ **Interfaz Amigable**: Templates con Bootstrap-style CSS
-✅ **Permisos**: Solo superusuarios pueden modificar campos administrativos
-✅ **Filtros**: Por lote, confirmado, inadmitido
+✅ **Drag & Drop Upload**: Interfaz moderna para arrastrar archivos
+✅ **Detección de Duplicados Inteligente**: 3 niveles de validación
+✅ **🔔 Módulo de Casos Especiales**: Gestión de documentos duplicados con revisión manual (Ver [CASOS_ESPECIALES.md](CASOS_ESPECIALES.md))
+✅ **Búsqueda por Rango de Fechas**: Vista especializada con agrupación por día
+✅ **Descarga de Archivos**: Botón de descarga segura para archivos Excel
+✅ **Verificación de Duplicados**: Herramienta de análisis de documentos duplicados
+✅ **Interfaz Amigable**: Templates con DaisyUI + Tailwind CSS
+✅ **Permisos**: Sistema flexible de permisos para usuarios
+✅ **Filtros Avanzados**: Por lote, confirmado, inadmitido, fecha, búsqueda de texto
 ✅ **Paginación**: 50 registros por página
 ✅ **Django Admin**: Panel de administración completo
 ✅ **Mensajes Flash**: Feedback visual de las acciones
@@ -180,6 +186,9 @@ Viajes/
 3. **Archivos Media**: Los archivos Excel se guardan en `media/uploads/`
 4. **Encoding**: La base de datos usa `utf8mb4` para soportar caracteres chinos
 5. **Zona Horaria**: Configurada para `America/Mexico_City`
+6. **🔔 Casos Especiales**: Revisa diariamente los casos pendientes de documentos duplicados (Ver [Guía Rápida](CASOS_ESPECIALES_GUIA_RAPIDA.md))
+7. **Validación de Duplicados**: El sistema permite la misma persona en diferentes vuelos/fechas (multi-travel)
+8. **Fechas Mínimas**: Las búsquedas por fecha tienen restricción desde 10/11/2025
 
 ---
 
