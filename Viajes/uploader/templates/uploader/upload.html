@@ -17,25 +17,25 @@
     </div>
 
     <!-- Upload Form -->
-    <div class="card bg-base-100 border border-gray-200">
+    <div class="card bg-base-100 border border-green-200">
         <div class="card-body">
             <form method="post" enctype="multipart/form-data" class="space-y-4" id="uploadForm">
                 {% csrf_token %}
                 
                 <div class="form-control">
                     <label class="label">
-                        <span class="label-text font-semibold">Seleccionar archivo Excel</span>
+                        <span class="label-text font-semibold text-green-700">Seleccionar archivo Excel</span>
                     </label>
                     
                     <!-- Área de arrastrar y soltar -->
-                    <div id="dropZone" class="border-2 border-dashed border-primary rounded-lg p-8 text-center transition-all duration-300 hover:border-secondary hover:bg-base-200 cursor-pointer">
+                    <div id="dropZone" class="border-2 border-dashed border-green-500 rounded-lg p-8 text-center transition-all duration-300 hover:border-green-600 hover:bg-green-50 cursor-pointer">
                         <div id="dropZoneContent">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-primary mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-green-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            <p class="text-lg font-semibold text-gray-700 mb-2">Arrastra tu archivo aquí</p>
-                            <p class="text-sm text-gray-500 mb-4">o haz clic para seleccionar</p>
-                            <button type="button" onclick="document.getElementById('id_archivo').click()" class="btn btn-primary btn-sm">
+                            <p class="text-lg font-semibold text-green-700 mb-2">Arrastra tu archivo Excel aquí</p>
+                            <p class="text-sm text-green-600 mb-4">o haz clic para seleccionar</p>
+                            <button type="button" onclick="document.getElementById('id_archivo').click()" class="btn bg-green-600 hover:bg-green-700 text-white border-green-600 btn-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                 </svg>
@@ -45,13 +45,13 @@
                         
                         <!-- Nombre del archivo seleccionado -->
                         <div id="fileInfo" class="hidden">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-success mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-green-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
                             </svg>
-                            <p class="text-lg font-semibold text-success mb-2">✓ Archivo seleccionado</p>
+                            <p class="text-lg font-semibold text-green-700 mb-2">✓ Archivo Excel seleccionado</p>
                             <p id="fileName" class="text-sm text-gray-600 font-mono mb-2"></p>
                             <p id="fileSize" class="text-xs text-gray-500 mb-4"></p>
-                            <button type="button" onclick="clearFile()" class="btn btn-ghost btn-sm">
+                            <button type="button" onclick="clearFile()" class="btn btn-ghost btn-sm text-green-700 hover:bg-green-100">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                                 </svg>
@@ -64,17 +64,17 @@
                     <input type="file" id="id_archivo" name="archivo" accept=".xlsx,.xls" class="hidden" required>
                     
                     <label class="label">
-                        <span class="label-text-alt text-gray-500">
+                        <span class="label-text-alt text-green-600">
                             Formatos permitidos: .xlsx, .xls (Máximo 10MB)
                         </span>
                     </label>
                 </div>
 
-                <button type="submit" class="btn btn-primary btn-block" id="submitBtn" disabled>
+                <button type="submit" class="btn bg-green-600 hover:bg-green-700 text-white border-green-600 btn-block" id="submitBtn" disabled>
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    Cargar Archivo
+                    Cargar Archivo Excel
                 </button>
             </form>
         </div>

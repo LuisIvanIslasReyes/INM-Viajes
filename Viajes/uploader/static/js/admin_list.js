@@ -5,14 +5,42 @@ const clearSearchBtn = document.getElementById('clearSearch');
 const batchFilter = document.getElementById('batchFilter');
 const confirmadoFilter = document.getElementById('confirmadoFilter');
 const inadmitidoFilter = document.getElementById('inadmitidoFilter');
+const puntoInternacionFilter = document.getElementById('puntoInternacionFilter');
 
 // Auto-focus en el buscador si tiene contenido al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const highlightId = urlParams.get('highlight');
+    
+    // Si hay búsqueda activa, SIEMPRE hacer focus en el buscador
     if (searchInput.value.trim()) {
-        // Si hay búsqueda activa, hacer focus y mover el cursor al final
-        searchInput.focus();
-        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+        // Mostrar botón de limpiar
         clearSearchBtn.classList.remove('hidden');
+        
+        // Hacer focus inmediato en el buscador
+        setTimeout(() => {
+            searchInput.focus();
+            searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+        }, 100);
+        
+        // Si también hay un registro actualizado en esta página, hacer scroll
+        if (highlightId) {
+            const registroElement = document.getElementById(`registro-${highlightId}`);
+            if (registroElement) {
+                setTimeout(() => {
+                    registroElement.scrollIntoView({ 
+                        behavior: 'smooth', 
+                        block: 'center' 
+                    });
+                    
+                    // Efecto visual temporal (flash amarillo)
+                    registroElement.classList.add('bg-warning', 'bg-opacity-20');
+                    setTimeout(() => {
+                        registroElement.classList.remove('bg-warning', 'bg-opacity-20');
+                    }, 2000);
+                }, 300);
+            }
+        }
     }
 });
 
@@ -56,6 +84,10 @@ if (inadmitidoFilter) {
     inadmitidoFilter.addEventListener('change', applyFilters);
 }
 
+if (puntoInternacionFilter) {
+    puntoInternacionFilter.addEventListener('change', applyFilters);
+}
+
 function applyFilters() {
     const params = new URLSearchParams();
     
@@ -70,14 +102,19 @@ function applyFilters() {
         params.set('batch', batchFilter.value);
     }
     
-    // Confirmado
+    // Segunda Revisión (SR)
     if (confirmadoFilter.checked) {
         params.set('confirmado', 'true');
     }
     
-    // Inadmitido
+    // Rechazo (R)
     if (inadmitidoFilter.checked) {
         params.set('inadmitido', 'true');
+    }
+    
+    // Punto de Internación (PI)
+    if (puntoInternacionFilter.checked) {
+        params.set('punto_internacion', 'true');
     }
     
     // Redirigir con los nuevos filtros (siempre a la página 1)

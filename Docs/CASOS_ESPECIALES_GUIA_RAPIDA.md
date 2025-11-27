@@ -5,18 +5,15 @@
 Cuando subes un archivo Excel y una persona tiene el mismo número de documento que otra persona que ya está en el sistema **pero en un vuelo o fecha diferente**, el sistema:
 
 1. ✅ **NO bloquea** el registro (permite que se suba)
-2. 🔔 **Crea un Caso Especial** para que lo revises manualmente
-3. 📧 Te notifica que hay un caso pendiente
 
 ## ¿Cuándo se crean?
 
-### ❌ NO se crea caso especial (se bloquea directamente):
+### ✅ SÍ se crea caso especial:
 - Mismo documento + mismo vuelo + misma fecha = **Duplicado Real**
 - Ejemplo: Juan Pérez en vuelo CA123 del 24/11 aparece dos veces en el archivo
 
-### ✅ SÍ se crea caso especial:
-- Mismo documento + vuelo diferente ó fecha diferente = **Requiere Revisión**
-- Ejemplo: Juan Pérez en vuelo CA123 del 24/11 Y en vuelo CA456 del 25/11
+- Mimso nombre + Mismo documento + mismo vuelo + misma fecha = **Duplicado Real**
+- Ejemplo: Juan Pérez en vuelo CA123 del 24/11 aparece dos veces en el archivo
 
 ## Cómo Acceder
 
@@ -39,7 +36,7 @@ Cuando subes un archivo Excel y una persona tiene el mismo número de documento 
 
 **Qué hace**: Marca todos los registros como confirmados
 
-**Ejemplo**: Luis y María son hermanos, tienen el mismo documento, viajaron el mismo día en vuelos diferentes
+**Ejemplo**: Luis y María son hermanos, tienen el mismo documento, viajaron el mismo día en el mismo vuelo
 
 ---
 
@@ -86,7 +83,7 @@ Cuando subes un archivo Excel y una persona tiene el mismo número de documento 
 ### 👨‍👩‍👧‍👦 Hermanos con Mismo Documento
 ```
 Juan García - Doc: 111 - Vuelo: CA123 - 24/11
-Ana García  - Doc: 111 - Vuelo: CA456 - 24/11
+Ana García  - Doc: 111 - Vuelo: CA123 - 24/11
 ```
 **Acción**: ✅ Aceptar Ambos
 
@@ -142,4 +139,4 @@ Si no estás seguro de qué acción tomar:
 
 ---
 
-**Recuerda**: El sistema te ayuda a mantener la base de datos limpia sin bloquear cargas válidas. ¡Usa este módulo para revisar casos especiales de manera eficiente! 🚀
+**Recuerda**: El sistema te ayuda a mantener la base de datos limpia sin bloquear cargas válidas. ¡Usa este módulo para revisar casos especiales de manera eficiente! 

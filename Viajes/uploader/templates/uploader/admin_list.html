@@ -23,7 +23,7 @@
             <h2 class="text-3xl font-bold">Gestión de Registros de Viaje</h2>
             <p class="text-gray-600 mt-2">Total: <span id="total-registros">{{ page_obj.paginator.count }}</span> registros</p>
         </div>
-        <a href="{% url 'upload_excel' %}" class="btn btn-primary btn-lg gap-2">
+        <a href="{% url 'upload_excel' %}" class="btn btn-success btn-lg gap-2">
             <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
             </svg>
@@ -81,26 +81,37 @@
                         <span class="label-text font-semibold">Filtros Rápidos</span>
                     </label>
                     <div class="flex gap-2">
-                        <!-- Confirmado -->
-                        <label class="btn btn-sm {% if request.GET.confirmado == 'true' %}btn-success{% else %}btn-ghost{% endif %} gap-2 cursor-pointer">
+                        <!-- Segunda Revisión -->
+                        <label class="btn btn-sm {% if request.GET.confirmado == 'true' %}btn-success{% else %}btn-ghost{% endif %} gap-2 cursor-pointer" title="Segunda Revisión">
                             <input 
                                 type="checkbox" 
                                 id="confirmadoFilter" 
                                 class="checkbox checkbox-xs"
                                 {% if request.GET.confirmado == 'true' %}checked{% endif %}
                             >
-                            <span>Confirmados</span>
+                            <span>SR</span>
                         </label>
 
-                        <!-- Inadmitido -->
-                        <label class="btn btn-sm {% if request.GET.inadmitido == 'true' %}btn-error{% else %}btn-ghost{% endif %} gap-2 cursor-pointer">
+                        <!-- Rechazo -->
+                        <label class="btn btn-sm {% if request.GET.inadmitido == 'true' %}btn-error{% else %}btn-ghost{% endif %} gap-2 cursor-pointer" title="Rechazo">
                             <input 
                                 type="checkbox" 
                                 id="inadmitidoFilter" 
                                 class="checkbox checkbox-xs"
                                 {% if request.GET.inadmitido == 'true' %}checked{% endif %}
                             >
-                            <span>Inadmitidos</span>
+                            <span>R</span>
+                        </label>
+
+                        <!-- Punto de Internación -->
+                        <label class="btn btn-sm {% if request.GET.punto_internacion == 'true' %}btn-info{% else %}btn-ghost{% endif %} gap-2 cursor-pointer" title="Punto de Internación">
+                            <input 
+                                type="checkbox" 
+                                id="puntoInternacionFilter" 
+                                class="checkbox checkbox-xs"
+                                {% if request.GET.punto_internacion == 'true' %}checked{% endif %}
+                            >
+                            <span>PI</span>
                         </label>
                     </div>
                 </div>
@@ -129,15 +140,16 @@
                     <thead>
                         <tr class="bg-primary text-primary-content">
                             <!-- Campos Administrativos (Izquierda) -->
-                            <th class="sticky left-0 z-10 bg-primary text-center">Conf.</th>
-                            <th class="sticky left-[60px] z-10 bg-primary text-center">Inad.</th>
-                            <th class="sticky left-[120px] z-10 bg-primary">
+                            <th class="sticky left-0 z-10 bg-primary text-center" title="Segunda Revisión">SR</th>
+                            <th class="sticky left-[60px] z-10 bg-primary text-center" title="Rechazo">R</th>
+                            <th class="sticky left-[120px] z-10 bg-primary text-center" title="Punto de Internación">PI</th>
+                            <th class="sticky left-[180px] z-10 bg-primary">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
                                 </svg>
                                 Comentario
                             </th>
-                            <th class="sticky left-[300px] z-10 bg-primary">
+                            <th class="sticky left-[360px] z-10 bg-primary">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                                 </svg>
@@ -174,11 +186,12 @@
                             data-pasajero="{{ registro.nombre_pasajero|default:''|lower }}">
 
                             <!-- CAMPOS ADMINISTRATIVOS (FIJOS A LA IZQUIERDA) -->
-                            <td class="sticky left-0 z-10 text-center">
-                                <form method="post" action="{% url 'update_registro' registro.id %}" class="inline">
+                            <!-- SR - Segunda Revisión (Siempre activo) -->
+                            <td class="sticky left-0 z-10 text-center bg-base-100">
+                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="confirmado" value="{% if registro.confirmado %}false{% else %}true{% endif %}">
-                                    <button type="submit" class="btn btn-ghost btn-md">
+                                    <button type="submit" class="btn btn-ghost btn-sm" title="Segunda Revisión">
                                         {% if registro.confirmado %}
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -192,11 +205,14 @@
                                 </form>
                             </td>
                             
-                            <td class="sticky left-[60px] z-10 text-center">
-                                <form method="post" action="{% url 'update_registro' registro.id %}" class="inline">
+                            <!-- R - Rechazo (Siempre activo, pero se deshabilita si PI está activo) -->
+                            <td class="sticky left-[60px] z-10 text-center bg-base-100">
+                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline">
                                     {% csrf_token %}
                                     <input type="hidden" name="inadmitido" value="{% if registro.inadmitido %}false{% else %}true{% endif %}">
-                                    <button type="submit" class="btn btn-ghost btn-md">
+                                    <button type="submit" class="btn btn-ghost btn-sm {% if not registro.confirmado and not registro.inadmitido %}{% endif %}" 
+                                            title="Rechazo"
+                                            {% if registro.punto_internacion %}disabled{% endif %}>
                                         {% if registro.inadmitido %}
                                         <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                             <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
@@ -210,7 +226,29 @@
                                 </form>
                             </td>
                             
-                            <td class="sticky left-[120px] z-10">
+                            <!-- PI - Punto de Internación (Solo se habilita si SR está activo) -->
+                            <td class="sticky left-[120px] z-10 text-center bg-base-100">
+                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="punto_internacion" value="{% if registro.punto_internacion %}false{% else %}true{% endif %}">
+                                    <button type="submit" class="btn btn-ghost btn-sm" 
+                                            title="Punto de Internación"
+                                            {% if not registro.confirmado %}disabled{% endif %}>
+                                        {% if registro.punto_internacion %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                        </svg>
+                                        {% else %}
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 {% if registro.confirmado %}text-gray-400{% else %}text-gray-200{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                        </svg>
+                                        {% endif %}
+                                    </button>
+                                </form>
+                            </td>
+                            
+                            <!-- Comentario -->
+                            <td class="sticky left-[180px] z-10 bg-base-100">
                                 <div class="max-w-[170px] truncate text-xs" title="{{ registro.comentario }}">
                                     {% if registro.comentario %}
                                     {{ registro.comentario }}
@@ -220,7 +258,8 @@
                                 </div>
                             </td>
                             
-                            <td class="sticky left-[300px] z-10 text-center">
+                            <!-- Acciones -->
+                            <td class="sticky left-[360px] z-10 text-center bg-base-100">
                                 <button onclick="openEditModal({{ registro.id }}, '{{ registro.comentario|default:""|escapejs }}')" 
                                         class="btn btn-sm btn-accent">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -277,7 +316,7 @@
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="24" class="text-center py-8">
+                            <td colspan="25" class="text-center py-8">
                                 <div class="flex flex-col items-center gap-4">
                                     <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
@@ -299,9 +338,9 @@
     <div class="flex justify-center">
         <div class="join">
             {% if page_obj.has_previous %}
-            <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.confirmado %}&confirmado={{ request.GET.confirmado }}{% endif %}{% if request.GET.inadmitido %}&inadmitido={{ request.GET.inadmitido }}{% endif %}" 
+            <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.confirmado %}&confirmado={{ request.GET.confirmado }}{% endif %}{% if request.GET.inadmitido %}&inadmitido={{ request.GET.inadmitido }}{% endif %}{% if request.GET.punto_internacion %}&punto_internacion={{ request.GET.punto_internacion }}{% endif %}" 
                class="join-item btn btn-sm">«</a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.confirmado %}&confirmado={{ request.GET.confirmado }}{% endif %}{% if request.GET.inadmitido %}&inadmitido={{ request.GET.inadmitido }}{% endif %}" 
+            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.confirmado %}&confirmado={{ request.GET.confirmado }}{% endif %}{% if request.GET.inadmitido %}&inadmitido={{ request.GET.inadmitido }}{% endif %}{% if request.GET.punto_internacion %}&punto_internacion={{ request.GET.punto_internacion }}{% endif %}" 
                class="join-item btn btn-sm">‹</a>
             {% endif %}
             
@@ -310,9 +349,9 @@
             </button>
             
             {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.confirmado %}&confirmado={{ request.GET.confirmado }}{% endif %}{% if request.GET.inadmitido %}&inadmitido={{ request.GET.inadmitido }}{% endif %}" 
+            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.confirmado %}&confirmado={{ request.GET.confirmado }}{% endif %}{% if request.GET.inadmitido %}&inadmitido={{ request.GET.inadmitido }}{% endif %}{% if request.GET.punto_internacion %}&punto_internacion={{ request.GET.punto_internacion }}{% endif %}" 
                class="join-item btn btn-sm">›</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.confirmado %}&confirmado={{ request.GET.confirmado }}{% endif %}{% if request.GET.inadmitido %}&inadmitido={{ request.GET.inadmitido }}{% endif %}" 
+            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.confirmado %}&confirmado={{ request.GET.confirmado }}{% endif %}{% if request.GET.inadmitido %}&inadmitido={{ request.GET.inadmitido }}{% endif %}{% if request.GET.punto_internacion %}&punto_internacion={{ request.GET.punto_internacion }}{% endif %}" 
                class="join-item btn btn-sm">»</a>
             {% endif %}
         </div>

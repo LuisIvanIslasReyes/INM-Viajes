@@ -3,9 +3,21 @@
         position: sticky;
     }
     
-    /* Sombra para separar las columnas fijas */
-    th.sticky:nth-child(4),
-    td.sticky:nth-child(4) {
+    /* 
+    ===================================
+    🎯 LÓGICA DE ESTADOS (SR, R, PI)
+    ===================================
+    SR (Segunda Revisión): Siempre activo
+    R (Rechazo): Siempre activo, EXCEPTO si PI está activo
+    PI (Punto de Internación): Solo se habilita si SR está activo
+    
+    Regla: R y PI son mutuamente excluyentes
+    ===================================
+    */
+    
+    /* Sombra para separar las columnas fijas de las scrolleables */
+    th.sticky:nth-child(5),
+    td.sticky:nth-child(5) {
         box-shadow: 2px 0 5px rgba(0,0,0,0.1);
     }
     
@@ -14,20 +26,25 @@
         max-width: 100%;
     }
     
-    /* Ancho mínimo para columnas fijas */
+    /* Ancho mínimo para columnas fijas de estado (SR, R, PI) */
     th.sticky:nth-child(1), td.sticky:nth-child(1),
-    th.sticky:nth-child(2), td.sticky:nth-child(2) {
-        min-width: 70px;
-        width: 70px;
-        max-width: 70px;
-    }
-    
+    th.sticky:nth-child(2), td.sticky:nth-child(2),
     th.sticky:nth-child(3), td.sticky:nth-child(3) {
-        min-width: 200px;
+        min-width: 60px;
+        width: 60px;
+        max-width: 60px;
     }
     
+    /* Columna de Comentario */
     th.sticky:nth-child(4), td.sticky:nth-child(4) {
-        min-width: 100px;
+        min-width: 180px;
+        width: 180px;
+    }
+    
+    /* Columna de Acciones */
+    th.sticky:nth-child(5), td.sticky:nth-child(5) {
+        min-width: 80px;
+        width: 80px;
     }
     
     /* 🔥 TAMAÑO DE FUENTE MÁS GRANDE */
@@ -84,4 +101,14 @@
     .table svg {
         width: 1.5rem;
         height: 1.5rem;
+    }
+    
+    /* Efecto de highlight para registro recién actualizado */
+    @keyframes highlight-pulse {
+        0%, 100% { background-color: transparent; }
+        50% { background-color: rgba(250, 204, 21, 0.3); }
+    }
+    
+    .bg-opacity-20 {
+        animation: highlight-pulse 2s ease-in-out;
     }

@@ -187,24 +187,53 @@ def upload_excel(request):
 @login_required
 def update_registro(request, registro_id):
     """Vista para actualizar campos (TODOS pueden editar TODO)"""
+    from urllib.parse import urlparse, parse_qs, urlencode
+    from django.urls import reverse
+    
     if request.method == 'POST':
         try:
             registro = Registro.objects.get(id=registro_id)
             
             # ✅ SIN VALIDACIÓN DE PERMISOS - Todos pueden editar todo
             
-            # Actualizar campos
+            # Actualizar campos según la nueva lógica:
+            # SR (Segunda Revisión) = confirmado
+            # R (Rechazo) = inadmitido
+            # PI (Punto de Internación) = punto_internacion
+            
             if 'confirmado' in request.POST:
+                # Toggle Segunda Revisión
                 registro.confirmado = request.POST.get('confirmado') == 'true'
             
             if 'inadmitido' in request.POST:
+                # Toggle Rechazo
                 registro.inadmitido = request.POST.get('inadmitido') == 'true'
+                # Si se marca como Rechazo, desmarcar Punto de Internación
+                if registro.inadmitido:
+                    registro.punto_internacion = False
+            
+            if 'punto_internacion' in request.POST:
+                # Toggle Punto de Internación
+                registro.punto_internacion = request.POST.get('punto_internacion') == 'true'
+                # Si se marca PI, desmarcar Rechazo
+                if registro.punto_internacion:
+                    registro.inadmitido = False
             
             if 'comentario' in request.POST:
                 registro.comentario = request.POST.get('comentario')
             
             registro.save()
             messages.success(request, '✅ Registro actualizado exitosamente.')
+            
+            # Mantener TODOS los parámetros GET que venían en la URL
+            params = request.GET.copy()
+            
+            # Agregar el parámetro highlight
+            params['highlight'] = str(registro_id)
+            
+            # Construir la URL completa manteniendo búsqueda, filtros, paginación, etc.
+            redirect_url = reverse('admin_list') + '?' + urlencode(params)
+            return redirect(redirect_url)
             
         except Registro.DoesNotExist:
             messages.error(request, '❌ Registro no encontrado.')
@@ -235,15 +264,20 @@ def admin_list(request):
     if batch_id:
         registros = registros.filter(batch_id=batch_id)
     
-    # Filtro por confirmado
+    # Filtro por Segunda Revisión (SR)
     confirmado = request.GET.get('confirmado')
     if confirmado == 'true':
         registros = registros.filter(confirmado=True)
     
-    # Filtro por inadmitido
+    # Filtro por Rechazo (R)
     inadmitido = request.GET.get('inadmitido')
     if inadmitido == 'true':
         registros = registros.filter(inadmitido=True)
+    
+    # Filtro por Punto de Internación (PI)
+    punto_internacion = request.GET.get('punto_internacion')
+    if punto_internacion == 'true':
+        registros = registros.filter(punto_internacion=True)
     
     # Paginación
     paginator = Paginator(registros, 50)
