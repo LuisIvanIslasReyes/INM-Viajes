@@ -6,7 +6,17 @@ const batchFilter = document.getElementById('batchFilter');
 const confirmadoFilter = document.getElementById('confirmadoFilter');
 const inadmitidoFilter = document.getElementById('inadmitidoFilter');
 
-// Función de búsqueda en tiempo real
+// Auto-focus en el buscador si tiene contenido al cargar la página
+document.addEventListener('DOMContentLoaded', function() {
+    if (searchInput.value.trim()) {
+        // Si hay búsqueda activa, hacer focus y mover el cursor al final
+        searchInput.focus();
+        searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
+        clearSearchBtn.classList.remove('hidden');
+    }
+});
+
+// Función de búsqueda en tiempo real (búsqueda del lado del servidor)
 searchInput.addEventListener('input', function() {
     clearTimeout(searchTimeout);
     const searchValue = this.value.trim();
@@ -18,71 +28,19 @@ searchInput.addEventListener('input', function() {
         clearSearchBtn.classList.add('hidden');
     }
     
-    // Esperar 300ms antes de filtrar (debounce)
+    // Esperar 500ms antes de buscar en el servidor (debounce)
     searchTimeout = setTimeout(() => {
-        if (searchValue.length > 0) {
-            filterTable(searchValue);
-        } else {
-            showAllRows();
-        }
-    }, 300);
+        applyFilters();
+    }, 500);
 });
-
-// Función para filtrar la tabla
-function filterTable(searchValue) {
-    const rows = document.querySelectorAll('#registrosTable tbody tr:not(#noResults)');
-    let visibleCount = 0;
-    
-    searchValue = searchValue.toLowerCase();
-    
-    rows.forEach(row => {
-        const documento = row.getAttribute('data-documento') ? row.getAttribute('data-documento').toLowerCase() : '';
-        const pasajero = row.getAttribute('data-pasajero') ? row.getAttribute('data-pasajero').toLowerCase() : '';
-        
-        if (documento.includes(searchValue) || pasajero.includes(searchValue)) {
-            row.style.display = '';
-            visibleCount++;
-        } else {
-            row.style.display = 'none';
-        }
-    });
-    
-    // Actualizar contador
-    const totalRegistros = document.getElementById('total-registros');
-    if (totalRegistros) {
-        totalRegistros.textContent = visibleCount;
-    }
-    
-    // Mostrar mensaje si no hay resultados
-    const noResults = document.getElementById('noResults');
-    if (visibleCount === 0 && noResults) {
-        noResults.style.display = '';
-    } else if (noResults) {
-        noResults.style.display = 'none';
-    }
-}
-
-// Mostrar todas las filas
-function showAllRows() {
-    const rows = document.querySelectorAll('#registrosTable tbody tr:not(#noResults)');
-    rows.forEach(row => row.style.display = '');
-    
-    const totalRegistros = document.getElementById('total-registros');
-    if (totalRegistros) {
-        totalRegistros.textContent = rows.length;
-    }
-    
-    const noResults = document.getElementById('noResults');
-    if (noResults) {
-        noResults.style.display = 'none';
-    }
-}
 
 // Limpiar búsqueda
 function clearSearchFilter() {
     searchInput.value = '';
     clearSearchBtn.classList.add('hidden');
-    showAllRows();
+    
+    // Aplicar filtros sin el parámetro search
+    applyFilters();
 }
 
 // Aplicar filtros cuando cambien
@@ -99,35 +57,30 @@ if (inadmitidoFilter) {
 }
 
 function applyFilters() {
-    const params = new URLSearchParams(window.location.search);
+    const params = new URLSearchParams();
+    
+    // Búsqueda
+    const searchValue = searchInput.value.trim();
+    if (searchValue) {
+        params.set('search', searchValue);
+    }
     
     // Batch
     if (batchFilter.value) {
         params.set('batch', batchFilter.value);
-    } else {
-        params.delete('batch');
     }
     
     // Confirmado
     if (confirmadoFilter.checked) {
         params.set('confirmado', 'true');
-    } else {
-        params.delete('confirmado');
     }
     
     // Inadmitido
     if (inadmitidoFilter.checked) {
         params.set('inadmitido', 'true');
-    } else {
-        params.delete('inadmitido');
     }
     
-    // Mantener búsqueda
-    if (searchInput.value) {
-        params.set('search', searchInput.value);
-    }
-    
-    // Redirigir con los nuevos filtros
+    // Redirigir con los nuevos filtros (siempre a la página 1)
     window.location.search = params.toString();
 }
 
