@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>404 - Página No Encontrada | Viajes INM</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
+    <div class="text-center max-w-2xl">
+        <div class="mb-8">
+            <!-- Icono de avión perdido -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32 mx-auto text-primary opacity-80 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+            </svg>
+        </div>
+        
+        <h1 class="text-9xl font-bold text-primary mb-4">404</h1>
+        <h2 class="text-4xl font-bold text-gray-800 mb-4">¡Vuelo No Encontrado!</h2>
+        <p class="text-xl text-gray-600 mb-8">
+            Lo sentimos, la página que buscas no existe o fue movida a otro destino.
+        </p>
+        
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <div class="flex items-center justify-center gap-2 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-warning" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-700">Posibles razones:</h3>
+            </div>
+            <ul class="text-left text-gray-600 space-y-2">
+                <li class="flex items-start gap-2">
+                    <span class="text-primary mt-1">✈️</span>
+                    <span>La URL fue escrita incorrectamente</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-primary mt-1">✈️</span>
+                    <span>El recurso fue eliminado o movido</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-primary mt-1">✈️</span>
+                    <span>El enlace que seguiste está desactualizado</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/" class="btn btn-primary btn-lg gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Volver al Inicio
+            </a>
+            <button onclick="window.history.back()" class="btn btn-ghost btn-lg gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Página Anterior
+            </button>
+        </div>
+        
+        <div class="mt-12 text-gray-500 text-sm">
+            <p>¿Necesitas ayuda? Contacta al administrador del sistema</p>
+        </div>
+    </div>
+</body>
+</html>

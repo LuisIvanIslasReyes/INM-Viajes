@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="es" data-theme="light">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>400 - Solicitud Incorrecta | Viajes INM</title>
+    <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-gradient-to-br from-purple-50 to-pink-100 min-h-screen flex items-center justify-center p-4">
+    <div class="text-center max-w-2xl">
+        <div class="mb-8">
+            <!-- Icono de documento con error -->
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32 mx-auto text-secondary opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+            </svg>
+        </div>
+        
+        <h1 class="text-9xl font-bold text-secondary mb-4">400</h1>
+        <h2 class="text-4xl font-bold text-gray-800 mb-4">¡Solicitud Incorrecta!</h2>
+        <p class="text-xl text-gray-600 mb-8">
+            El servidor no pudo entender tu solicitud debido a una sintaxis inválida.
+        </p>
+        
+        <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
+            <div class="flex items-center justify-center gap-2 mb-4">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-secondary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <h3 class="text-lg font-semibold text-gray-700">¿Qué significa esto?</h3>
+            </div>
+            <ul class="text-left text-gray-600 space-y-2">
+                <li class="flex items-start gap-2">
+                    <span class="text-secondary mt-1">📋</span>
+                    <span>Puede que hayas enviado datos incorrectos en un formulario</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-secondary mt-1">📋</span>
+                    <span>La URL puede contener caracteres no válidos</span>
+                </li>
+                <li class="flex items-start gap-2">
+                    <span class="text-secondary mt-1">📋</span>
+                    <span>Hubo un problema al procesar tu solicitud</span>
+                </li>
+            </ul>
+        </div>
+        
+        <div class="flex flex-col sm:flex-row gap-4 justify-center">
+            <a href="/" class="btn btn-secondary btn-lg gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                </svg>
+                Volver al Inicio
+            </a>
+            <button onclick="window.history.back()" class="btn btn-ghost btn-lg gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+                </svg>
+                Página Anterior
+            </button>
+        </div>
+        
+        <div class="mt-12 text-gray-500 text-sm">
+            <p>Si el problema persiste, por favor contacta al soporte técnico</p>
+        </div>
+    </div>
+</body>
+</html>

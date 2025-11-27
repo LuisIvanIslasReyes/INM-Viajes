@@ -58,7 +58,9 @@ ROOT_URLCONF = 'Viajes.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [
+            BASE_DIR / 'uploader' / 'templates' / 'errors',  # Páginas de error personalizadas
+        ],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
