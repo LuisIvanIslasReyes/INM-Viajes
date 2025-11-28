@@ -212,33 +212,42 @@ def update_registro(request, registro_id):
                     
             # R solo se puede activar si SR está activo
             elif 'rechazado' in request.POST:
-                if registro.segunda_revision:
-                    registro.rechazado = request.POST.get('rechazado') == 'true'
-                # Si se marca como Rechazo, desmarcar Internación
-                if registro.rechazado:
-                    registro.internacion = False
-                else:
-                    messages.warning(request, 'Debes marcar "Segunda revisión (SR)" antes de marcar "Rechazo (R)".')
+                nuevo_valor = request.POST.get('rechazado') == 'true'
+                
+                # Si está intentando ACTIVAR R, validar que SR esté activo
+                if nuevo_valor and not registro.segunda_revision:
+                    messages.warning(request, '⚠️ Debes marcar "Segunda Revisión (SR)" antes de poder rechazar.')
+                    # Redirigir sin guardar
                     params = request.GET.copy()
                     params['highlight'] = str(registro_id)
                     redirect_url = reverse('admin_list') + '?' + urlencode(params)
                     return redirect(redirect_url)
                 
+                # Si la validación pasa (o está desactivando), actualizar
+                registro.rechazado = nuevo_valor
+                # Si se marca como Rechazo, desmarcar Internación
+                if registro.rechazado:
+                    registro.internacion = False
+                
         
             # I solo se puede activar si SR está activo
             elif 'internacion' in request.POST:
-                if registro.segunda_revision:
-                # Toggle Internación
-                    registro.internacion = request.POST.get('internacion') == 'true'
-                    # Si se marca Internación, desmarcar Rechazo
-                    if registro.internacion:
-                        registro.rechazado = False
-                else: 
-                    messages.warning(request, 'Debes marcar "Segunda revisión (SR)" antes de marcar "Punto de Internación (PI)".')
+                nuevo_valor = request.POST.get('internacion') == 'true'
+                
+                # Si está intentando ACTIVAR I, validar que SR esté activo
+                if nuevo_valor and not registro.segunda_revision:
+                    messages.warning(request, '⚠️ Debes marcar "Segunda Revisión (SR)" antes de marcar Internación (I).')
+                    # Redirigir sin guardar
                     params = request.GET.copy()
                     params['highlight'] = str(registro_id)
                     redirect_url = reverse('admin_list') + '?' + urlencode(params)
                     return redirect(redirect_url)
+                
+                # Si la validación pasa (o está desactivando), actualizar
+                registro.internacion = nuevo_valor
+                # Si se marca I, desmarcar Rechazo
+                if registro.internacion:
+                    registro.rechazado = False
             
             elif 'comentario' in request.POST:
                 registro.comentario = request.POST.get('comentario')
