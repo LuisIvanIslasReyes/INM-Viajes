@@ -1,16 +1,24 @@
 {% extends 'uploader/base_admin.html' %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
+<div class="space-y-6">
+    <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold"> Gestión de Cargas de Archivos</h1>
-        <a href="{% url 'admin_list' %}" class="btn btn-ghost">
-            ← Volver a Registros
+        <div>
+            <h2 class="text-3xl font-bold text-gray-800">
+                <i class="fas fa-boxes-stacked text-green-600 mr-2"></i>
+                Gestión de Cargas de Archivos
+            </h2>
+            <p class="text-gray-600 mt-2">Administra y revisa todos los archivos Excel cargados al sistema</p>
+        </div>
+        <a href="{% url 'admin_list' %}" class="btn btn-primary">
+            <i class="fas fa-arrow-left mr-2"></i>
+            Volver a Registros
         </a>
     </div>
 
     <!-- Tabla de Cargas -->
-    <div class="card bg-base-100 shadow-xl">
+    <div class="card bg-base-100 border border-green-200 shadow-xl">
         <div class="card-body">
             <div class="overflow-x-auto">
                 <table class="table table-zebra w-full">
@@ -30,9 +38,7 @@
                             <td>{{ batch.id }}</td>
                             <td>
                                 <div class="flex items-center gap-2">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
+                                    <i class="fas fa-file-excel text-success text-xl"></i>
                                     <span class="font-mono text-sm">{{ batch.archivo.name|truncatechars:50 }}</span>
                                 </div>
                             </td>
@@ -45,24 +51,27 @@
                             </td>
                             <td>
                                 <div class="flex gap-2">
-                                    <a href="{% url 'admin_list' %}?batch={{ batch.id }}" class="btn btn-sm btn-info">
-                                        👁️ Ver Registros
+                                    <a href="{% url 'admin_list' %}?batch={{ batch.id }}" class="btn btn-sm btn-info" title="Ver registros">
+                                        <i class="fas fa-eye"></i>
+                                        Ver
                                     </a>
                                     <a href="{% url 'download_batch_file' batch.id %}" class="btn btn-sm btn-success" title="Descargar archivo Excel">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
-                                        </svg>
+                                        <i class="fas fa-download"></i>
+                                        Descargar
                                     </a>
-                                    <button onclick="confirmDelete({{ batch.id }}, '{{ batch.archivo.name|escapejs }}')" class="btn btn-sm btn-error">
-                                        🗑️ Eliminar
+                                    <button onclick="confirmDelete({{ batch.id }}, '{{ batch.archivo.name|escapejs }}')" class="btn btn-sm btn-error" title="Eliminar carga">
+                                        <i class="fas fa-trash"></i>
+                                        Eliminar
                                     </button>
                                 </div>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="6" class="text-center text-gray-500 py-8">
-                                📭 No hay cargas de archivos registradas
+                            <td colspan="6" class="text-center text-gray-500 py-12">
+                                <i class="fas fa-inbox text-6xl text-green-300 mb-4 block"></i>
+                                <p class="text-lg font-semibold">No hay cargas de archivos registradas</p>
+                                <p class="text-sm mt-2">Los archivos Excel cargados aparecerán aquí</p>
                             </td>
                         </tr>
                         {% endfor %}
@@ -93,7 +102,10 @@
 <!-- Modal de confirmación -->
 <dialog id="delete_modal" class="modal">
     <div class="modal-box">
-        <h3 class="font-bold text-lg">⚠️ Confirmar Eliminación</h3>
+        <h3 class="font-bold text-lg text-warning">
+            <i class="fas fa-triangle-exclamation mr-2"></i>
+            Confirmar Eliminación
+        </h3>
         <p class="py-4">
             ¿Está seguro que desea eliminar la carga <strong id="batch_name"></strong>?
             <br><br>

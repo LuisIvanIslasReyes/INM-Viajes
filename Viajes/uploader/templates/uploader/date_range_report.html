@@ -13,7 +13,10 @@
 <div class="container mx-auto px-4 py-6">
     <!-- Header -->
     <div class="mb-6">
-        <h1 class="text-3xl font-bold mb-2">📅 Búsqueda por Rango de Fechas</h1>
+        <h1 class="text-3xl font-bold mb-2">
+            <i class="fas fa-calendar-alt mr-2"></i>
+            Búsqueda por Rango de Fechas
+        </h1>
         <p class="text-base-content/70">
             Busca y visualiza registros de vuelos por período de tiempo
         </p>
@@ -22,12 +25,18 @@
     <!-- Formulario de búsqueda -->
     <form method="GET" class="card bg-base-200 shadow-xl mb-6">
         <div class="card-body">
-            <h2 class="card-title">🔍 Seleccionar Rango de Fechas</h2>
+            <h2 class="card-title">
+                <i class="fas fa-search mr-2"></i>
+                Seleccionar Rango de Fechas
+            </h2>
             
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div class="form-control">
                     <label class="label">
-                        <span class="label-text font-semibold">📆 Fecha Inicio</span>
+                        <span class="label-text font-semibold">
+                            <i class="fas fa-calendar-day mr-1"></i>
+                            Fecha Inicio
+                        </span>
                     </label>
                     <input 
                         type="date" 
@@ -45,7 +54,10 @@
 
                 <div class="form-control">
                     <label class="label">
-                        <span class="label-text font-semibold">📆 Fecha Fin</span>
+                        <span class="label-text font-semibold">
+                            <i class="fas fa-calendar-day mr-1"></i>
+                            Fecha Fin
+                        </span>
                     </label>
                     <input 
                         type="date" 
@@ -64,11 +76,13 @@
 
             <div class="card-actions justify-end">
                 <button type="submit" class="btn btn-primary">
-                    🔎 Buscar Registros
+                    <i class="fas fa-search mr-1"></i>
+                    Buscar Registros
                 </button>
                 {% if fecha_inicio or fecha_fin %}
                 <a href="{% url 'date_range_report' %}" class="btn btn-ghost">
-                    🔄 Limpiar Filtros
+                    <i class="fas fa-rotate-right mr-1"></i>
+                    Limpiar Filtros
                 </a>
                 {% endif %}
             </div>
@@ -92,24 +106,31 @@
     {% for stat in estadisticas_por_fecha %}
     <div class="fecha-grupo mb-6">
         <!-- Encabezado de fecha -->
-        <div class="fecha-header">
+        <div class="fecha-header cursor-pointer hover:bg-base-300 transition-colors" onclick="toggleFecha(this)">
             <div class="flex items-center gap-3">
-                <span class="fecha-icono">📅</span>
+                <i class="fas fa-chevron-down fecha-toggle transition-transform"></i>
+                <i class="fas fa-calendar-day text-primary"></i>
                 <h3 class="fecha-titulo">{{ stat.fecha|date:"l, d \d\e F \d\e Y"|title }}</h3>
             </div>
             <div class="flex gap-2">
                 <span class="badge badge-primary badge-lg">Total: {{ stat.total }}</span>
-                {% if stat.confirmados > 0 %}
-                <span class="badge badge-success badge-lg">✓ {{ stat.confirmados }}</span>
+                {% if stat.segunda_revisions > 0 %}
+                <span class="badge badge-warning badge-lg">
+                    <i class="fas fa-exclamation-circle mr-1"></i>
+                    SR: {{ stat.segunda_revisions }}
+                </span>
                 {% endif %}
-                {% if stat.inadmitidos > 0 %}
-                <span class="badge badge-error badge-lg">✗ {{ stat.inadmitidos }}</span>
+                {% if stat.rechazados > 0 %}
+                <span class="badge badge-error badge-lg">
+                    <i class="fas fa-times-circle mr-1"></i>
+                    R: {{ stat.rechazados }}
+                </span>
                 {% endif %}
             </div>
         </div>
 
         <!-- Tabla de registros -->
-        <div class="overflow-x-auto">
+        <div class="overflow-x-auto fecha-content">
             <table class="table table-sm table-zebra">
                 <thead>
                     <tr>
@@ -137,12 +158,29 @@
                             </span>
                         </td>
                         <td>
-                            {% if registro.confirmado %}
-                                <span class="badge badge-success badge-sm">✓ Confirmado</span>
-                            {% elif registro.inadmitido %}
-                                <span class="badge badge-error badge-sm">✗ Inadmitido</span>
-                            {% else %}
-                                <span class="badge badge-ghost badge-sm">⏳ Pendiente</span>
+                            {% if registro.segunda_revision %}
+                                <span class="badge badge-warning badge-sm">
+                                    <i class="fas fa-exclamation-circle mr-1"></i>
+                                    SR
+                                </span>
+                            {% endif %}
+                            {% if registro.rechazado %}
+                                <span class="badge badge-error badge-sm">
+                                    <i class="fas fa-times-circle mr-1"></i>
+                                    R
+                                </span>
+                            {% endif %}
+                            {% if registro.internacion %}
+                                <span class="badge badge-info badge-sm">
+                                    <i class="fas fa-plane-arrival mr-1"></i>
+                                    I
+                                </span>
+                            {% endif %}
+                            {% if not registro.segunda_revision and not registro.rechazado and not registro.internacion %}
+                                <span class="badge badge-ghost badge-sm">
+                                    <i class="fas fa-clock mr-1"></i>
+                                    Pendiente
+                                </span>
                             {% endif %}
                         </td>
                         <td class="text-xs">

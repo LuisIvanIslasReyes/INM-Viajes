@@ -1,5 +1,6 @@
 <!-- filepath: c:\Users\alberto\Documents\GitHub\INM-Viajes\Viajes\uploader\templates\uploader\upload.html -->
 {% extends 'uploader/base.html' %}
+{% load static %}
 
 {% block title %}Subir Excel - INM Viajes{% endblock %}
 
@@ -24,7 +25,7 @@
                 
                 <div class="form-control">
                     <label class="label">
-                        <span class="label-text font-semibold text-green-700">Seleccionar archivo Excel</span>
+                        <span class="label-text font-semibold text-green-700">Seleccionar archivos Excel (máximo 2)</span>
                     </label>
                     
                     <!-- Área de arrastrar y soltar -->
@@ -33,39 +34,26 @@
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-green-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                             </svg>
-                            <p class="text-lg font-semibold text-green-700 mb-2">Arrastra tu archivo Excel aquí</p>
-                            <p class="text-sm text-green-600 mb-4">o haz clic para seleccionar</p>
-                            <button type="button" onclick="document.getElementById('id_archivo').click()" class="btn bg-green-600 hover:bg-green-700 text-white border-green-600 btn-sm">
+                            <p class="text-lg font-semibold text-green-700 mb-2">Arrastra tus archivos Excel aquí</p>
+                            <p class="text-sm text-green-600 mb-4">o haz clic para seleccionar (máximo 2 archivos)</p>
+                            <button type="button" id="selectFilesBtn" class="btn bg-green-600 hover:bg-green-700 text-white border-green-600 btn-sm">
                                 <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z" />
                                 </svg>
-                                Buscar archivo
-                            </button>
-                        </div>
-                        
-                        <!-- Nombre del archivo seleccionado -->
-                        <div id="fileInfo" class="hidden">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-green-600 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
-                            <p class="text-lg font-semibold text-green-700 mb-2">✓ Archivo Excel seleccionado</p>
-                            <p id="fileName" class="text-sm text-gray-600 font-mono mb-2"></p>
-                            <p id="fileSize" class="text-xs text-gray-500 mb-4"></p>
-                            <button type="button" onclick="clearFile()" class="btn btn-ghost btn-sm text-green-700 hover:bg-green-100">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                Cambiar archivo
+                                Buscar archivos
                             </button>
                         </div>
                     </div>
                     
+                    <!-- Lista de archivos seleccionados -->
+                    <div id="filesList" class="mt-4 space-y-2 hidden"></div>
+                    
                     <!-- Input de archivo oculto -->
-                    <input type="file" id="id_archivo" name="archivo" accept=".xlsx,.xls" class="hidden" required>
+                    <input type="file" id="id_archivo" name="archivo" accept=".xlsx,.xls" class="hidden" multiple>
                     
                     <label class="label">
                         <span class="label-text-alt text-green-600">
-                            Formatos permitidos: .xlsx, .xls (Máximo 10MB)
+                            Formatos permitidos: .xlsx, .xls | Máximo 10MB por archivo | Máximo 2 archivos
                         </span>
                     </label>
                 </div>
@@ -74,113 +62,15 @@
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                     </svg>
-                    Cargar Archivo Excel
+                    <span id="submitBtnText">Cargar Archivos Excel</span>
                 </button>
             </form>
         </div>
     </div>
-    
-    <script>
-        const dropZone = document.getElementById('dropZone');
-        const fileInput = document.getElementById('id_archivo');
-        const dropZoneContent = document.getElementById('dropZoneContent');
-        const fileInfo = document.getElementById('fileInfo');
-        const fileName = document.getElementById('fileName');
-        const fileSize = document.getElementById('fileSize');
-        const submitBtn = document.getElementById('submitBtn');
-        
-        // Prevenir comportamiento por defecto
-        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, preventDefaults, false);
-            document.body.addEventListener(eventName, preventDefaults, false);
-        });
-        
-        function preventDefaults(e) {
-            e.preventDefault();
-            e.stopPropagation();
-        }
-        
-        // Destacar zona cuando se arrastra sobre ella
-        ['dragenter', 'dragover'].forEach(eventName => {
-            dropZone.addEventListener(eventName, highlight, false);
-        });
-        
-        ['dragleave', 'drop'].forEach(eventName => {
-            dropZone.addEventListener(eventName, unhighlight, false);
-        });
-        
-        function highlight(e) {
-            dropZone.classList.add('border-secondary', 'bg-base-200', 'scale-105');
-        }
-        
-        function unhighlight(e) {
-            dropZone.classList.remove('border-secondary', 'bg-base-200', 'scale-105');
-        }
-        
-        // Manejar archivos soltados
-        dropZone.addEventListener('drop', handleDrop, false);
-        
-        function handleDrop(e) {
-            const dt = e.dataTransfer;
-            const files = dt.files;
-            
-            if (files.length > 0) {
-                fileInput.files = files;
-                updateFileInfo(files[0]);
-            }
-        }
-        
-        // Manejar selección de archivo con click
-        fileInput.addEventListener('change', function() {
-            if (this.files.length > 0) {
-                updateFileInfo(this.files[0]);
-            }
-        });
-        
-        // Actualizar información del archivo
-        function updateFileInfo(file) {
-            const fileSizeMB = (file.size / 1024 / 1024).toFixed(2);
-            
-            // Validar tipo de archivo
-            const validTypes = ['.xlsx', '.xls', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel'];
-            const fileExtension = '.' + file.name.split('.').pop().toLowerCase();
-            
-            if (!validTypes.includes(fileExtension) && !validTypes.includes(file.type)) {
-                alert('⚠️ Por favor selecciona un archivo Excel válido (.xlsx o .xls)');
-                clearFile();
-                return;
-            }
-            
-            // Validar tamaño
-            if (file.size > 10 * 1024 * 1024) {
-                alert('⚠️ El archivo es demasiado grande. Máximo 10MB permitido.');
-                clearFile();
-                return;
-            }
-            
-            fileName.textContent = file.name;
-            fileSize.textContent = `Tamaño: ${fileSizeMB} MB`;
-            
-            dropZoneContent.classList.add('hidden');
-            fileInfo.classList.remove('hidden');
-            submitBtn.disabled = false;
-        }
-        
-        // Limpiar archivo
-        function clearFile() {
-            fileInput.value = '';
-            dropZoneContent.classList.remove('hidden');
-            fileInfo.classList.add('hidden');
-            submitBtn.disabled = true;
-        }
-        
-        // Hacer clic en la zona para abrir selector
-        dropZone.addEventListener('click', function(e) {
-            if (e.target === dropZone || e.target.closest('#dropZoneContent')) {
-                fileInput.click();
-            }
-        });
-    </script>
+
+    {% block extra_scripts %}
+    <script src="{% static 'js/upload.js' %}"></script>
+    {% endblock %}
 
     <!-- Mis Cargas Recientes -->
     {% if mis_cargas %}

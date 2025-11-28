@@ -9,64 +9,174 @@
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.4.19/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <link rel="stylesheet" href="{% static 'css/base.css' %}">
     {% block extra_css %}{% endblock %}
 </head>
 <body class="bg-base-200">
     <!-- Navbar -->
-    <div class="navbar bg-primary text-primary-content shadow-lg">
-        <div class="flex-1">
+    <div class="navbar bg-primary text-primary-content shadow-lg sticky top-0 z-50">
+        <div class="flex-1 gap-2">
+            <!-- Burger Menu Button -->
+            {% if user.is_authenticated %}
+            <button id="sidebarToggle" class="btn btn-ghost btn-circle">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16" />
+                </svg>
+            </button>
+            {% endif %}
+            
             <a href="{% url 'admin_list' %}" class="btn btn-ghost text-xl">
-                 INM Viajes
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                </svg>
+                INM Viajes
             </a>
         </div>
         <div class="flex-none">
             {% if user.is_authenticated %}
-            <div class="dropdown dropdown-end">
-                <div tabindex="0" role="button" class="btn btn-ghost">
-                    <div class="avatar placeholder">
-                        <div class="bg-neutral text-neutral-content rounded-full w-10">
-                            <span class="text-xl">{{ user.username|first|upper }}</span>
-                        </div>
-                    </div>
-                    <span class="ml-2">{{ user.username }}</span>
-                    <div class="badge badge-secondary ml-2">
-                        {% if user.is_superuser %}
-                            Admin
-                        {% else %}
-                            Usuario
-                        {% endif %}
+            <div class="flex items-center gap-3">
+                <div class="avatar placeholder">
+                    <div class="bg-neutral text-neutral-content rounded-full w-10">
+                        <span class="text-xl">{{ user.username|first|upper }}</span>
                     </div>
                 </div>
-                <ul tabindex="0" class="menu menu-sm dropdown-content mt-3 z-[1] p-2 shadow bg-base-100 rounded-box w-52 text-base-content">
-                    <li><a href="{% url 'upload_excel' %}">Subir Excel</a></li>
-                    <li><a href="{% url 'admin_list' %}">Ver Registros</a></li>
-                    <li><a href="{% url 'date_range_report' %}">Búsqueda por Fecha</a></li>
-                    <li><a href="{% url 'check_duplicates' %}">Verificar Duplicados</a></li>
-                    <li><a href="{% url 'casos_especiales_list' %}">Casos Especiales</a></li>
-                    
-                    {% if user.is_superuser %}
-                    <li class="menu-title">
-                        <span>Administración</span>
-                    </li>
-                    <li><a href="{% url 'batch_list' %}">Gestionar Cargas</a></li>
-                    <li><a href="{% url 'create_user' %}">Crear Usuario</a></li>
-                    <li><a href="/admin/">Django Admin</a></li>
-                    {% endif %}
-                    
-                    <li class="menu-title">
-                        <span>Sesión</span>
-                    </li>
-                    <li>
-                        <form method="post" action="{% url 'logout' %}" class="m-0">
-                            {% csrf_token %}
-                            <button type="submit" class="w-full text-left"> Cerrar Sesión</button>
-                        </form>
-                    </li>
-                </ul>
+                <div class="flex flex-col">
+                    <span class="font-semibold">{{ user.username }}</span>
+                    <span class="text-xs opacity-80">
+                        {% if user.is_superuser %}
+                            <i class="fas fa-crown mr-1"></i>Administrador
+                        {% else %}
+                            <i class="fas fa-user mr-1"></i>Usuario
+                        {% endif %}
+                    </span>
+                </div>
             </div>
             {% endif %}
         </div>
     </div>
+
+    <!-- Sidebar -->
+    {% if user.is_authenticated %}
+    <div id="sidebar" class="fixed top-16 left-0 h-[calc(100vh-4rem)] w-80 bg-base-100 shadow-2xl z-40 sidebar-transition sidebar-closed">
+        <div class="flex flex-col h-full">
+            <!-- Sidebar Header -->
+            <div class="p-6 bg-primary text-primary-content">
+                <div class="flex items-center justify-between">
+                    <div class="flex items-center gap-3">
+                        <div class="avatar placeholder">
+                            <div class="bg-neutral text-neutral-content rounded-full w-12">
+                                <span class="text-2xl">{{ user.username|first|upper }}</span>
+                            </div>
+                        </div>
+                        <div>
+                            <p class="font-bold text-lg">{{ user.username }}</p>
+                            <p class="text-sm opacity-90">
+                                {% if user.is_superuser %}
+                                    <i class="fas fa-crown mr-1"></i>Administrador
+                                {% else %}
+                                    <i class="fas fa-user mr-1"></i>Usuario
+                                {% endif %}
+                            </p>
+                        </div>
+                    </div>
+                    <button id="sidebarClose" class="btn btn-ghost btn-sm btn-circle">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                        </svg>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sidebar Menu -->
+            <div class="flex-1 overflow-y-auto p-4">
+                <ul class="menu text-base gap-1">
+                    <!-- Principal -->
+                    <li class="menu-title">
+                        <span class="text-lg"><i class="fas fa-home mr-2"></i>Principal</span>
+                    </li>
+                    <li>
+                        <a href="{% url 'admin_list' %}" class="text-base">
+                            <i class="fas fa-table-list w-5"></i>
+                            Ver Registros
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'upload_excel' %}" class="text-base">
+                            <i class="fas fa-file-upload w-5"></i>
+                            Subir Excel
+                        </a>
+                    </li>
+
+                    <div class="divider my-2"></div>
+
+                    <!-- Búsqueda y Análisis -->
+                    <li class="menu-title">
+                        <span class="text-lg"><i class="fas fa-search mr-2"></i>Búsqueda y Análisis</span>
+                    </li>
+                    <li>
+                        <a href="{% url 'date_range_report' %}" class="text-base">
+                            <i class="fas fa-calendar-days w-5"></i>
+                            Búsqueda por Fecha
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'check_duplicates' %}" class="text-base">
+                            <i class="fas fa-copy w-5"></i>
+                            Verificar Duplicados
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'casos_especiales_list' %}" class="text-base">
+                            <i class="fas fa-triangle-exclamation w-5"></i>
+                            Casos Especiales
+                        </a>
+                    </li>
+
+                    {% if user.is_superuser %}
+                    <div class="divider my-2"></div>
+
+                    <!-- Administración -->
+                    <li class="menu-title">
+                        <span class="text-lg"><i class="fas fa-tools mr-2"></i>Administración</span>
+                    </li>
+                    <li>
+                        <a href="{% url 'batch_list' %}" class="text-base">
+                            <i class="fas fa-boxes-stacked w-5"></i>
+                            Gestionar Cargas
+                        </a>
+                    </li>
+                    <li>
+                        <a href="{% url 'create_user' %}" class="text-base">
+                            <i class="fas fa-user-plus w-5"></i>
+                            Crear Usuario
+                        </a>
+                    </li>
+                    <li>
+                        <a href="/admin/" class="text-base">
+                            <i class="fas fa-cog w-5"></i>
+                            Django Admin
+                        </a>
+                    </li>
+                    {% endif %}
+                </ul>
+            </div>
+
+            <!-- Sidebar Footer -->
+            <div class="p-4 border-t border-base-300">
+                <form method="post" action="{% url 'logout' %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-error btn-block text-base gap-2">
+                        <i class="fas fa-right-from-bracket"></i>
+                        Cerrar Sesión
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay (cuando sidebar está abierto) -->
+    <div id="sidebarOverlay" class="fixed inset-0 bg-black bg-opacity-50 z-30 hidden"></div>
+    {% endif %}
     
     <!-- Main Content -->
     <div class="w-[95%] mx-auto p-4">
@@ -87,6 +197,9 @@
         <!-- Page Content -->
         {% block content %}{% endblock %}
     </div>
+    
+    <!-- Sidebar Script -->
+    <script src="{% static 'js/base.js' %}"></script>
     
     {% block extra_js %}{% endblock %}
 </body>

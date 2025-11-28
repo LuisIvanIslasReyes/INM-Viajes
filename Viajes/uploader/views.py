@@ -24,14 +24,23 @@ def upload_excel(request):
     if request.method == 'POST':
         form = ExcelUploadForm(request.POST, request.FILES)
         
-        # Validar que se haya seleccionado un archivo
-        if 'archivo' not in request.FILES or not request.FILES['archivo']:
-            messages.error(request, '📁 Por favor, selecciona un archivo Excel antes de subir.')
+        # Validar que se hayan seleccionado archivos
+        archivos = request.FILES.getlist('archivo')
+        if not archivos:
+            messages.error(request, '📁 Por favor, selecciona al menos un archivo Excel antes de subir.')
             return redirect('upload_excel')
         
-        if form.is_valid():
-            archivo = request.FILES['archivo']
-            
+        if len(archivos) > 2:
+            messages.error(request, '❌ Solo puedes subir máximo 2 archivos a la vez.')
+            return redirect('upload_excel')
+        
+        # Procesar cada archivo
+        total_registros_creados = 0
+        total_casos_especiales = 0
+        total_registros_error = 0
+        archivos_procesados = 0
+        
+        for archivo in archivos:
             try:
                 # Crear batch asociado al usuario que sube
                 batch = UploadBatch.objects.create(
@@ -43,8 +52,8 @@ def upload_excel(request):
 
                 if df.empty:
                     batch.delete()
-                    messages.error(request, '📋 El archivo está vacío o no contiene datos válidos.')
-                    return redirect('upload_excel')
+                    messages.warning(request, f'📋 El archivo "{archivo.name}" está vacío o no contiene datos válidos.')
+                    continue
                 
                 column_mapping = {
                     '航班号': 'vuelo_numero',
@@ -144,33 +153,32 @@ def upload_excel(request):
                         registros_error += 1
                         continue
                 
-                # Mensajes de resultado
-                if registros_creados > 0:
-                    messages.success(request, f'✅ ¡Archivo procesado exitosamente! Se agregaron {registros_creados} registro(s).')
-                
-                if casos_especiales_creados > 0:
-                    messages.warning(request, f'🔔 IMPORTANTE: Se crearon {casos_especiales_creados} Caso(s) Especial(es) que requieren tu revisión. Pueden ser: hermanos con mismo documento, datos duplicados por error, u otros casos especiales. Ve a "Casos Especiales" en el menú para revisarlos y tomar una decisión.')
-                
-                if registros_error > 0:
-                    messages.info(request, f'ℹ️ {registros_error} registro(s) tuvieron errores y no se pudieron procesar.')
-                
-                if registros_creados == 0:
-                    messages.warning(request, '⚠️ No se pudo procesar ningún registro. Verifica el formato del archivo.')
-                
-                return redirect('admin_list')
+                # Acumular totales
+                total_registros_creados += registros_creados
+                total_casos_especiales += casos_especiales_creados
+                total_registros_error += registros_error
+                archivos_procesados += 1
                 
             except Exception as e:
-                messages.error(request, f'❌ Ocurrió un problema al procesar el archivo: {str(e)}. Por favor, verifique que el formato sea correcto e intente nuevamente.')
+                messages.error(request, f'❌ Error al procesar "{archivo.name}": {str(e)}')
                 if 'batch' in locals():
                     batch.delete()
+                continue
+        
+        # Mensajes finales consolidados
+        if archivos_procesados > 0:
+            if total_registros_creados > 0:
+                messages.success(request, f'✅ ¡{archivos_procesados} archivo(s) procesado(s) exitosamente! Se agregaron {total_registros_creados} registro(s) en total.')
+            
+            if total_casos_especiales > 0:
+                messages.warning(request, f'🔔 IMPORTANTE: Se crearon {total_casos_especiales} Caso(s) Especial(es) que requieren tu revisión. Ve a "Casos Especiales" en el menú.')
+            
+            if total_registros_error > 0:
+                messages.info(request, f'ℹ️ {total_registros_error} registro(s) tuvieron errores y no se pudieron procesar.')
         else:
-            # El formulario no es válido, mostrar errores
-            if form.errors:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f'❌ {error}')
-            else:
-                messages.error(request, '❌ El formulario contiene errores. Por favor, revisa los datos e intenta nuevamente.')
+            messages.error(request, '❌ No se pudo procesar ningún archivo.')
+        
+        return redirect('admin_list')
     else:
         form = ExcelUploadForm()
     

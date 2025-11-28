@@ -25,18 +25,45 @@ class MaintenanceHandler(SimpleHTTPRequestHandler):
     <title>Mantenimiento | Viajes INM</title>
     <link href="https://cdn.jsdelivr.net/npm/daisyui@4.12.14/dist/full.min.css" rel="stylesheet" type="text/css" />
     <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        @keyframes fly {
+            0% { transform: translateX(-100px) translateY(20px) rotate(-20deg); opacity: 0; }
+            20% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { transform: translateX(100vw) translateY(-100px) rotate(10deg); opacity: 0; }
+        }
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-20px); }
+        }
+        .plane-animation {
+            animation: fly 8s ease-in-out infinite;
+        }
+        .float-animation {
+            animation: float 3s ease-in-out infinite;
+        }
+    </style>
 </head>
-<body class="bg-gradient-to-br from-blue-50 to-indigo-100 min-h-screen flex items-center justify-center p-4">
-    <div class="text-center max-w-2xl">
-        <div class="mb-8">
-            <!-- Icono de herramientas -->
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-32 w-32 mx-auto text-info opacity-80 animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
+<body class="bg-gradient-to-br from-green-50 to-emerald-100 min-h-screen flex items-center justify-center p-4 overflow-hidden relative">
+    <!-- Aviones animados en el fondo -->
+    <div class="fixed top-1/4 left-0 w-full pointer-events-none">
+        <i class="fas fa-plane text-green-600 text-6xl plane-animation absolute opacity-30"></i>
+    </div>
+    
+    <div class="text-center max-w-2xl relative z-10">
+        <div class="mb-8 float-animation">
+            <!-- Icono de avión y herramientas -->
+            <div class="relative inline-block">
+                <i class="fas fa-plane-departure text-green-600 text-8xl mb-4 block"></i>
+                <i class="fas fa-tools text-green-700 text-3xl absolute bottom-0 right-0 bg-white rounded-full p-2 shadow-lg"></i>
+            </div>
         </div>
         
-        <h1 class="text-6xl font-bold text-info mb-4">🔧 En Mantenimiento</h1>
+        <h1 class="text-6xl font-bold text-green-600 mb-4">
+            <i class="fas fa-wrench mr-2"></i>
+            En Mantenimiento
+        </h1>
         <h2 class="text-3xl font-bold text-gray-800 mb-4">Estamos Mejorando el Sistema</h2>
         <p class="text-xl text-gray-600 mb-8">
             El sistema de Viajes INM está temporalmente fuera de servicio para realizar actualizaciones y mejoras.
@@ -44,48 +71,53 @@ class MaintenanceHandler(SimpleHTTPRequestHandler):
         
         <div class="bg-white rounded-lg shadow-lg p-8 mb-8">
             <div class="flex items-center justify-center gap-2 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+                <i class="fas fa-circle-info text-green-600 text-2xl"></i>
                 <h3 class="text-lg font-semibold text-gray-700">¿Qué está pasando?</h3>
             </div>
             <ul class="text-left text-gray-600 space-y-3">
-                <li class="flex items-start gap-2">
-                    <span class="text-info mt-1 text-xl">⚙️</span>
+                <li class="flex items-start gap-3">
+                    <i class="fas fa-cog text-green-600 mt-1 text-xl"></i>
                     <span>Estamos aplicando actualizaciones importantes</span>
                 </li>
-                <li class="flex items-start gap-2">
-                    <span class="text-info mt-1 text-xl">⚙️</span>
+                <li class="flex items-start gap-3">
+                    <i class="fas fa-database text-green-600 mt-1 text-xl"></i>
                     <span>Realizando migraciones de base de datos</span>
                 </li>
-                <li class="flex items-start gap-2">
-                    <span class="text-info mt-1 text-xl">⚙️</span>
+                <li class="flex items-start gap-3">
+                    <i class="fas fa-rocket text-green-600 mt-1 text-xl"></i>
                     <span>El sistema volverá pronto con mejoras</span>
                 </li>
             </ul>
         </div>
         
-        <div class="bg-info/10 rounded-lg p-6 mb-8">
-            <p class="text-lg font-semibold text-info mb-2">⏱️ Tiempo estimado</p>
+        <div class="bg-green-100 border-2 border-green-300 rounded-lg p-6 mb-8">
+            <p class="text-lg font-semibold text-green-700 mb-2">
+                <i class="fas fa-clock mr-2"></i>
+                Tiempo estimado
+            </p>
             <p class="text-gray-700">Normalmente estos mantenimientos toman entre 5 a 15 minutos</p>
         </div>
         
         <div class="flex flex-col gap-4 justify-center items-center">
             <div class="flex gap-2 items-center text-gray-600">
-                <div class="loading loading-spinner loading-md text-info"></div>
+                <div class="loading loading-spinner loading-md text-green-600"></div>
                 <span>Esta página se recargará automáticamente cada 30 segundos</span>
             </div>
-            <button onclick="location.reload()" class="btn btn-info btn-lg gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                </svg>
+            <button onclick="location.reload()" class="btn bg-green-600 hover:bg-green-700 text-white border-green-600 btn-lg gap-2">
+                <i class="fas fa-rotate-right text-xl"></i>
                 Reintentar Ahora
             </button>
         </div>
         
         <div class="mt-12 text-gray-500 text-sm">
-            <p>Gracias por tu paciencia 🙏</p>
-            <p class="mt-2">¿Urgente? Contacta al administrador del sistema</p>
+            <p>
+                <i class="fas fa-heart text-green-600"></i>
+                Gracias por tu paciencia
+            </p>
+            <p class="mt-2">
+                <i class="fas fa-headset text-green-600 mr-1"></i>
+                ¿Urgente? Contacta al administrador del sistema
+            </p>
         </div>
     </div>
 </body>

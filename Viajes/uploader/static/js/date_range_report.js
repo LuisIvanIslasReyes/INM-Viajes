@@ -33,3 +33,18 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// Función para colapsar/expandir fechas
+function toggleFecha(header) {
+    const grupo = header.closest('.fecha-grupo');
+    const content = grupo.querySelector('.fecha-content');
+    const toggle = header.querySelector('.fecha-toggle');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        toggle.style.transform = 'rotate(0deg)';
+    } else {
+        content.style.display = 'none';
+        toggle.style.transform = 'rotate(-90deg)';
+    }
+}

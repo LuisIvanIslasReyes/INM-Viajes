@@ -1,0 +1,66 @@
+/* ===================================
+   🎨 PALETA DE COLORES VERDE INM VIAJES
+   =================================== */
+:root {
+    --color-primary: #059669; /* green-600 */
+    --color-primary-dark: #047857; /* green-700 */
+    --color-primary-light: #10b981; /* green-500 */
+    --color-secondary: #064e3b; /* green-900 */
+    --color-accent: #34d399; /* green-400 */
+}
+
+/* ===================================
+   🎭 TRANSICIONES DEL SIDEBAR
+   =================================== */
+.sidebar-transition {
+    transition: transform 0.3s ease-in-out;
+}
+
+.sidebar-open {
+    transform: translateX(0);
+}
+
+.sidebar-closed {
+    transform: translateX(-100%);
+}
+
+/* ===================================
+   🎨 SOBRESCRITURA DE COLORES DAISYUI
+   =================================== */
+.bg-primary {
+    background-color: var(--color-primary) !important;
+}
+
+.text-primary {
+    color: var(--color-primary) !important;
+}
+
+.border-primary {
+    border-color: var(--color-primary) !important;
+}
+
+.btn-primary {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+}
+
+.btn-primary:hover {
+    background-color: var(--color-primary-dark) !important;
+    border-color: var(--color-primary-dark) !important;
+}
+
+.badge-primary {
+    background-color: var(--color-primary) !important;
+    border-color: var(--color-primary) !important;
+}
+
+/* ===================================
+   📱 UTILIDADES ADICIONALES
+   =================================== */
+.primary-gradient {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-primary-light) 100%);
+}
+
+.primary-gradient-hover:hover {
+    background: linear-gradient(135deg, var(--color-primary-dark) 0%, var(--color-primary) 100%);
+}
