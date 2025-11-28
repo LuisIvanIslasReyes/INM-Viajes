@@ -333,13 +333,18 @@ def admin_list(request):
 
 @login_required
 def date_range_report(request):
-    """Vista de reporte por rango de fechas con agrupación por día"""
+    """Vista de reporte por rango de fechas - Solo muestra registros con SR, R o I"""
     from collections import OrderedDict
+    from django.db.models import Q
     
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
     
-    registros = Registro.objects.all().select_related('batch', 'batch__usuario').order_by('vuelo_fecha', 'vuelo_numero')
+    # FILTRO PRINCIPAL: Solo registros que tienen SR, R o I
+    # (Los que no tienen nada están OK y no se muestran aquí)
+    registros = Registro.objects.filter(
+        Q(segunda_revision=True) | Q(rechazado=True) | Q(internacion=True)
+    ).select_related('batch', 'batch__usuario').order_by('vuelo_fecha', 'vuelo_numero')
     
     # Aplicar filtros de fecha
     if fecha_inicio:
@@ -364,6 +369,7 @@ def date_range_report(request):
             'total': len(regs),
             'segunda_revisions': sum(1 for r in regs if r.segunda_revision),
             'rechazados': sum(1 for r in regs if r.rechazado),
+            'internaciones': sum(1 for r in regs if r.internacion),
         })
     
     context = {

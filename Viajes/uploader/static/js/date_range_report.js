@@ -48,3 +48,17 @@ function toggleFecha(header) {
         toggle.style.transform = 'rotate(-90deg)';
     }
 }
+
+// Función para colapsar/expandir filtros
+function toggleFiltros() {
+    const content = document.getElementById('filtros-content');
+    const toggle = document.getElementById('filtros-toggle');
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        toggle.style.transform = 'rotate(0deg)';
+    } else {
+        content.style.display = 'none';
+        toggle.style.transform = 'rotate(-90deg)';
+    }
+}
