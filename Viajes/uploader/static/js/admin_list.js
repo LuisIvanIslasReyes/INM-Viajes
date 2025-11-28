@@ -3,9 +3,9 @@ let searchTimeout;
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearch');
 const batchFilter = document.getElementById('batchFilter');
-const confirmadoFilter = document.getElementById('confirmadoFilter');
-const inadmitidoFilter = document.getElementById('inadmitidoFilter');
-const puntoInternacionFilter = document.getElementById('puntoInternacionFilter');
+const segundaRevisionFilter = document.getElementById('segundaRevisionFilter');  // ← CAMBIO 1
+const rechazadoFilter = document.getElementById('rechazadoFilter');              // ← CAMBIO 2
+const internacionFilter = document.getElementById('internacionFilter');          // ← CAMBIO 3
 
 // Auto-focus en el buscador si tiene contenido al cargar la página
 document.addEventListener('DOMContentLoaded', function() {
@@ -76,16 +76,16 @@ if (batchFilter) {
     batchFilter.addEventListener('change', applyFilters);
 }
 
-if (confirmadoFilter) {
-    confirmadoFilter.addEventListener('change', applyFilters);
+if (segundaRevisionFilter) {                                                    // ← CAMBIO 4
+    segundaRevisionFilter.addEventListener('change', applyFilters);
 }
 
-if (inadmitidoFilter) {
-    inadmitidoFilter.addEventListener('change', applyFilters);
+if (rechazadoFilter) {                                                          // ← CAMBIO 5
+    rechazadoFilter.addEventListener('change', applyFilters);
 }
 
-if (puntoInternacionFilter) {
-    puntoInternacionFilter.addEventListener('change', applyFilters);
+if (internacionFilter) {                                                        // ← CAMBIO 6
+    internacionFilter.addEventListener('change', applyFilters);
 }
 
 function applyFilters() {
@@ -103,18 +103,18 @@ function applyFilters() {
     }
     
     // Segunda Revisión (SR)
-    if (confirmadoFilter.checked) {
-        params.set('confirmado', 'true');
+    if (segundaRevisionFilter.checked) {                                        // ← CAMBIO 7
+        params.set('segunda_revision', 'true');                                 // ← CAMBIO 8
     }
     
     // Rechazo (R)
-    if (inadmitidoFilter.checked) {
-        params.set('inadmitido', 'true');
+    if (rechazadoFilter.checked) {                                              // ← CAMBIO 9
+        params.set('rechazado', 'true');                                        // ← CAMBIO 10
     }
     
-    // Punto de Internación (PI)
-    if (puntoInternacionFilter.checked) {
-        params.set('punto_internacion', 'true');
+    // Internación (I)
+    if (internacionFilter.checked) {                                            // ← CAMBIO 11
+        params.set('internacion', 'true');                                      // ← CAMBIO 12
     }
     
     // Redirigir con los nuevos filtros (siempre a la página 1)

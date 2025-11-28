@@ -17,12 +17,24 @@ class UploadBatchAdmin(admin.ModelAdmin):
 @admin.register(Registro)
 class RegistroAdmin(admin.ModelAdmin):
     list_display = (
-        'id', 'nombre_pasajero', 'vuelo_numero', 'numero_documento', 
-        'confirmado', 'inadmitido', 'batch'
+        'id', 
+        'nombre_pasajero', 
+        'numero_documento', 
+        'vuelo_numero', 
+        'segunda_revision', 
+        'rechazado', 
+        'internacion', 
+        'batch',
+        # 'fecha_creacion'
     )
     list_filter = (
-        'confirmado', 'inadmitido', 'vuelo_numero', 
-        'aeropuerto_salida', 'aeropuerto_llegada', 'genero'
+        'segunda_revision', 
+        'rechazado', 
+        'internacion',
+        'vuelo_numero', 
+        'aeropuerto_salida', 
+        'aeropuerto_llegada', 
+        'genero'
     )
     search_fields = (
         'nombre_pasajero', 'numero_documento', 'vuelo_numero', 
@@ -55,7 +67,7 @@ class RegistroAdmin(admin.ModelAdmin):
             )
         }),
         ('Campos Administrativos', {
-            'fields': ('confirmado', 'inadmitido', 'comentario'),
+            'fields': ('segunda_revision', 'rechazado', 'internacion', 'comentario'),
             'classes': ('collapse',)
         }),
         ('Metadatos', {

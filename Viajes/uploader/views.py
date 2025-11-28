@@ -197,29 +197,50 @@ def update_registro(request, registro_id):
             # ✅ SIN VALIDACIÓN DE PERMISOS - Todos pueden editar todo
             
             # Actualizar campos según la nueva lógica:
-            # SR (Segunda Revisión) = confirmado
-            # R (Rechazo) = inadmitido
-            # PI (Punto de Internación) = punto_internacion
+            # SR (Segunda Revisión) = segunda_revision
+            # R (Rechazo) = rechazado
+            # I (Internación) = internacion
             
-            if 'confirmado' in request.POST:
+            if 'segunda_revision' in request.POST:
                 # Toggle Segunda Revisión
-                registro.confirmado = request.POST.get('confirmado') == 'true'
+                registro.segunda_revision = request.POST.get('segunda_revision') == 'true'
+                
+                if not registro.segunda_revision:
+                    # Si se desactiva SR, también desactivar R e I
+                    registro.internacion = False
+                    registro.rechazado = False
+                    
+            # R solo se puede activar si SR está activo
+            elif 'rechazado' in request.POST:
+                if registro.segunda_revision:
+                    registro.rechazado = request.POST.get('rechazado') == 'true'
+                # Si se marca como Rechazo, desmarcar Internación
+                if registro.rechazado:
+                    registro.internacion = False
+                else:
+                    messages.warning(request, 'Debes marcar "Segunda revisión (SR)" antes de marcar "Rechazo (R)".')
+                    params = request.GET.copy()
+                    params['highlight'] = str(registro_id)
+                    redirect_url = reverse('admin_list') + '?' + urlencode(params)
+                    return redirect(redirect_url)
+                
+        
+            # I solo se puede activar si SR está activo
+            elif 'internacion' in request.POST:
+                if registro.segunda_revision:
+                # Toggle Internación
+                    registro.internacion = request.POST.get('internacion') == 'true'
+                    # Si se marca Internación, desmarcar Rechazo
+                    if registro.internacion:
+                        registro.rechazado = False
+                else: 
+                    messages.warning(request, 'Debes marcar "Segunda revisión (SR)" antes de marcar "Punto de Internación (PI)".')
+                    params = request.GET.copy()
+                    params['highlight'] = str(registro_id)
+                    redirect_url = reverse('admin_list') + '?' + urlencode(params)
+                    return redirect(redirect_url)
             
-            if 'inadmitido' in request.POST:
-                # Toggle Rechazo
-                registro.inadmitido = request.POST.get('inadmitido') == 'true'
-                # Si se marca como Rechazo, desmarcar Punto de Internación
-                if registro.inadmitido:
-                    registro.punto_internacion = False
-            
-            if 'punto_internacion' in request.POST:
-                # Toggle Punto de Internación
-                registro.punto_internacion = request.POST.get('punto_internacion') == 'true'
-                # Si se marca PI, desmarcar Rechazo
-                if registro.punto_internacion:
-                    registro.inadmitido = False
-            
-            if 'comentario' in request.POST:
+            elif 'comentario' in request.POST:
                 registro.comentario = request.POST.get('comentario')
             
             registro.save()
@@ -265,19 +286,19 @@ def admin_list(request):
         registros = registros.filter(batch_id=batch_id)
     
     # Filtro por Segunda Revisión (SR)
-    confirmado = request.GET.get('confirmado')
-    if confirmado == 'true':
-        registros = registros.filter(confirmado=True)
+    segunda_revision = request.GET.get('segunda_revision')
+    if segunda_revision == 'true':
+        registros = registros.filter(segunda_revision=True)
     
     # Filtro por Rechazo (R)
-    inadmitido = request.GET.get('inadmitido')
-    if inadmitido == 'true':
-        registros = registros.filter(inadmitido=True)
+    rechazado = request.GET.get('rechazado')
+    if rechazado == 'true':
+        registros = registros.filter(rechazado=True)
     
     # Filtro por Punto de Internación (PI)
-    punto_internacion = request.GET.get('punto_internacion')
-    if punto_internacion == 'true':
-        registros = registros.filter(punto_internacion=True)
+    internacion = request.GET.get('internacion')
+    if internacion == 'true':
+        registros = registros.filter(internacion=True)
     
     # Paginación
     paginator = Paginator(registros, 50)
@@ -324,8 +345,8 @@ def date_range_report(request):
             'fecha': fecha,
             'registros': regs,
             'total': len(regs),
-            'confirmados': sum(1 for r in regs if r.confirmado),
-            'inadmitidos': sum(1 for r in regs if r.inadmitido),
+            'segunda_revisions': sum(1 for r in regs if r.segunda_revision),
+            'rechazados': sum(1 for r in regs if r.rechazado),
         })
     
     context = {
@@ -522,11 +543,11 @@ def resolver_caso_aceptar(request, caso_id):
         caso.save()
         
         # Confirmar todos los registros
-        caso.registro.confirmado = True
+        caso.registro.segunda_revision = True
         caso.registro.save()
         
         for reg_conf in caso.registros_conflictivos:
-            reg_conf.confirmado = True
+            reg_conf.segunda_revision = True
             reg_conf.save()
         
         messages.success(request, f'✅ Caso #{caso.id} aceptado. Todos los registros se confirmaron como válidos.')
@@ -580,24 +601,24 @@ def resolver_caso_editar(request, caso_id, registro_id):
 
 @login_required
 def resolver_caso_inadmitir(request, caso_id, registro_id):
-    """Marcar un registro como inadmitido"""
+    """Marcar un registro como rechazado"""
     if request.method == 'POST':
         caso = get_object_or_404(CasoEspecial, id=caso_id)
         registro = get_object_or_404(Registro, id=registro_id)
         
-        # Marcar como inadmitido
-        registro.inadmitido = True
-        registro.comentario = request.POST.get('motivo', 'Marcado como inadmitido por documento duplicado')
+        # Marcar como rechazado
+        registro.rechazado = True
+        registro.comentario = request.POST.get('motivo', 'Marcado como rechazado por documento duplicado')
         registro.save()
         
         # Marcar caso como resuelto
-        caso.estado = 'inadmitido'
+        caso.estado = 'rechazado'
         caso.resuelto_por = request.user
         caso.fecha_resolucion = timezone.now()
-        caso.notas_admin = f'Registro {registro.nombre_pasajero} marcado como inadmitido'
+        caso.notas_admin = f'Registro {registro.nombre_pasajero} marcado como rechazado'
         caso.save()
         
-        messages.success(request, f'✅ Caso #{caso.id} resuelto. Registro marcado como inadmitido.')
+        messages.success(request, f'✅ Caso #{caso.id} resuelto. Registro marcado como rechazado.')
         return redirect('casos_especiales_list')
     
     return redirect('casos_especiales_list')

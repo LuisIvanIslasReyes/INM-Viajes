@@ -45,9 +45,9 @@ class Registro(models.Model):
     pais_emision = models.CharField(max_length=100, verbose_name='签发国')
     
     # Campos administrativos (4 campos)
-    confirmado = models.BooleanField(default=False, verbose_name='Segunda Revisión (SR)')
-    inadmitido = models.BooleanField(default=False, verbose_name='Rechazo (R)')
-    punto_internacion = models.BooleanField(default=False, verbose_name='Punto de Internación (PI)')
+    segunda_revision = models.BooleanField(default=False, verbose_name='Segunda Revisión (SR)')
+    rechazado = models.BooleanField(default=False, verbose_name='Rechazo (R)')
+    internacion = models.BooleanField(default=False, verbose_name='Punto de Internación (PI)')
     comentario = models.TextField(blank=True, null=True, verbose_name='Comentario')
     
     # Timestamps
