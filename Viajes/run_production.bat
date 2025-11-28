@@ -84,12 +84,16 @@ echo.
 echo Opciones:
 echo   [R] Reiniciar servidor de produccion
 echo   [M] Ejecutar migraciones y reiniciar
+echo   [S] Recolectar archivos estaticos (collectstatic) y reiniciar
+echo   [A] Migraciones + Collectstatic + Reiniciar (TODO)
 echo   [X] Salir (mantenimiento seguira activo)
 echo.
 
-choice /C RMX /N /M "Selecciona una opcion (R/M/X): "
+choice /C RMSAX /N /M "Selecciona una opcion (R/M/S/A/X): "
 
-if errorlevel 3 goto EXIT
+if errorlevel 5 goto EXIT
+if errorlevel 4 goto ALL
+if errorlevel 3 goto COLLECTSTATIC
 if errorlevel 2 goto MIGRATE
 if errorlevel 1 goto RESTART
 
@@ -100,6 +104,33 @@ set DJANGO_SETTINGS_MODULE=Viajes.settings.production
 "%ENV_PATH%" manage.py migrate
 echo.
 echo [OK] Migraciones completadas
+timeout /t 3 /nobreak >nul
+goto RESTART
+
+:COLLECTSTATIC
+echo.
+echo [*] Recolectando archivos estaticos...
+set DJANGO_SETTINGS_MODULE=Viajes.settings.production
+"%ENV_PATH%" manage.py collectstatic --noinput
+echo.
+echo [OK] Archivos estaticos recolectados
+timeout /t 3 /nobreak >nul
+goto RESTART
+
+:ALL
+echo.
+echo ========================================
+echo   EJECUTANDO TODO
+echo ========================================
+echo.
+echo [1/2] Ejecutando migraciones...
+set DJANGO_SETTINGS_MODULE=Viajes.settings.production
+"%ENV_PATH%" manage.py migrate
+echo.
+echo [2/2] Recolectando archivos estaticos...
+"%ENV_PATH%" manage.py collectstatic --noinput
+echo.
+echo [OK] Todas las tareas completadas
 timeout /t 3 /nobreak >nul
 goto RESTART
 
