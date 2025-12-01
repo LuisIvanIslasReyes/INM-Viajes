@@ -105,18 +105,17 @@
                     fileCard.className = 'flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg';
                     fileCard.innerHTML = `
                         <div class="flex-shrink-0">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-green-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                            </svg>
+                            <i class="fas fa-file-excel text-green-600 text-4xl"></i>
                         </div>
                         <div class="flex-1">
                             <p class="font-semibold text-gray-800">${file.name}</p>
-                            <p class="text-sm text-gray-600">${fileSizeMB} MB</p>
+                            <p class="text-sm text-gray-600">
+                                <i class="fas fa-weight-hanging text-xs mr-1"></i>
+                                ${fileSizeMB} MB
+                            </p>
                         </div>
-                        <button type="button" onclick="removeFile(${index})" class="btn btn-circle btn-ghost btn-sm text-error hover:bg-error hover:text-white">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
+                        <button type="button" onclick="removeFile(${index})" class="btn btn-circle btn-ghost btn-sm text-error hover:bg-error hover:text-white" title="Eliminar archivo">
+                            <i class="fas fa-times text-lg"></i>
                         </button>
                     `;
                     filesList.appendChild(fileCard);
@@ -128,9 +127,7 @@
                     addMoreCard.className = 'flex items-center justify-center p-3 border-2 border-dashed border-green-300 rounded-lg bg-green-50 hover:bg-green-100 transition-colors cursor-pointer';
                     addMoreCard.innerHTML = `
                         <button type="button" class="flex items-center gap-2 text-green-700 font-semibold">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
-                            </svg>
+                            <i class="fas fa-plus-circle text-xl"></i>
                             Agregar otro archivo (${selectedFiles.length}/${MAX_FILES})
                         </button>
                     `;
@@ -172,4 +169,47 @@
             if (!dropZoneContent.classList.contains('hidden')) {
                 fileInput.click();
             }
+        });
+
+        // Manejar envío del formulario con indicadores visuales
+        const uploadForm = document.getElementById('uploadForm');
+        uploadForm.addEventListener('submit', function(e) {
+            // Deshabilitar el botón para evitar doble clic
+            submitBtn.disabled = true;
+            
+            // Cambiar el ícono y texto del botón
+            const submitBtnIcon = document.getElementById('submitBtnIcon');
+            const submitBtnSpinner = document.getElementById('submitBtnSpinner');
+            const uploadProgress = document.getElementById('uploadProgress');
+            
+            submitBtnIcon.classList.add('hidden');
+            submitBtnSpinner.classList.remove('hidden');
+            submitBtnText.textContent = 'Subiendo archivos...';
+            
+            // Mostrar barra de progreso
+            uploadProgress.classList.remove('hidden');
+            
+            // Simular progreso (ya que no podemos capturar el progreso real sin AJAX)
+            let progress = 0;
+            const progressBar = document.getElementById('progressBar');
+            const progressText = document.getElementById('progressText');
+            
+            const interval = setInterval(() => {
+                if (progress < 90) {
+                    progress += Math.random() * 15;
+                    if (progress > 90) progress = 90;
+                    
+                    progressBar.value = progress;
+                    
+                    if (progress < 30) {
+                        progressText.textContent = 'Validando archivos...';
+                    } else if (progress < 60) {
+                        progressText.textContent = 'Subiendo al servidor...';
+                    } else {
+                        progressText.textContent = 'Procesando datos...';
+                    }
+                }
+            }, 300);
+            
+            // El formulario se enviará normalmente
         });

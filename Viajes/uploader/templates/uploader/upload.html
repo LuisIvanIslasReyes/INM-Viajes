@@ -59,11 +59,22 @@
                 </div>
 
                 <button type="submit" class="btn bg-green-600 hover:bg-green-700 text-white border-green-600 btn-block" id="submitBtn" disabled>
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                    </svg>
+                    <span id="submitBtnIcon">
+                        <i class="fas fa-cloud-upload-alt text-xl"></i>
+                    </span>
                     <span id="submitBtnText">Cargar Archivos Excel</span>
+                    <span class="loading loading-spinner loading-md hidden" id="submitBtnSpinner"></span>
                 </button>
+                
+                <!-- Barra de progreso -->
+                <div id="uploadProgress" class="hidden">
+                    <div class="flex items-center gap-3 mb-2">
+                        <i class="fas fa-circle-notch fa-spin text-green-600 text-xl"></i>
+                        <span class="text-sm font-semibold text-green-700">Subiendo archivos...</span>
+                    </div>
+                    <progress class="progress progress-success w-full" id="progressBar" value="0" max="100"></progress>
+                    <p class="text-xs text-gray-500 mt-1" id="progressText">Preparando...</p>
+                </div>
             </form>
         </div>
     </div>
