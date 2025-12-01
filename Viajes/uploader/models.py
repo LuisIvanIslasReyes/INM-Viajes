@@ -1,17 +1,31 @@
 from django.db import models
 from django.contrib.auth.models import User
+from django.utils import timezone
 
 
 class UploadBatch(models.Model):
     """Batch de carga de archivo Excel"""
+    TIPO_VUELO_CHOICES = [
+        ('PEK-TIJ', 'Pekín - Tijuana'),
+        ('PEK-MEX', 'Pekín - México'),
+    ]
+    
     archivo = models.FileField(upload_to='uploads/')
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     fecha_carga = models.DateTimeField(auto_now_add=True)
+    
+    # Campos para generación de PIN
+    vuelo_numero = models.CharField(max_length=50, blank=True, null=True, verbose_name='Número de Vuelo')
+    tipo_vuelo = models.CharField(max_length=10, choices=TIPO_VUELO_CHOICES, blank=True, null=True, verbose_name='Tipo de Vuelo')
+    fecha_vuelo = models.DateField(blank=True, null=True, verbose_name='Fecha del Vuelo')
     
     class Meta:
         verbose_name = 'Lote de Carga'
         verbose_name_plural = 'Lotes de Carga'
         ordering = ['-fecha_carga']
+        indexes = [
+            models.Index(fields=['fecha_vuelo', 'tipo_vuelo']),
+        ]
     
     def __str__(self):
         return f"Carga {self.id} - {self.usuario.username} - {self.fecha_carga.strftime('%Y-%m-%d %H:%M')}"
@@ -174,3 +188,83 @@ class CasoEspecial(models.Model):
     @property
     def esta_resuelto(self):
         return self.estado in ['aceptado', 'editado', 'inadmitido', 'eliminado']
+
+
+class Notificacion(models.Model):
+    """Notificaciones del sistema para mantener seguimiento de eventos"""
+    
+    TIPO_CHOICES = [
+        ('importante', 'Importante'),
+        ('no_importante', 'No Importante'),
+    ]
+    
+    CATEGORIA_CHOICES = [
+        ('duplicados', 'Duplicados Detectados'),
+        ('casos_especiales', 'Casos Especiales'),
+        ('error_registro', 'Error en Registro'),
+        ('carga_exitosa', 'Carga Exitosa'),
+        ('sistema', 'Sistema'),
+    ]
+    
+    # Usuario destinatario
+    usuario = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='notificaciones',
+        verbose_name='Usuario'
+    )
+    
+    # Tipo y categoría
+    tipo = models.CharField(
+        max_length=20,
+        choices=TIPO_CHOICES,
+        default='no_importante',
+        verbose_name='Tipo'
+    )
+    
+    categoria = models.CharField(
+        max_length=30,
+        choices=CATEGORIA_CHOICES,
+        verbose_name='Categoría'
+    )
+    
+    # Contenido
+    titulo = models.CharField(max_length=200, verbose_name='Título')
+    mensaje = models.TextField(verbose_name='Mensaje')
+    
+    # Enlace opcional
+    enlace = models.CharField(
+        max_length=500,
+        blank=True,
+        null=True,
+        verbose_name='Enlace',
+        help_text='URL a la que redirige la notificación'
+    )
+    
+    # Estado
+    leida = models.BooleanField(default=False, verbose_name='Leída')
+    
+    # Timestamps
+    fecha_creacion = models.DateTimeField(auto_now_add=True, verbose_name='Fecha de Creación')
+    fecha_lectura = models.DateTimeField(null=True, blank=True, verbose_name='Fecha de Lectura')
+    
+    class Meta:
+        verbose_name = 'Notificación'
+        verbose_name_plural = 'Notificaciones'
+        ordering = ['-fecha_creacion']
+        indexes = [
+            models.Index(fields=['usuario', 'leida']),
+            models.Index(fields=['tipo']),
+            models.Index(fields=['categoria']),
+            models.Index(fields=['fecha_creacion']),
+        ]
+    
+    def __str__(self):
+        return f"{self.titulo} - {self.usuario.username} ({'Leída' if self.leida else 'No leída'})"
+    
+    def marcar_como_leida(self):
+        """Marca la notificación como leída"""
+        if not self.leida:
+            self.leida = True
+            self.fecha_lectura = timezone.now()
+            self.save()

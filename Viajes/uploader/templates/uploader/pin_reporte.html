@@ -1,0 +1,150 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block title %}PIN Oficial - {{ fecha|date:"d/m/Y" }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6 max-w-4xl">
+    <!-- Botones de acción -->
+    <div class="flex justify-between items-center mb-6">
+        <a href="{% url 'date_range_report' %}" class="btn btn-ghost gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Volver
+        </a>
+        
+        <button onclick="window.print()" class="btn btn-primary gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z" />
+            </svg>
+            Imprimir PIN
+        </button>
+    </div>
+    
+    <!-- Documento PIN -->
+    <div id="pin-documento" class="bg-white shadow-2xl p-12 rounded-lg border border-gray-300">
+        <!-- Encabezado -->
+        <div class="text-center mb-8">
+            <h1 class="text-2xl font-bold uppercase text-gray-800 mb-2">
+                INSTITUTO NACIONAL DE MIGRACIÓN
+            </h1>
+            <h2 class="text-lg font-semibold text-gray-700">
+                Oficina de Representación Baja California
+            </h2>
+        </div>
+        
+        <!-- Fecha del reporte -->
+        <div class="text-center mb-8">
+            <p class="text-xl font-bold uppercase text-gray-800">
+                {{ fecha|date:"l, d \d\e F \d\e Y"|upper }}
+            </p>
+        </div>
+        
+        <!-- Cuerpo del documento -->
+        <div class="space-y-6 text-justify leading-relaxed">
+            <!-- Párrafo inicial -->
+            <p class="text-base">
+                Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana 
+                el vuelo <strong>{{ vuelo_numero }}</strong> proveniente de Pekín con 
+                <strong>{{ total_pasajeros }} pasajeros</strong>.
+            </p>
+            
+            <!-- Proceso migratorio -->
+            {% if total_sr > 0 %}
+            <p class="text-base">
+                En dicho proceso migratorio se llevó a cabo <strong>{{ total_sr|stringformat:"02d" }} segunda{% if total_sr != 1 %}s{% endif %} revisión{% if total_sr != 1 %}es{% endif %}</strong>, 
+                las cuales, derivaron en:
+            </p>
+            
+            <ul class="list-none ml-8 space-y-2">
+                {% if total_internaciones > 0 %}
+                <li class="text-base">
+                    <strong>{{ total_internaciones|stringformat:"02d" }} internación{% if total_internaciones != 1 %}es{% endif %}</strong> por entrevista.
+                </li>
+                {% endif %}
+                
+                {% if total_rechazos > 0 %}
+                <li class="text-base">
+                    <strong>{{ total_rechazos|stringformat:"02d" }} rechazo{% if total_rechazos != 1 %}s{% endif %}</strong> por entrevista.
+                </li>
+                {% endif %}
+            </ul>
+            {% else %}
+            <p class="text-base">
+                En dicho proceso migratorio no se llevó a cabo ninguna segunda revisión.
+            </p>
+            {% endif %}
+            
+            <!-- Detalle de rechazos -->
+            {% if rechazados_detalle %}
+            <div class="mt-6">
+                <h3 class="text-lg font-bold uppercase text-gray-800 mb-4">
+                    RECHAZO{% if total_rechazos != 1 %}S{% endif %}
+                </h3>
+                
+                {% for rechazado in rechazados_detalle %}
+                <div class="mb-6 ml-4 border-l-4 border-red-500 pl-4">
+                    <p class="text-base"><strong>{{ forloop.counter }}. NOMBRE:</strong> {{ rechazado.nombre|upper }}</p>
+                    <p class="text-base ml-3"><strong>GÉNERO:</strong> {{ rechazado.genero }}</p>
+                    <p class="text-base ml-3"><strong>NACIONALIDAD:</strong> {{ rechazado.nacionalidad|upper }}</p>
+                    <p class="text-base ml-3"><strong>N. PASAPORTE:</strong> {{ rechazado.pasaporte }}</p>
+                    <p class="text-base ml-3"><strong>FDN:</strong> {{ rechazado.fecha_nacimiento }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            {% endif %}
+            
+            <!-- Apego a Derechos Humanos -->
+            <p class="text-base">
+                Cabe resaltar que los procesos mencionados fueron en apego a Derechos Humanos.
+            </p>
+            
+            <!-- Conexiones -->
+            <div class="mt-6 p-4 bg-blue-50 border-l-4 border-blue-500">
+                <p class="text-base">
+                    <strong>Conexiones:</strong> {{ total_conexiones }}
+                </p>
+            </div>
+            
+            <!-- Despedida -->
+            <p class="text-base mt-8">
+                Sin otro particular, se envía un cordial saludo.
+            </p>
+        </div>
+        
+        <!-- Firma (espacio) -->
+        <div class="mt-16 text-center">
+            <div class="border-t-2 border-gray-400 inline-block w-64 pt-2">
+                <p class="text-sm font-semibold">FIRMA Y SELLO</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+@media print {
+    /* Ocultar elementos de navegación al imprimir */
+    nav, .btn, .breadcrumbs {
+        display: none !important;
+    }
+    
+    /* Ajustar el documento para impresión */
+    #pin-documento {
+        box-shadow: none !important;
+        border: none !important;
+        padding: 40px !important;
+        margin: 0 !important;
+    }
+    
+    body {
+        background: white !important;
+    }
+    
+    /* Forzar saltos de página apropiados */
+    .page-break {
+        page-break-before: always;
+    }
+}
+</style>
+{% endblock %}

@@ -119,7 +119,18 @@
                 <i class="fas fa-calendar-day text-primary"></i>
                 <h3 class="fecha-titulo">{{ stat.fecha|date:"l, d \d\e F \d\e Y"|title }}</h3>
             </div>
-            <div class="flex gap-2">
+            <div class="flex gap-2 items-center">
+                <!-- Botón Generar PIN -->
+                <button 
+                   class="btn btn-sm btn-accent gap-1" 
+                   onclick="event.stopPropagation(); abrirModalPin('{{ stat.fecha|date:'Y-m-d' }}', '{{ stat.fecha|date:'l, d \d\e F \d\e Y'|title }}', {{ stat.total }}, {{ stat.segunda_revisions }}, {{ stat.internaciones }}, {{ stat.rechazados }})"
+                   title="Generar PIN Oficial">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="currentColor" viewBox="0 0 384 512">
+                        <path d="M32 32C32 14.3 46.3 0 64 0H320c17.7 0 32 14.3 32 32s-14.3 32-32 32H290.5l11.4 148.2c36.7 19.9 65.7 53.2 79.5 94.7l1 3c3.3 9.8 1.6 20.5-4.4 28.8s-15.7 13.3-26 13.3H32c-10.3 0-19.9-5-26-13.3s-7.7-19.1-4.4-28.8l1-3c13.8-41.5 42.8-74.8 79.5-94.7L93.5 64H64C46.3 64 32 49.7 32 32zM160 384h64v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V384z"/>
+                    </svg>
+                    PIN
+                </button>
+                
                 <span class="badge badge-primary badge-lg">Total: {{ stat.total }}</span>
                 {% if stat.segunda_revisions > 0 %}
                 <span class="badge badge-warning badge-lg">
@@ -217,4 +228,184 @@
     </div>
     {% endif %}
 </div>
+
+<!-- Modal PIN -->
+<dialog id="modalPin" class="modal">
+    <div class="modal-box max-w-3xl">
+        <div class="flex justify-between items-center mb-4">
+            <h3 class="font-bold text-lg flex items-center gap-2">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-success" fill="currentColor" viewBox="0 0 384 512">
+                    <path d="M32 32C32 14.3 46.3 0 64 0H320c17.7 0 32 14.3 32 32s-14.3 32-32 32H290.5l11.4 148.2c36.7 19.9 65.7 53.2 79.5 94.7l1 3c3.3 9.8 1.6 20.5-4.4 28.8s-15.7 13.3-26 13.3H32c-10.3 0-19.9-5-26-13.3s-7.7-19.1-4.4-28.8l1-3c13.8-41.5 42.8-74.8 79.5-94.7L93.5 64H64C46.3 64 32 49.7 32 32zM160 384h64v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V384z"/>
+                </svg>
+                PIN Oficial del INM
+            </h3>
+            
+            <div class="flex gap-2">
+                <button onclick="copiarPin()" class="btn btn-primary btn-sm gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                    Copiar PIN
+                </button>
+                <button onclick="cerrarModalPin()" class="btn btn-ghost btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                    </svg>
+                </button>
+            </div>
+        </div>
+        
+        <!-- Contenido del PIN -->
+        <div class="bg-base-200 p-6 rounded-lg max-h-96 overflow-y-auto" id="contenidoPin">
+            <div class="space-y-4 text-base leading-relaxed">
+                <!-- El contenido se cargará dinámicamente -->
+            </div>
+        </div>
+    </div>
+    <form method="dialog" class="modal-backdrop">
+        <button onclick="cerrarModalPin()">close</button>
+    </form>
+</dialog>
+
+<script>
+async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalInternaciones, totalRechazos) {
+    const modal = document.getElementById('modalPin');
+    const contenido = document.getElementById('contenidoPin');
+    
+    // Mostrar loading
+    contenido.innerHTML = '<div class="text-center"><span class="loading loading-spinner loading-lg"></span></div>';
+    modal.showModal();
+    
+    try {
+        // Hacer petición para obtener datos completos
+        const response = await fetch(`/pin/${fecha}/`, {
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest'
+            }
+        });
+        
+        const data = await response.json();
+        
+        // Generar el contenido del PIN
+        let pinTexto = `<strong>INSTITUTO NACIONAL DE MIGRACIÓN</strong>
+Oficina de Representación Baja California
+
+<strong>${fechaTexto.toUpperCase()}</strong>
+
+Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo <strong>${data.vuelo_numero}</strong> proveniente de Pekín con <strong>${data.total_pasajeros} pasajeros</strong>.
+
+`;
+
+        if (data.total_sr > 0) {
+            pinTexto += `En dicho proceso migratorio se llevó a cabo <strong>${String(data.total_sr).padStart(2, '0')} segunda${data.total_sr != 1 ? 's' : ''} revisión${data.total_sr != 1 ? 'es' : ''}</strong>, las cuales, derivaron en:\n`;
+            
+            if (data.total_internaciones > 0) {
+                pinTexto += `${String(data.total_internaciones).padStart(2, '0')} internación${data.total_internaciones != 1 ? 'es' : ''} por entrevista.\n`;
+            }
+            
+            if (data.total_rechazos > 0) {
+                pinTexto += `${String(data.total_rechazos).padStart(2, '0')} rechazo${data.total_rechazos != 1 ? 's' : ''} por entrevista.\n`;
+            }
+            pinTexto += '\n';
+        } else {
+            pinTexto += `En dicho proceso migratorio no se llevó a cabo ninguna segunda revisión.\n\n`;
+        }
+        
+        // Detalles de rechazos
+        if (data.rechazados_detalle && data.rechazados_detalle.length > 0) {
+            pinTexto += `<strong>RECHAZO${data.total_rechazos != 1 ? 'S' : ''}</strong>\n`;
+            data.rechazados_detalle.forEach((rechazado, index) => {
+                pinTexto += `${index + 1}. NOMBRE: ${rechazado.nombre.toUpperCase()}
+   GÉNERO: ${rechazado.genero}
+   NACIONALIDAD: ${rechazado.nacionalidad.toUpperCase()}
+   N. PASAPORTE: ${rechazado.pasaporte}
+   FDN: ${rechazado.fecha_nacimiento}\n\n`;
+            });
+        }
+        
+        pinTexto += `Cabe resaltar que los procesos mencionados fueron en apego a Derechos Humanos.
+
+<strong>Conexiones: ${data.total_conexiones}</strong>
+
+Sin otro particular, se envía un cordial saludo.`;
+        
+        // Reemplazar saltos de línea con <br> y mantener el formato
+        contenido.innerHTML = `<div style="white-space: pre-wrap;">${pinTexto}</div>`;
+        
+    } catch (error) {
+        console.error('Error al cargar el PIN:', error);
+        contenido.innerHTML = '<div class="alert alert-error">Error al cargar el PIN. Intenta de nuevo.</div>';
+    }
+}
+
+function cerrarModalPin() {
+    document.getElementById('modalPin').close();
+}
+
+async function copiarPin() {
+    const contenido = document.getElementById('contenidoPin');
+    const btnCopiar = event.target.closest('button');
+    const textoOriginal = btnCopiar.innerHTML;
+    
+    // Extraer el texto sin las etiquetas HTML pero manteniendo formato
+    const textoTemporal = document.createElement('div');
+    textoTemporal.innerHTML = contenido.innerHTML;
+    let texto = textoTemporal.innerText || textoTemporal.textContent;
+    
+    // Método 1: Intentar con Clipboard API moderna
+    if (navigator.clipboard && window.isSecureContext) {
+        try {
+            await navigator.clipboard.writeText(texto);
+            mostrarExito(btnCopiar, textoOriginal);
+            return;
+        } catch (err) {
+            console.log('Clipboard API falló, intentando método alternativo...');
+        }
+    }
+    
+    // Método 2: Usar textarea temporal (método clásico)
+    const textarea = document.createElement('textarea');
+    textarea.value = texto;
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-999999px';
+    textarea.style.top = '-999999px';
+    document.body.appendChild(textarea);
+    
+    try {
+        textarea.focus();
+        textarea.select();
+        
+        const exitoso = document.execCommand('copy');
+        document.body.removeChild(textarea);
+        
+        if (exitoso) {
+            mostrarExito(btnCopiar, textoOriginal);
+        } else {
+            throw new Error('execCommand falló');
+        }
+    } catch (err) {
+        console.error('Error al copiar:', err);
+        document.body.removeChild(textarea);
+        
+        // Método 3: Seleccionar el contenido directamente
+        const range = document.createRange();
+        range.selectNodeContents(contenido);
+        const selection = window.getSelection();
+        selection.removeAllRanges();
+        selection.addRange(range);
+        
+        alert('El texto ha sido seleccionado. Por favor presiona Ctrl+C (o Cmd+C en Mac) para copiar.');
+    }
+}
+
+function mostrarExito(btnCopiar, textoOriginal) {
+    btnCopiar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> ¡Copiado!';
+    btnCopiar.classList.add('btn-success');
+    
+    setTimeout(() => {
+        btnCopiar.innerHTML = textoOriginal;
+        btnCopiar.classList.remove('btn-success');
+    }, 2000);
+}
+</script>
 {% endblock %}

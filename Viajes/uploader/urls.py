@@ -12,6 +12,13 @@ urlpatterns = [
     path('check-duplicates/', views.check_duplicates, name='check_duplicates'),
     path('date-range-report/', views.date_range_report, name='date_range_report'),
     
+    # Notificaciones
+    path('notificaciones/', views.notificaciones_list, name='notificaciones_list'),
+    path('notificaciones/marcar-leida/<int:notificacion_id>/', views.marcar_notificacion_leida, name='marcar_notificacion_leida'),
+    
+    # PIN Oficial
+    path('pin/<str:fecha>/', views.generar_pin, name='generar_pin'),
+    
     # Casos Especiales
     path('casos-especiales/', views.casos_especiales_list, name='casos_especiales_list'),
     path('casos-especiales/aceptar/<int:caso_id>/', views.resolver_caso_aceptar, name='resolver_caso_aceptar'),

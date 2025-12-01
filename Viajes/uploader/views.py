@@ -42,18 +42,46 @@ def upload_excel(request):
         
         for archivo in archivos:
             try:
-                # Crear batch asociado al usuario que sube
-                batch = UploadBatch.objects.create(
-                    archivo=archivo,
-                    usuario=request.user
-                )
-                
                 df = pd.read_excel(archivo)
 
                 if df.empty:
-                    batch.delete()
                     messages.warning(request, f'📋 El archivo "{archivo.name}" está vacío o no contiene datos válidos.')
                     continue
+                
+                # Extraer información del vuelo del primer registro
+                primer_registro = df.iloc[0]
+                vuelo_numero = str(primer_registro.get('航班号', '')).strip() if '航班号' in df.columns else None
+                
+                # Detectar fecha del vuelo
+                fecha_vuelo = None
+                if '航班日期' in df.columns:
+                    fecha_valor = primer_registro.get('航班日期')
+                    if pd.notna(fecha_valor):
+                        if isinstance(fecha_valor, pd.Timestamp):
+                            fecha_vuelo = fecha_valor.date()
+                        else:
+                            try:
+                                fecha_vuelo = pd.to_datetime(fecha_valor).date()
+                            except:
+                                pass
+                
+                # Detectar tipo de vuelo basado en el aeropuerto de llegada
+                tipo_vuelo = None
+                if '落地机场' in df.columns:
+                    aeropuerto_llegada = str(primer_registro.get('落地机场', '')).upper()
+                    if 'TIJ' in aeropuerto_llegada or 'TIJUANA' in aeropuerto_llegada:
+                        tipo_vuelo = 'PEK-TIJ'
+                    elif 'MEX' in aeropuerto_llegada or 'MEXICO' in aeropuerto_llegada or 'MÉXICO' in aeropuerto_llegada:
+                        tipo_vuelo = 'PEK-MEX'
+                
+                # Crear batch asociado al usuario que sube
+                batch = UploadBatch.objects.create(
+                    archivo=archivo,
+                    usuario=request.user,
+                    vuelo_numero=vuelo_numero,
+                    tipo_vuelo=tipo_vuelo,
+                    fecha_vuelo=fecha_vuelo
+                )
                 
                 column_mapping = {
                     '航班号': 'vuelo_numero',
@@ -183,12 +211,45 @@ def upload_excel(request):
         if archivos_procesados > 0:
             if total_registros_creados > 0:
                 messages.success(request, f'✅ ¡{archivos_procesados} archivo(s) procesado(s) exitosamente! Se agregaron {total_registros_creados} registro(s) en total.')
+                
+                # Crear notificación de carga exitosa
+                from .models import Notificacion
+                Notificacion.objects.create(
+                    usuario=request.user,
+                    tipo='no_importante',
+                    categoria='carga_exitosa',
+                    titulo=f'Carga exitosa: {total_registros_creados} registros',
+                    mensaje=f'Se procesaron {archivos_procesados} archivo(s) correctamente con un total de {total_registros_creados} registros agregados.',
+                    enlace='/admin_list/'
+                )
             
             if total_casos_especiales > 0:
                 messages.warning(request, f'🔔 IMPORTANTE: Se crearon {total_casos_especiales} Caso(s) Especial(es) que requieren tu revisión. Ve a "Casos Especiales" en el menú.')
+                
+                # Crear notificación IMPORTANTE de casos especiales
+                from .models import Notificacion
+                Notificacion.objects.create(
+                    usuario=request.user,
+                    tipo='importante',
+                    categoria='casos_especiales',
+                    titulo=f'⚠️ {total_casos_especiales} Casos Especiales detectados',
+                    mensaje=f'Se encontraron {total_casos_especiales} caso(s) que requieren tu revisión inmediata: documentos duplicados o mismo vuelo/fecha.',
+                    enlace='/casos-especiales/'
+                )
             
             if total_registros_error > 0:
                 messages.info(request, f'ℹ️ {total_registros_error} registro(s) tuvieron errores y no se pudieron procesar.')
+                
+                # Crear notificación IMPORTANTE de errores
+                from .models import Notificacion
+                Notificacion.objects.create(
+                    usuario=request.user,
+                    tipo='importante',
+                    categoria='error_registro',
+                    titulo=f'❌ {total_registros_error} registros con errores',
+                    mensaje=f'Algunos registros no pudieron procesarse debido a errores de formato o datos inválidos. Revisa los archivos Excel.',
+                    enlace='/upload/'
+                )
         else:
             messages.error(request, '❌ No se pudo procesar ningún archivo.')
         
@@ -298,6 +359,7 @@ def update_registro(request, registro_id):
 @login_required
 def admin_list(request):
     """Vista para ver y modificar registros (TODOS VEN TODO)"""
+    from .models import Notificacion
     
     # TODOS ven TODOS los registros
     registros = Registro.objects.select_related('batch', 'batch__usuario').all()
@@ -336,10 +398,17 @@ def admin_list(request):
     page_number = request.GET.get('page')
     page_obj = paginator.get_page(page_number)
     
+    # Contar notificaciones no leídas para el usuario actual
+    notificaciones_no_leidas = Notificacion.objects.filter(
+        usuario=request.user,
+        leida=False
+    ).count()
+    
     context = {
         'page_obj': page_obj,
         'batches': batches,
         'is_superuser': request.user.is_superuser,
+        'notificaciones_no_leidas': notificaciones_no_leidas,
     }
     
     return render(request, 'uploader/admin_list.html', context)
@@ -358,7 +427,7 @@ def date_range_report(request):
     # (Los que no tienen nada están OK y no se muestran aquí)
     registros = Registro.objects.filter(
         Q(segunda_revision=True) | Q(rechazado=True) | Q(internacion=True)
-    ).select_related('batch', 'batch__usuario').order_by('vuelo_fecha', 'vuelo_numero')
+    ).select_related('batch', 'batch__usuario').order_by('-vuelo_fecha', 'vuelo_numero')
     
     # Aplicar filtros de fecha
     if fecha_inicio:
@@ -533,6 +602,159 @@ def check_duplicates(request):
     }
     
     return render(request, 'uploader/check_duplicates.html', context)
+
+
+@login_required
+def generar_pin(request, fecha):
+    """Vista para generar el PIN oficial del INM por fecha"""
+    from datetime import datetime, timedelta
+    
+    # Convertir string de fecha a objeto date
+    try:
+        fecha_obj = datetime.strptime(fecha, '%Y-%m-%d').date()
+    except ValueError:
+        messages.error(request, '❌ Fecha inválida.')
+        return redirect('date_range_report')
+    
+    # Obtener todos los registros de ese día (buscar por rango de fecha completo)
+    fecha_inicio = datetime.combine(fecha_obj, datetime.min.time())
+    fecha_fin = datetime.combine(fecha_obj, datetime.max.time())
+    
+    registros_del_dia = Registro.objects.filter(
+        vuelo_fecha__gte=fecha_inicio,
+        vuelo_fecha__lte=fecha_fin
+    )
+    
+    if not registros_del_dia.exists():
+        messages.error(request, f'❌ No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}.')
+        return redirect('date_range_report')
+    
+    # Calcular estadísticas
+    total_pasajeros = registros_del_dia.count()
+    
+    # Registros con Segunda Revisión
+    registros_sr = registros_del_dia.filter(segunda_revision=True)
+    total_sr = registros_sr.count()
+    
+    # De los SR, cuántos fueron Internación
+    registros_internacion = registros_sr.filter(internacion=True)
+    total_internaciones = registros_internacion.count()
+    
+    # De los SR, cuántos fueron Rechazo
+    registros_rechazo = registros_sr.filter(rechazado=True)
+    total_rechazos = registros_rechazo.count()
+    
+    # Calcular conexiones (pasajeros que van a MEX y NO fueron rechazados)
+    # Detectar MEX por aeropuerto_llegada
+    registros_mex = registros_del_dia.filter(
+        models.Q(aeropuerto_llegada__icontains='MEX') | 
+        models.Q(aeropuerto_llegada__icontains='MEXICO') |
+        models.Q(aeropuerto_llegada__icontains='MÉXICO')
+    )
+    # Conexiones = Total PEK-MEX - Rechazados PEK-MEX
+    rechazados_mex = registros_mex.filter(rechazado=True).count()
+    total_conexiones = registros_mex.count() - rechazados_mex
+    
+    # Obtener número de vuelo del primer registro
+    primer_registro = registros_del_dia.first()
+    vuelo_numero = primer_registro.vuelo_numero if primer_registro else 'HU7925'
+    
+    # Datos completos de personas rechazadas
+    rechazados_detalle = []
+    for registro in registros_rechazo:
+        rechazados_detalle.append({
+            'nombre': registro.nombre_pasajero,
+            'genero': 'HOMBRE' if registro.genero == 'M' else 'MUJER' if registro.genero == 'F' else 'N/A',
+            'nacionalidad': registro.pais_emision or 'N/A',
+            'pasaporte': registro.numero_documento,
+            'fecha_nacimiento': registro.fecha_nacimiento.strftime('%d.%m.%Y') if registro.fecha_nacimiento else 'N/A'
+        })
+    
+    # Si es una petición AJAX, devolver JSON
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return JsonResponse({
+            'fecha': fecha_obj.strftime('%Y-%m-%d'),
+            'vuelo_numero': vuelo_numero,
+            'total_pasajeros': total_pasajeros,
+            'total_sr': total_sr,
+            'total_internaciones': total_internaciones,
+            'total_rechazos': total_rechazos,
+            'total_conexiones': total_conexiones,
+            'rechazados_detalle': rechazados_detalle,
+        })
+    
+    # Si no es AJAX, renderizar template completo (para compatibilidad)
+    context = {
+        'fecha': fecha_obj,
+        'vuelo_numero': vuelo_numero,
+        'total_pasajeros': total_pasajeros,
+        'total_sr': total_sr,
+        'total_internaciones': total_internaciones,
+        'total_rechazos': total_rechazos,
+        'total_conexiones': total_conexiones,
+        'rechazados_detalle': rechazados_detalle,
+        'is_superuser': request.user.is_superuser,
+    }
+    
+    return render(request, 'uploader/pin_reporte.html', context)
+
+
+@login_required
+def notificaciones_list(request):
+    """Vista para listar notificaciones del usuario"""
+    from .models import Notificacion
+    
+    filtro_tipo = request.GET.get('tipo', 'todas')
+    
+    # Obtener notificaciones del usuario actual
+    notificaciones = Notificacion.objects.filter(usuario=request.user)
+    
+    # Filtrar por tipo
+    if filtro_tipo == 'importante':
+        notificaciones = notificaciones.filter(tipo='importante')
+    elif filtro_tipo == 'no_importante':
+        notificaciones = notificaciones.filter(tipo='no_importante')
+    
+    notificaciones = notificaciones.order_by('-fecha_creacion')
+    
+    # Paginar
+    paginator = Paginator(notificaciones, 20)
+    page = request.GET.get('page', 1)
+    notificaciones_paginadas = paginator.get_page(page)
+    
+    # Contar no leídas
+    total_no_leidas = Notificacion.objects.filter(usuario=request.user, leida=False).count()
+    
+    context = {
+        'notificaciones': notificaciones_paginadas,
+        'filtro_tipo': filtro_tipo,
+        'total_no_leidas': total_no_leidas,
+        'is_superuser': request.user.is_superuser,
+    }
+    
+    return render(request, 'uploader/notificaciones_list.html', context)
+
+
+@login_required
+def marcar_notificacion_leida(request, notificacion_id):
+    """Marcar una notificación como leída"""
+    from .models import Notificacion
+    
+    if request.method == 'POST':
+        try:
+            notificacion = Notificacion.objects.get(id=notificacion_id, usuario=request.user)
+            notificacion.marcar_como_leida()
+            
+            # Devolver respuesta JSON con el nuevo contador
+            total_no_leidas = Notificacion.objects.filter(usuario=request.user, leida=False).count()
+            return JsonResponse({
+                'success': True,
+                'total_no_leidas': total_no_leidas
+            })
+        except Notificacion.DoesNotExist:
+            return JsonResponse({'success': False, 'error': 'Notificación no encontrada'}, status=404)
+    
+    return JsonResponse({'success': False, 'error': 'Método no permitido'}, status=405)
 
 
 @login_required

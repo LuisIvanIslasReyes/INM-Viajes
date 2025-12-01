@@ -1,0 +1,192 @@
+{% extends 'uploader/base.html' %}
+
+{% block title %}Notificaciones{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6">
+    <div class="flex justify-between items-center mb-6">
+        <h1 class="text-3xl font-bold">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
+            </svg>
+            Notificaciones
+        </h1>
+        
+        <a href="{% url 'admin_list' %}" class="btn btn-ghost">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Volver
+        </a>
+    </div>
+
+    <!-- Tabs de filtro -->
+    <div class="tabs tabs-boxed mb-6">
+        <a href="?tipo=todas" class="tab {% if filtro_tipo == 'todas' %}tab-active{% endif %}">
+            Todas
+            {% if filtro_tipo == 'todas' %}
+                <span class="badge badge-sm ml-2">{{ notificaciones.paginator.count }}</span>
+            {% endif %}
+        </a>
+        <a href="?tipo=importante" class="tab {% if filtro_tipo == 'importante' %}tab-active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            Importante
+        </a>
+        <a href="?tipo=no_importante" class="tab {% if filtro_tipo == 'no_importante' %}tab-active{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            No Importante
+        </a>
+    </div>
+
+    <!-- Lista de notificaciones -->
+    {% if notificaciones %}
+        <div class="space-y-4">
+            {% for notif in notificaciones %}
+            <div class="card bg-base-100 shadow-md border-l-4 
+                        {% if notif.tipo == 'importante' %}border-error{% else %}border-info{% endif %}
+                        {% if not notif.leida %}bg-base-200{% endif %}">
+                <div class="card-body">
+                    <div class="flex justify-between items-start">
+                        <div class="flex-1">
+                            <!-- Categoría badge -->
+                            <div class="flex gap-2 items-center mb-2">
+                                {% if notif.categoria == 'duplicados' %}
+                                    <span class="badge badge-warning gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                        </svg>
+                                        Duplicados
+                                    </span>
+                                {% elif notif.categoria == 'casos_especiales' %}
+                                    <span class="badge badge-error gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                        </svg>
+                                        Casos Especiales
+                                    </span>
+                                {% elif notif.categoria == 'error_registro' %}
+                                    <span class="badge badge-error gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                        </svg>
+                                        Error
+                                    </span>
+                                {% elif notif.categoria == 'carga_exitosa' %}
+                                    <span class="badge badge-success gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                        </svg>
+                                        Carga Exitosa
+                                    </span>
+                                {% elif notif.categoria == 'sistema' %}
+                                    <span class="badge badge-info gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                        </svg>
+                                        Sistema
+                                    </span>
+                                {% endif %}
+                                
+                                {% if not notif.leida %}
+                                    <span class="badge badge-sm">Nueva</span>
+                                {% endif %}
+                            </div>
+                            
+                            <!-- Título -->
+                            <h3 class="card-title text-lg">{{ notif.titulo }}</h3>
+                            
+                            <!-- Mensaje -->
+                            <p class="text-base-content/70 mt-2">{{ notif.mensaje }}</p>
+                            
+                            <!-- Fecha -->
+                            <p class="text-xs text-base-content/50 mt-3">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                {{ notif.fecha_creacion|date:"d/m/Y H:i" }}
+                            </p>
+                        </div>
+                        
+                        <!-- Acciones -->
+                        <div class="flex flex-col gap-2 ml-4">
+                            {% if notif.enlace %}
+                                <a href="{{ notif.enlace }}" class="btn btn-sm btn-primary">
+                                    Ver Detalles
+                                </a>
+                            {% endif %}
+                            
+                            {% if not notif.leida %}
+                                <button class="btn btn-sm btn-ghost marcar-leida-btn" data-notif-id="{{ notif.id }}">
+                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Marcar leída
+                                </button>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Paginación -->
+        {% if notificaciones.has_other_pages %}
+        <div class="flex justify-center mt-8">
+            <div class="btn-group">
+                {% if notificaciones.has_previous %}
+                    <a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.previous_page_number }}" class="btn btn-sm">«</a>
+                {% endif %}
+                
+                <button class="btn btn-sm btn-active">Página {{ notificaciones.number }}</button>
+                
+                {% if notificaciones.has_next %}
+                    <a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.next_page_number }}" class="btn btn-sm">»</a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    {% else %}
+        <div class="alert alert-info">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span>No tienes notificaciones en esta categoría.</span>
+        </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Marcar notificación como leída
+    document.querySelectorAll('.marcar-leida-btn').forEach(btn => {
+        btn.addEventListener('click', async function() {
+            const notifId = this.dataset.notifId;
+            
+            try {
+                const response = await fetch(`/notificaciones/marcar-leida/${notifId}/`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json'
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    // Recargar página para reflejar cambios
+                    location.reload();
+                }
+            } catch (error) {
+                console.error('Error al marcar como leída:', error);
+            }
+        });
+    });
+});
+</script>
+{% endblock %}
