@@ -107,9 +107,18 @@ def upload_excel(request):
                                             value = None
                                     except:
                                         value = None
-                                elif model_field in ['numero_equipaje', 'informacion_contacto', 'contacto_reserva', 
-                                                    'contacto_pasajero', 'numero_ticket', 'salida_planificada']:
-                                    value = str(value) if value is not None else None
+                                elif model_field in ['numero_documento', 'numero_equipaje', 'informacion_contacto', 'contacto_reserva', 
+                                                    'contacto_pasajero', 'numero_ticket', 'salida_planificada', 'numero_asiento']:
+                                    # Convertir a string para manejar tanto números como texto con prefijos
+                                    if value is not None and not pd.isna(value):
+                                        # Si es número, convertir a string y limpiar notación científica
+                                        if isinstance(value, (int, float)):
+                                            # Convertir sin notación científica
+                                            value = f"{value:.0f}" if value == int(value) else str(value)
+                                        else:
+                                            value = str(value).strip()
+                                    else:
+                                        value = None
                                 
                                 registro_data[model_field] = value
                         
@@ -150,6 +159,11 @@ def upload_excel(request):
                                 casos_especiales_creados += 1
                     
                     except Exception as e:
+                        # Mostrar información detallada del error
+                        fila_excel = index + 2  # +2 porque Excel empieza en 1 y tiene encabezado
+                        nombre_error = row.get('旅客姓名', 'N/A')
+                        doc_error = row.get('证件号', 'N/A')
+                        print(f"❌ ERROR en fila {fila_excel}: {nombre_error} (Doc: {doc_error}) - {str(e)}")
                         registros_error += 1
                         continue
                 
