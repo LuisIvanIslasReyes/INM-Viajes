@@ -7,6 +7,36 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+function updateRegistro(registroId, campo, valor) {
+    const formData = new FormData();
+    formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    formData.append(campo, valor);
+    
+    fetch(`/update-registro/${registroId}/`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Recargar la página para actualizar el estado de los checkboxes
+            location.reload();
+        } else {
+            alert('Error al actualizar el registro');
+            location.reload();
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Error al actualizar el registro');
+        location.reload();
+    });
+}
+</script>
 {% endblock %}
 
 {% block content %}
@@ -181,11 +211,11 @@
                                 </button>
                                 
                                 <!-- Inadmitir -->
-                                <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id caso.registro.id %}" onsubmit="return confirm('¿Marcar este registro como INADMITIDO?');">
+                                <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id caso.registro.id %}" onsubmit="return confirm('¿Marcar este registro como INADMITIDO?\n\nSe activará automáticamente:\n✓ SR (Segunda Revisión)\n✓ R (Rechazado)');">
                                     {% csrf_token %}
                                     <input type="hidden" name="motivo" value="Documento duplicado - registro inadmitido">
-                                    <button type="submit" class="w-full btn btn-sm" style="background: #dc2626; color: white; border: none;">
-                                        <i class="fas fa-ban"></i> Inadmitir
+                                    <button type="submit" class="w-full btn btn-sm" style="background: #dc2626; color: white; border: none;" title="Activa SR + R automáticamente">
+                                        <i class="fas fa-ban"></i> Rechazar (SR + R)
                                     </button>
                                 </form>
                                 
@@ -319,11 +349,11 @@
                                 </button>
                                 
                                 <!-- Inadmitir -->
-                                <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id reg_conf.id %}" onsubmit="return confirm('¿Marcar a {{ reg_conf.nombre_pasajero }} como INADMITIDO?');">
+                                <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id reg_conf.id %}" onsubmit="return confirm('¿Marcar a {{ reg_conf.nombre_pasajero }} como INADMITIDO?\n\nSe activará automáticamente:\n✓ SR (Segunda Revisión)\n✓ R (Rechazado)');">
                                     {% csrf_token %}
                                     <input type="hidden" name="motivo" value="Documento duplicado - registro inadmitido">
-                                    <button type="submit" class="w-full btn btn-sm" style="background: #dc2626; color: white; border: none;">
-                                        <i class="fas fa-ban"></i> Inadmitir
+                                    <button type="submit" class="w-full btn btn-sm" style="background: #dc2626; color: white; border: none;" title="Activa SR + R automáticamente">
+                                        <i class="fas fa-ban"></i> Rechazar (SR + R)
                                     </button>
                                 </form>
                                 
@@ -389,13 +419,14 @@
             <!-- BOTÓN ACEPTAR AMBOS (solo para pendientes, abarca todo el ancho) -->
             {% if caso.estado == 'pendiente' %}
             <div class="mt-6 pt-6 border-t-2 border-gray-300">
-                <form method="POST" action="{% url 'resolver_caso_aceptar' caso.id %}" onsubmit="return confirm('¿Confirma que AMBOS registros son válidos (ej. hermanos con mismo documento)?');">
+                <form method="POST" action="{% url 'resolver_caso_aceptar' caso.id %}" onsubmit="return confirm('¿Confirma que AMBOS registros son válidos?\n\nSe activará automáticamente:\n✓ SR (Segunda Revisión) en TODOS los registros');">
                     {% csrf_token %}
-                    <button type="submit" class="btn btn-success w-full btn-lg" style="height: 60px; font-size: 1.1rem;">
-                        <i class="fas fa-check-double"></i> ACEPTAR AMBOS REGISTROS COMO VÁLIDOS
+                    <button type="submit" class="btn btn-success w-full btn-lg" style="height: 60px; font-size: 1.1rem;" title="Activa SR en todos los registros">
+                        <i class="fas fa-check-double"></i> ACEPTAR AMBOS REGISTROS COMO VÁLIDOS (SR)
                     </button>
                     <p class="text-center text-sm text-gray-600 mt-2">
-                        Usa esta opción si ambos registros son correctos (ej. hermanos compartiendo documento familiar)
+                        Usa esta opción si ambos registros son correctos (ej. hermanos compartiendo documento familiar).<br>
+                        <strong>Se marcará SR (Segunda Revisión) en todos los registros automáticamente.</strong>
                     </p>
                 </form>
             </div>

@@ -945,19 +945,21 @@ def resolver_caso_inadmitir(request, caso_id, registro_id):
         caso = get_object_or_404(CasoEspecial, id=caso_id)
         registro = get_object_or_404(Registro, id=registro_id)
         
-        # Marcar como rechazado
-        registro.rechazado = True
+        # Marcar como rechazado (automáticamente activa SR y R)
+        registro.segunda_revision = True  # Activar SR
+        registro.rechazado = True  # Activar R
+        registro.internacion = False  # Desactivar I (incompatible con R)
         registro.comentario = request.POST.get('motivo', 'Marcado como rechazado por documento duplicado')
         registro.save()
         
         # Marcar caso como resuelto
-        caso.estado = 'rechazado'
+        caso.estado = 'inadmitido'
         caso.resuelto_por = request.user
         caso.fecha_resolucion = timezone.now()
-        caso.notas_admin = f'Registro {registro.nombre_pasajero} marcado como rechazado'
+        caso.notas_admin = f'Registro {registro.nombre_pasajero} marcado como rechazado (SR + R activados automáticamente)'
         caso.save()
         
-        messages.success(request, f'✅ Caso #{caso.id} resuelto. Registro marcado como rechazado.')
+        messages.success(request, f'✅ Caso #{caso.id} resuelto. Registro marcado como INADMITIDO (SR + R).')
         return redirect('casos_especiales_list')
     
     return redirect('casos_especiales_list')
