@@ -141,7 +141,7 @@ function cerrarModalPin() {
 
 async function copiarPin() {
     const contenido = document.getElementById('contenidoPin');
-    const btnCopiar = event.target.closest('button');
+    const btnCopiar = event.currentTarget;
     const textoOriginal = btnCopiar.innerHTML;
     
     // Extraer el texto sin las etiquetas HTML pero manteniendo formato
@@ -149,49 +149,55 @@ async function copiarPin() {
     textoTemporal.innerHTML = contenido.innerHTML;
     let texto = textoTemporal.innerText || textoTemporal.textContent;
     
-    // Método 1: Intentar con Clipboard API moderna
-    if (navigator.clipboard && window.isSecureContext) {
-        try {
-            await navigator.clipboard.writeText(texto);
-            mostrarExito(btnCopiar, textoOriginal);
-            return;
-        } catch (err) {
-            console.log('Clipboard API falló, intentando método alternativo...');
-        }
-    }
-    
-    // Método 2: Usar textarea temporal (método clásico)
+    // Crear textarea temporal (método más compatible)
     const textarea = document.createElement('textarea');
     textarea.value = texto;
     textarea.style.position = 'fixed';
-    textarea.style.left = '-999999px';
-    textarea.style.top = '-999999px';
+    textarea.style.top = '0';
+    textarea.style.left = '0';
+    textarea.style.width = '2em';
+    textarea.style.height = '2em';
+    textarea.style.padding = '0';
+    textarea.style.border = 'none';
+    textarea.style.outline = 'none';
+    textarea.style.boxShadow = 'none';
+    textarea.style.background = 'transparent';
+    textarea.setAttribute('readonly', '');
+    
     document.body.appendChild(textarea);
     
     try {
-        textarea.focus();
-        textarea.select();
+        // Para iOS
+        textarea.contentEditable = true;
+        textarea.readOnly = false;
         
-        const exitoso = document.execCommand('copy');
-        document.body.removeChild(textarea);
-        
-        if (exitoso) {
-            mostrarExito(btnCopiar, textoOriginal);
-        } else {
-            throw new Error('execCommand falló');
-        }
-    } catch (err) {
-        console.error('Error al copiar:', err);
-        document.body.removeChild(textarea);
-        
-        // Método 3: Seleccionar el contenido directamente
         const range = document.createRange();
-        range.selectNodeContents(contenido);
+        range.selectNodeContents(textarea);
+        
         const selection = window.getSelection();
         selection.removeAllRanges();
         selection.addRange(range);
         
-        alert('El texto ha sido seleccionado. Por favor presiona Ctrl+C (o Cmd+C en Mac) para copiar.');
+        textarea.setSelectionRange(0, 999999);
+        
+        const exitoso = document.execCommand('copy');
+        
+        if (exitoso) {
+            mostrarExito(btnCopiar, textoOriginal);
+        } else {
+            // Si falla, intentar con Clipboard API
+            if (navigator.clipboard) {
+                await navigator.clipboard.writeText(texto);
+                mostrarExito(btnCopiar, textoOriginal);
+            } else {
+                throw new Error('No se pudo copiar');
+            }
+        }
+    } catch (err) {
+        console.error('Error al copiar:', err);
+        alert('Error al copiar. Por favor, selecciona el texto manualmente y presiona Ctrl+C (o Cmd+C en Mac).');
+    } finally {
+        document.body.removeChild(textarea);
     }
 }
 
