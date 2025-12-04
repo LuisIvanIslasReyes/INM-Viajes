@@ -142,29 +142,97 @@ function cerrarModalPin() {
 function copiarPin(event) {
     const contenido = document.getElementById('contenidoPin');
     const btnCopiar = event.currentTarget;
+    
+    // Si el botón ya está deshabilitado, no hacer nada
+    if (btnCopiar.disabled) {
+        return;
+    }
+    
     const textoOriginal = btnCopiar.innerHTML;
     
     // Extraer el texto limpio
     let texto = contenido.innerText || contenido.textContent;
     
+    // Crear contenedor con instrucciones
+    const container = document.createElement('div');
+    container.className = 'space-y-3';
+    
+    // Agregar alerta con instrucciones
+    const alerta = document.createElement('div');
+    alerta.className = 'alert alert-warning shadow-lg';
+    alerta.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+        </svg>
+        <div>
+            <h3 class="font-bold text-base">📋 Texto listo para copiar</h3>
+            <div class="text-sm mt-1">
+                <p>1. El texto ya está seleccionado abajo</p>
+                <p>2. Presiona <kbd class="kbd kbd-sm">Ctrl</kbd> + <kbd class="kbd kbd-sm">C</kbd> en tu teclado</p>
+                <p>3. Pega donde necesites con <kbd class="kbd kbd-sm">Ctrl</kbd> + <kbd class="kbd kbd-sm">V</kbd></p>
+            </div>
+        </div>
+    `;
+    
     // Crear textarea visible con el texto
     const textarea = document.createElement('textarea');
     textarea.value = texto;
-    textarea.className = 'textarea textarea-bordered w-full h-64 mt-4';
+    textarea.className = 'textarea textarea-bordered w-full h-64 font-mono text-sm';
     textarea.readOnly = true;
     
-    // Limpiar y agregar el textarea
+    // Agregar elementos al contenedor
+    container.appendChild(alerta);
+    container.appendChild(textarea);
+    
+    // Limpiar y agregar el contenedor
     contenido.innerHTML = '';
-    contenido.appendChild(textarea);
+    contenido.appendChild(container);
     
-    // Seleccionar todo el texto
+    // Seleccionar todo el texto automáticamente
     textarea.select();
+    textarea.focus();
     
-    // Cambiar el botón
-    btnCopiar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Presiona Ctrl+C';
+    // Detectar cuando el usuario copie con Ctrl+C
+    let copiado = false;
+    textarea.addEventListener('copy', function() {
+        if (!copiado) {
+            copiado = true;
+            
+            // Cambiar la alerta a éxito
+            alerta.className = 'alert alert-success shadow-lg';
+            alerta.innerHTML = `
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <h3 class="font-bold text-base">✅ ¡Texto copiado exitosamente!</h3>
+                    <div class="text-sm mt-1">
+                        <p>Ahora puedes pegarlo donde lo necesites con <kbd class="kbd kbd-sm">Ctrl</kbd> + <kbd class="kbd kbd-sm">V</kbd></p>
+                        <p class="text-xs mt-1 opacity-70">Esta ventana se cerrará en 2 segundos...</p>
+                    </div>
+                </div>
+            `;
+            
+            // Cambiar el botón a éxito
+            btnCopiar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> ¡Copiado!';
+            
+            // Cerrar el modal automáticamente después de 2 segundos
+            setTimeout(() => {
+                const modal = document.getElementById('modalPin');
+                modal.close();
+                // Recargar la página para resetear el estado del modal
+                location.reload();
+            }, 2000);
+        }
+    });
+    
+    // Cambiar el botón inicial
+    btnCopiar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg> Esperando copia...';
+    btnCopiar.classList.remove('btn-primary');
     btnCopiar.classList.add('btn-warning');
+    btnCopiar.disabled = true;
+    btnCopiar.style.cursor = 'not-allowed';
 }
-
 
 function copiarConTextarea(texto, btnCopiar, textoOriginal) {
     console.log('Usando método textarea...'); // Debug
