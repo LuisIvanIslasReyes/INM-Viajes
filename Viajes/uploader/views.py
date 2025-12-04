@@ -239,7 +239,6 @@ def upload_excel(request):
                         # DESPUÉS de crear, verificar si es un Caso Especial
                         if numero_doc and vuelo_num and vuelo_fecha:
                             # Buscar registros con mismo documento + mismo vuelo + misma fecha
-                            # (sin importar el nombre - pueden ser hermanos o datos duplicados)
                             registros_mismo_vuelo_doc = Registro.objects.filter(
                                 numero_documento=numero_doc,
                                 vuelo_numero=vuelo_num,
@@ -248,14 +247,19 @@ def upload_excel(request):
                                 id=nuevo_registro.id  # Excluir el que acabamos de crear
                             )
                             
-                            # Si encontramos coincidencias, es un Caso Especial
+                            # Si encontramos coincidencias, SIEMPRE crear caso especial
                             if registros_mismo_vuelo_doc.exists():
-                                # Determinar razón basado en si el nombre es igual o diferente
-                                mismo_nombre = registros_mismo_vuelo_doc.filter(nombre_pasajero=nombre).exists()
+                                # Determinar razón basada en si el nombre es diferente o igual
+                                nombre_diferente = registros_mismo_vuelo_doc.exclude(nombre_pasajero=nombre).exists()
+                                
+                                # SIEMPRE crear caso especial, pero con diferentes razones:
+                                # - NOMBRE DIFERENTE = documento_duplicado (fraude/error grave)
+                                # - NOMBRE IGUAL = mismo_vuelo_fecha (carga duplicada)
+                                razon = 'documento_duplicado' if nombre_diferente else 'mismo_vuelo_fecha'
                                 
                                 CasoEspecial.objects.create(
                                     registro=nuevo_registro,
-                                    razon='mismo_vuelo_fecha' if mismo_nombre else 'documento_duplicado',
+                                    razon=razon,
                                     estado='pendiente',
                                     documento_original=numero_doc,
                                     registros_conflictivos_ids=list(registros_mismo_vuelo_doc.values_list('id', flat=True))

@@ -48,7 +48,7 @@
             {% for notif in notificaciones %}
             <div class="card bg-base-100 shadow-md border-l-4 
                         {% if notif.tipo == 'importante' %}border-error{% else %}border-info{% endif %}
-                        {% if not notif.leida %}bg-base-200{% endif %}">
+                        {% if notif.leida %}bg-base-200 opacity-60{% else %}bg-white{% endif %}">
                 <div class="card-body">
                     <div class="flex justify-between items-start">
                         <div class="flex-1">
