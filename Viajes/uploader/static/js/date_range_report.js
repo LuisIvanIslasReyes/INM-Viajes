@@ -85,7 +85,7 @@ async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalIn
         
         // Generar el contenido del PIN
         let pinTexto = `<strong>INSTITUTO NACIONAL DE MIGRACIÓN</strong>
-Oficina de Representación Baja California
+<strong>Oficina de Representación Baja California</strong>
 
 <strong>${fechaTexto.toUpperCase()}</strong>
 
@@ -150,8 +150,16 @@ function copiarPin(event) {
     
     const textoOriginal = btnCopiar.innerHTML;
     
-    // Extraer el texto limpio
-    let texto = contenido.innerText || contenido.textContent;
+    // Extraer el HTML y convertir <strong> a formato WhatsApp
+    let html = contenido.innerHTML;
+    
+    // Convertir <strong>texto</strong> a *texto* para WhatsApp
+    html = html.replace(/<strong>(.*?)<\/strong>/gi, '*$1*');
+    
+    // Crear un elemento temporal para extraer el texto con los asteriscos
+    const tempDiv = document.createElement('div');
+    tempDiv.innerHTML = html;
+    let texto = tempDiv.innerText || tempDiv.textContent;
     
     // Crear contenedor con instrucciones
     const container = document.createElement('div');
