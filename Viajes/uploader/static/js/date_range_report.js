@@ -139,64 +139,62 @@ function cerrarModalPin() {
     document.getElementById('modalPin').close();
 }
 
-async function copiarPin() {
+function copiarPin(event) {
     const contenido = document.getElementById('contenidoPin');
     const btnCopiar = event.currentTarget;
     const textoOriginal = btnCopiar.innerHTML;
     
-    // Extraer el texto sin las etiquetas HTML pero manteniendo formato
-    const textoTemporal = document.createElement('div');
-    textoTemporal.innerHTML = contenido.innerHTML;
-    let texto = textoTemporal.innerText || textoTemporal.textContent;
+    // Extraer el texto limpio del contenido
+    let texto = contenido.innerText || contenido.textContent;
     
-    // Crear textarea temporal (método más compatible)
+    // Método 1: Intentar con Clipboard API (más confiable para texto plano)
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(texto)
+            .then(() => {
+                mostrarExito(btnCopiar, textoOriginal);
+            })
+            .catch(() => {
+                // Si falla, usar método alternativo
+                copiarConTextarea(texto, btnCopiar, textoOriginal);
+            });
+    } else {
+        // Usar método alternativo directamente
+        copiarConTextarea(texto, btnCopiar, textoOriginal);
+    }
+}
+
+function copiarConTextarea(texto, btnCopiar, textoOriginal) {
+    // Crear textarea temporal
     const textarea = document.createElement('textarea');
     textarea.value = texto;
+    
+    // Posicionar fuera de la vista pero asegurarse de que sea visible
     textarea.style.position = 'fixed';
     textarea.style.top = '0';
-    textarea.style.left = '0';
-    textarea.style.width = '2em';
-    textarea.style.height = '2em';
-    textarea.style.padding = '0';
-    textarea.style.border = 'none';
-    textarea.style.outline = 'none';
-    textarea.style.boxShadow = 'none';
-    textarea.style.background = 'transparent';
-    textarea.setAttribute('readonly', '');
+    textarea.style.left = '-9999px';
+    textarea.style.width = '1px';
+    textarea.style.height = '1px';
     
     document.body.appendChild(textarea);
     
+    // Seleccionar el texto
+    textarea.focus();
+    textarea.select();
+    
     try {
-        // Para iOS
-        textarea.contentEditable = true;
-        textarea.readOnly = false;
-        
-        const range = document.createRange();
-        range.selectNodeContents(textarea);
-        
-        const selection = window.getSelection();
-        selection.removeAllRanges();
-        selection.addRange(range);
-        
-        textarea.setSelectionRange(0, 999999);
-        
+        // Copiar
         const exitoso = document.execCommand('copy');
         
         if (exitoso) {
             mostrarExito(btnCopiar, textoOriginal);
         } else {
-            // Si falla, intentar con Clipboard API
-            if (navigator.clipboard) {
-                await navigator.clipboard.writeText(texto);
-                mostrarExito(btnCopiar, textoOriginal);
-            } else {
-                throw new Error('No se pudo copiar');
-            }
+            alert('No se pudo copiar. Por favor, selecciona el texto y presiona Ctrl+C manualmente.');
         }
     } catch (err) {
         console.error('Error al copiar:', err);
-        alert('Error al copiar. Por favor, selecciona el texto manualmente y presiona Ctrl+C (o Cmd+C en Mac).');
+        alert('Error al copiar. Por favor, copia el texto manualmente.');
     } finally {
+        // Limpiar
         document.body.removeChild(textarea);
     }
 }
