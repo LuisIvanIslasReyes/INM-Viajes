@@ -147,43 +147,44 @@ function copiarPin(event) {
     // Extraer el texto limpio del contenido
     let texto = contenido.innerText || contenido.textContent;
     
-    // Método 1: Intentar con Clipboard API (más confiable para texto plano)
-    if (navigator.clipboard && navigator.clipboard.writeText) {
-        navigator.clipboard.writeText(texto)
-            .then(() => {
-                mostrarExito(btnCopiar, textoOriginal);
-            })
-            .catch(() => {
-                // Si falla, usar método alternativo
-                copiarConTextarea(texto, btnCopiar, textoOriginal);
-            });
-    } else {
-        // Usar método alternativo directamente
-        copiarConTextarea(texto, btnCopiar, textoOriginal);
-    }
+    console.log('Intentando copiar texto:', texto.substring(0, 50) + '...'); // Debug
+    console.log('Clipboard API disponible:', !!navigator.clipboard); // Debug
+    console.log('writeText disponible:', !!(navigator.clipboard && navigator.clipboard.writeText)); // Debug
+    
+    // Forzar a usar SIEMPRE el método del textarea en producción
+    copiarConTextarea(texto, btnCopiar, textoOriginal);
 }
 
 function copiarConTextarea(texto, btnCopiar, textoOriginal) {
+    console.log('Usando método textarea...'); // Debug
+    
     // Crear textarea temporal
     const textarea = document.createElement('textarea');
     textarea.value = texto;
     
-    // Posicionar fuera de la vista pero asegurarse de que sea visible
+    // Estilo para asegurar que funcione
     textarea.style.position = 'fixed';
-    textarea.style.top = '0';
-    textarea.style.left = '-9999px';
-    textarea.style.width = '1px';
-    textarea.style.height = '1px';
+    textarea.style.top = '50%';
+    textarea.style.left = '50%';
+    textarea.style.width = '2em';
+    textarea.style.height = '2em';
+    textarea.style.padding = '0';
+    textarea.style.border = 'none';
+    textarea.style.outline = 'none';
+    textarea.style.boxShadow = 'none';
+    textarea.style.background = 'transparent';
     
     document.body.appendChild(textarea);
     
     // Seleccionar el texto
     textarea.focus();
     textarea.select();
+    textarea.setSelectionRange(0, 99999); // Para móviles
     
     try {
         // Copiar
         const exitoso = document.execCommand('copy');
+        console.log('Resultado execCommand:', exitoso); // Debug
         
         if (exitoso) {
             mostrarExito(btnCopiar, textoOriginal);
@@ -192,10 +193,12 @@ function copiarConTextarea(texto, btnCopiar, textoOriginal) {
         }
     } catch (err) {
         console.error('Error al copiar:', err);
-        alert('Error al copiar. Por favor, copia el texto manualmente.');
+        alert('Error al copiar: ' + err.message);
     } finally {
-        // Limpiar
-        document.body.removeChild(textarea);
+        // Limpiar después de un pequeño delay
+        setTimeout(() => {
+            document.body.removeChild(textarea);
+        }, 100);
     }
 }
 
