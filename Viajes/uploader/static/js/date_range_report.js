@@ -81,7 +81,26 @@ async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalIn
             }
         });
         
+        // Verificar si la respuesta es correcta
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('Sesión expirada. Por favor, recarga la página e inicia sesión nuevamente.');
+            }
+            throw new Error(`Error del servidor: ${response.status}`);
+        }
+        
+        // Verificar que la respuesta sea JSON
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('La respuesta del servidor no es válida. Por favor, recarga la página.');
+        }
+        
         const data = await response.json();
+        
+        // Validar que tenemos los datos necesarios
+        if (!data || typeof data.vuelo_numero === 'undefined') {
+            throw new Error('Datos incompletos recibidos del servidor.');
+        }
         
         // Generar el contenido del PIN
         let pinTexto = `<strong>INSTITUTO NACIONAL DE MIGRACIÓN</strong>
@@ -131,7 +150,27 @@ Sin otro particular, se envía un cordial saludo.`;
         
     } catch (error) {
         console.error('Error al cargar el PIN:', error);
-        contenido.innerHTML = '<div class="alert alert-error">Error al cargar el PIN. Intenta de nuevo.</div>';
+        
+        // Mostrar mensaje de error detallado
+        contenido.innerHTML = `
+            <div class="alert alert-error shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <h3 class="font-bold">Error al cargar el PIN</h3>
+                    <div class="text-sm">${error.message}</div>
+                </div>
+            </div>
+            <div class="mt-4 text-center">
+                <button onclick="location.reload()" class="btn btn-primary btn-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+                    </svg>
+                    Recargar Página
+                </button>
+            </div>
+        `;
     }
 }
 
