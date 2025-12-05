@@ -47,14 +47,14 @@ SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
 # ============================================
-# ARCHIVOS ESTÁTICOS Y MEDIA CON SUB-RUTA
+# ARCHIVOS ESTÁTICOS Y MEDIA
 # ============================================
 
-# URLs con prefijo /viajes/ porque Nginx las maneja así
-STATIC_URL = '/viajes/static/'
+# SIN prefijo /viajes/ - Nginx lo quita con rewrite antes de llegar aquí
+STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
-MEDIA_URL = '/viajes/media/'
+MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
 # WhiteNoise para servir archivos estáticos en producción
@@ -62,10 +62,10 @@ MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # ============================================
-# URLs DE AUTENTICACIÓN CON SUB-RUTA
+# URLs DE AUTENTICACIÓN
 # ============================================
 
-# URLs con prefijo /viajes/ porque así las recibe Django desde Nginx
-LOGIN_URL = '/viajes/accounts/login/'
-LOGIN_REDIRECT_URL = '/viajes/'
-LOGOUT_REDIRECT_URL = '/viajes/accounts/login/'
+# SIN prefijo /viajes/ - Nginx lo quita con rewrite antes de llegar aquí
+LOGIN_URL = '/accounts/login/'
+LOGIN_REDIRECT_URL = '/'
+LOGOUT_REDIRECT_URL = '/accounts/login/'
