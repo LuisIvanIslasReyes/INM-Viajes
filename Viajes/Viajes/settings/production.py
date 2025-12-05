@@ -12,18 +12,59 @@ ALLOWED_HOSTS = config('ALLOWED_HOSTS', cast=Csv())
 INSTALLED_APPS = [app for app in INSTALLED_APPS if app != 'django_browser_reload']
 MIDDLEWARE = [mw for mw in MIDDLEWARE if 'browser_reload' not in mw]
 
-# Seguridad adicional para producción
-SECURE_SSL_REDIRECT = config('SECURE_SSL_REDIRECT', default=False, cast=bool)  # False para HTTP interno
-SESSION_COOKIE_SECURE = config('SESSION_COOKIE_SECURE', default=False, cast=bool)
-CSRF_COOKIE_SECURE = config('CSRF_COOKIE_SECURE', default=False, cast=bool)
+# ============================================
+# CONFIGURACIÓN PARA SUB-RUTA /viajes/
+# ============================================
+
+# Forzar sub-ruta en todas las URLs generadas por Django
+FORCE_SCRIPT_NAME = '/viajes'
+
+# Nombres ÚNICOS de cookies (evita conflictos con FaceID)
+SESSION_COOKIE_NAME = 'inmviajes_sessionid'
+CSRF_COOKIE_NAME = 'inmviajes_csrftoken'
+
+# Ruta de las cookies (solo válidas en /viajes/)
+SESSION_COOKIE_PATH = '/viajes/'
+CSRF_COOKIE_PATH = '/viajes/'
+
+# ============================================
+# SEGURIDAD HTTPS/SSL
+# ============================================
+
+# Django detrás de proxy Nginx con HTTPS
+SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
+
+# Cookies seguras en producción
+CSRF_COOKIE_SECURE = True
+SESSION_COOKIE_SECURE = True
+
+# Seguridad adicional
+SECURE_SSL_REDIRECT = False  # Nginx maneja el redirect HTTP->HTTPS
+SECURE_HSTS_SECONDS = 31536000  # HSTS por 1 año
+SECURE_HSTS_INCLUDE_SUBDOMAINS = True
+SECURE_HSTS_PRELOAD = True
 SECURE_BROWSER_XSS_FILTER = True
 SECURE_CONTENT_TYPE_NOSNIFF = True
 X_FRAME_OPTIONS = 'DENY'
 
-# Archivos estáticos (CSS, JavaScript, Images)
-STATIC_URL = '/static/'
+# ============================================
+# ARCHIVOS ESTÁTICOS Y MEDIA CON SUB-RUTA
+# ============================================
+
+STATIC_URL = '/viajes/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+
+MEDIA_URL = '/viajes/media/'
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # WhiteNoise para servir archivos estáticos en producción
 MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
 STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
+# ============================================
+# URLs DE AUTENTICACIÓN CON SUB-RUTA
+# ============================================
+
+LOGIN_URL = '/viajes/accounts/login/'
+LOGIN_REDIRECT_URL = '/viajes/'
+LOGOUT_REDIRECT_URL = '/viajes/accounts/login/'
