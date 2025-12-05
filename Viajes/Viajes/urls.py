@@ -19,10 +19,11 @@ from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
 
+# En producción, las URLs vienen con prefijo /viajes/ desde Nginx
 urlpatterns = [
-    path('admin/', admin.site.urls),
-    path('', include('uploader.urls')),
-    path('accounts/', include('django.contrib.auth.urls')),  # Rutas de autenticación
+    path('viajes/admin/', admin.site.urls),
+    path('viajes/', include('uploader.urls')),
+    path('viajes/accounts/', include('django.contrib.auth.urls')),  # Rutas de autenticación
 ]
 
 # Django Browser Reload solo en desarrollo

@@ -16,8 +16,7 @@ MIDDLEWARE = [mw for mw in MIDDLEWARE if 'browser_reload' not in mw]
 # CONFIGURACIÓN PARA SUB-RUTA /viajes/
 # ============================================
 
-# Forzar sub-ruta en todas las URLs generadas por Django
-FORCE_SCRIPT_NAME = '/viajes'
+# NO usar FORCE_SCRIPT_NAME - Django manejará las URLs tal como vienen de Nginx
 
 # Nombres ÚNICOS de cookies (evita conflictos con FaceID)
 SESSION_COOKIE_NAME = 'inmviajes_sessionid'
@@ -51,6 +50,7 @@ X_FRAME_OPTIONS = 'DENY'
 # ARCHIVOS ESTÁTICOS Y MEDIA CON SUB-RUTA
 # ============================================
 
+# URLs con prefijo /viajes/ porque Nginx las maneja así
 STATIC_URL = '/viajes/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
 
@@ -65,6 +65,7 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 # URLs DE AUTENTICACIÓN CON SUB-RUTA
 # ============================================
 
+# URLs con prefijo /viajes/ porque así las recibe Django desde Nginx
 LOGIN_URL = '/viajes/accounts/login/'
 LOGIN_REDIRECT_URL = '/viajes/'
 LOGOUT_REDIRECT_URL = '/viajes/accounts/login/'
