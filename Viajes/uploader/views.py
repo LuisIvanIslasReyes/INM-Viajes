@@ -536,8 +536,8 @@ def date_range_report(request):
         })
     
     context = {
-        'fecha_inicio': fecha_inicio,
-        'fecha_fin': fecha_fin,
+        'fecha_inicio': fecha_inicio if fecha_inicio else '',
+        'fecha_fin': fecha_fin if fecha_fin else '',
         'estadisticas_por_fecha': estadisticas_por_fecha,
         'total_registros': registros.count(),
         'is_superuser': request.user.is_superuser,
@@ -688,11 +688,17 @@ def check_duplicates(request):
 def generar_pin(request, fecha):
     """Vista para generar el PIN oficial del INM por fecha"""
     from datetime import datetime, timedelta
+    import logging
+    
+    logger = logging.getLogger(__name__)
     
     # Convertir string de fecha a objeto date
     try:
         fecha_obj = datetime.strptime(fecha, '%Y-%m-%d').date()
-    except ValueError:
+    except ValueError as e:
+        logger.error(f'Fecha inválida recibida: {fecha} - Error: {str(e)}')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': 'Fecha inválida'}, status=400)
         messages.error(request, '❌ Fecha inválida.')
         return redirect('date_range_report')
     
@@ -706,7 +712,10 @@ def generar_pin(request, fecha):
     )
     
     if not registros_del_dia.exists():
-        messages.error(request, f'❌ No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}.')
+        logger.warning(f'No se encontraron registros para la fecha: {fecha_obj}')
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            return JsonResponse({'error': f'No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}'}, status=404)
+        messages.error(request, f'❌ No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}')
         return redirect('date_range_report')
     
     # Calcular estadísticas
@@ -752,16 +761,20 @@ def generar_pin(request, fecha):
     
     # Si es una petición AJAX, devolver JSON
     if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
-        return JsonResponse({
-            'fecha': fecha_obj.strftime('%Y-%m-%d'),
-            'vuelo_numero': vuelo_numero,
-            'total_pasajeros': total_pasajeros,
-            'total_sr': total_sr,
-            'total_internaciones': total_internaciones,
-            'total_rechazos': total_rechazos,
-            'total_conexiones': total_conexiones,
-            'rechazados_detalle': rechazados_detalle,
-        })
+        try:
+            return JsonResponse({
+                'fecha': fecha_obj.strftime('%Y-%m-%d'),
+                'vuelo_numero': vuelo_numero,
+                'total_pasajeros': total_pasajeros,
+                'total_sr': total_sr,
+                'total_internaciones': total_internaciones,
+                'total_rechazos': total_rechazos,
+                'total_conexiones': total_conexiones,
+                'rechazados_detalle': rechazados_detalle,
+            })
+        except Exception as e:
+            logger.error(f'Error al generar JSON del PIN: {str(e)}')
+            return JsonResponse({'error': 'Error al generar el PIN'}, status=500)
     
     # Si no es AJAX, renderizar template completo (para compatibilidad)
     context = {

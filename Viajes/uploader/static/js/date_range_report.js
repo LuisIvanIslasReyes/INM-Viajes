@@ -86,13 +86,22 @@ async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalIn
             if (response.status === 401 || response.status === 403) {
                 throw new Error('Sesión expirada. Por favor, recarga la página e inicia sesión nuevamente.');
             }
-            throw new Error(`Error del servidor: ${response.status}`);
+            if (response.status === 502 || response.status === 503) {
+                throw new Error('El servidor está temporalmente no disponible. Por favor, intenta de nuevo en unos momentos.');
+            }
+            if (response.status === 404) {
+                throw new Error('No se encontraron registros para esta fecha.');
+            }
+            if (response.status === 500) {
+                throw new Error('Error interno del servidor. Por favor, contacta al administrador.');
+            }
+            throw new Error(`Error del servidor (${response.status}). Por favor, intenta de nuevo.`);
         }
         
         // Verificar que la respuesta sea JSON
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
-            throw new Error('La respuesta del servidor no es válida. Por favor, recarga la página.');
+            throw new Error('La respuesta del servidor no es válida. Posiblemente el servidor se reinició. Por favor, recarga la página.');
         }
         
         const data = await response.json();
