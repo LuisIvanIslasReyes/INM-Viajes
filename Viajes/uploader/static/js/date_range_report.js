@@ -98,13 +98,25 @@ async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalIn
             throw new Error(`Error del servidor (${response.status}). Por favor, intenta de nuevo.`);
         }
         
-        // Verificar que la respuesta sea JSON
+        // Verificar que la respuesta sea JSON ANTES de intentar parsear
         const contentType = response.headers.get('content-type');
         if (!contentType || !contentType.includes('application/json')) {
+            // Si no es JSON, probablemente es una página de error HTML
+            const text = await response.text();
+            if (text.includes('<!DOCTYPE') || text.includes('<html')) {
+                throw new Error('El servidor devolvió una página de error. Por favor, verifica que el servidor Django esté corriendo.');
+            }
             throw new Error('La respuesta del servidor no es válida. Posiblemente el servidor se reinició. Por favor, recarga la página.');
         }
         
-        const data = await response.json();
+        // Intentar parsear JSON de forma segura
+        let data;
+        try {
+            data = await response.json();
+        } catch (jsonError) {
+            console.error('Error al parsear JSON:', jsonError);
+            throw new Error('Error al procesar la respuesta del servidor. El servidor puede estar reiniciándose.');
+        }
         
         // Validar que tenemos los datos necesarios
         if (!data || typeof data.vuelo_numero === 'undefined') {
