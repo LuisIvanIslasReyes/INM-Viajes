@@ -75,7 +75,11 @@ async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalIn
     
     try {
         // Hacer petición para obtener datos completos
-        const response = await fetch(`/pin/${fecha}/`, {
+        // Usar la ruta correcta que pasa por Nginx (/viajes/pin/)
+        const url = `/viajes/pin/${fecha}/`;
+        console.log('Solicitando PIN desde:', url);
+        
+        const response = await fetch(url, {
             headers: {
                 'X-Requested-With': 'XMLHttpRequest'
             }
