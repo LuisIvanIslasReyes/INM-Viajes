@@ -11,14 +11,15 @@ django.setup()
 
 from uploader.models import Notificacion
 
-# Actualizar enlaces con guion a guion bajo
+# Actualizar enlaces con guion a guion bajo Y agregar prefijo /viajes/
 notificaciones = Notificacion.objects.filter(enlace__icontains='/casos-especiales/')
 
 print(f"Encontradas {notificaciones.count()} notificaciones con enlaces antiguos")
 
 for notif in notificaciones:
     old_enlace = notif.enlace
-    notif.enlace = notif.enlace.replace('/casos-especiales/', '/casos_especiales/')
+    # Cambiar /casos-especiales/ por /viajes/casos_especiales/
+    notif.enlace = notif.enlace.replace('/casos-especiales/', '/viajes/casos_especiales/')
     notif.save()
     print(f"✓ Actualizado: {old_enlace} -> {notif.enlace}")
 
