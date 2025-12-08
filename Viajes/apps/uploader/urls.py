@@ -1,5 +1,5 @@
 from django.urls import path
-from . import views
+from apps.uploader import views
 
 urlpatterns = [
     path('', views.admin_list, name='admin_list'),

@@ -1,10 +1,13 @@
 """
 Configuración base compartida entre todos los entornos
 """
+import sys
 from pathlib import Path
 from decouple import config, Csv
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
+sys.path.insert(0, str(BASE_DIR / 'apps'))
 
 SECRET_KEY = config('SECRET_KEY')
 
@@ -16,7 +19,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'uploader',
+    'apps.uploader',
 ]
 
 MIDDLEWARE = [

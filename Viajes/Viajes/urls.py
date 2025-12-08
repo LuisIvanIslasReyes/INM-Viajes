@@ -21,7 +21,7 @@ from django.conf.urls.static import static
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('uploader.urls')),
+    path('', include('apps.uploader.urls')),
     path('accounts/', include('django.contrib.auth.urls')),  # Rutas de autenticación
 ]
 
