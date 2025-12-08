@@ -7,6 +7,7 @@ from .models import UploadBatch, Registro, CasoEspecial
 from django.contrib import messages
 from django.db import models
 from django.http import FileResponse, Http404, JsonResponse
+from django.urls import reverse
 from django.utils import timezone
 from datetime import datetime
 import pandas as pd
@@ -300,7 +301,7 @@ def upload_excel(request):
                     categoria='carga_exitosa',
                     titulo=f'Carga exitosa: {total_registros_creados} registros',
                     mensaje=f'Se procesaron {archivos_procesados} archivo(s) correctamente con un total de {total_registros_creados} registros agregados.',
-                    enlace='/admin_list/'
+                    enlace=reverse('admin_list')
                 )
             
             if total_casos_especiales > 0:
@@ -314,7 +315,7 @@ def upload_excel(request):
                     categoria='casos_especiales',
                     titulo=f'⚠️ {total_casos_especiales} Casos Especiales detectados',
                     mensaje=f'Se encontraron {total_casos_especiales} caso(s) que requieren tu revisión inmediata: documentos duplicados o mismo vuelo/fecha.',
-                    enlace='/casos-especiales/'
+                    enlace=reverse('casos_especiales_list')
                 )
             
             if total_registros_error > 0:
@@ -328,7 +329,7 @@ def upload_excel(request):
                     categoria='error_registro',
                     titulo=f'❌ {total_registros_error} registros con errores',
                     mensaje=f'Algunos registros no pudieron procesarse debido a errores de formato o datos inválidos. Revisa los archivos Excel.',
-                    enlace='/upload/'
+                    enlace=reverse('upload_excel')
                 )
         else:
             messages.error(request, '❌ No se pudo procesar ningún archivo.')
