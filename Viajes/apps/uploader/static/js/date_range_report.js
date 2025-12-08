@@ -65,6 +65,9 @@ function toggleFiltros() {
 
 
 // Función para abrir el modal del PIN
+// Variable global para guardar los datos del PIN
+let pinData = null;
+
 async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalInternaciones, totalRechazos) {
     const modal = document.getElementById('modalPin');
     const contenido = document.getElementById('contenidoPin');
@@ -75,8 +78,9 @@ async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalIn
     
     try {
         // Hacer petición para obtener datos completos
-        // Usar la ruta correcta que pasa por Nginx (/viajes/pin/)
-        const url = `/viajes/pin/${fecha}/`;
+        // Usar prefijo de URL dinámico (vacío en dev, /viajes en prod)
+        const urlPrefix = window.URL_PREFIX || '';
+        const url = `${urlPrefix}/pin/${fecha}/`;
         console.log('Solicitando PIN desde:', url);
         
         const response = await fetch(url, {
@@ -126,6 +130,12 @@ async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalIn
         if (!data || typeof data.vuelo_numero === 'undefined') {
             throw new Error('Datos incompletos recibidos del servidor.');
         }
+        
+        // Guardar datos globalmente para el PDF (incluyendo fechaTexto formateada)
+        pinData = {
+            fechaTexto: fechaTexto,
+            ...data
+        };
         
         // Generar el contenido del PIN
         let pinTexto = `<strong>INSTITUTO NACIONAL DE MIGRACIÓN</strong>
@@ -203,98 +213,93 @@ function cerrarModalPin() {
     document.getElementById('modalPin').close();
 }
 
+// Función para copiar PIN (con ** para negritas de WhatsApp)
 async function copiarPin(event) {
-    const contenido = document.getElementById('contenidoPin');
-    const btnCopiar = event.currentTarget;
+    event.preventDefault();
     
-    // Si el botón ya está deshabilitado, no hacer nada
-    if (btnCopiar.disabled) {
+    if (!pinData) {
+        alert('❌ No hay datos del PIN disponibles');
         return;
     }
     
-    const textoOriginal = btnCopiar.innerHTML;
-    
-    // Extraer el HTML y convertir <strong> a formato WhatsApp
-    let html = contenido.innerHTML;
-    
-    // Convertir <strong>texto</strong> a *texto* para WhatsApp
-    html = html.replace(/<strong>(.*?)<\/strong>/gi, '*$1*');
-    
-    // Crear un elemento temporal para extraer el texto con los asteriscos
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    let texto = tempDiv.innerText || tempDiv.textContent;
-    
-    // Deshabilitar el botón temporalmente
-    btnCopiar.disabled = true;
-    btnCopiar.innerHTML = '<span class="loading loading-spinner loading-sm"></span> Copiando...';
-    
     try {
-        // Usar la API moderna del Clipboard (funciona con HTTPS)
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-            await navigator.clipboard.writeText(texto);
-            
-            // Éxito - mostrar feedback
-            btnCopiar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> ¡Copiado!';
-            btnCopiar.classList.remove('btn-primary');
-            btnCopiar.classList.add('btn-success');
-            
-            // Mostrar notificación de éxito
-            mostrarNotificacionExito();
-            
-            // Restaurar el botón después de 2 segundos
-            setTimeout(() => {
-                btnCopiar.innerHTML = textoOriginal;
-                btnCopiar.classList.remove('btn-success');
-                btnCopiar.classList.add('btn-primary');
-                btnCopiar.disabled = false;
-            }, 2000);
-            
-        } else {
-            // Fallback para navegadores que no soportan clipboard API
-            throw new Error('API del Clipboard no disponible');
-        }
+        // Generar texto con * para WhatsApp
+        let texto = `*INSTITUTO NACIONAL DE MIGRACIÓN*\n*Oficina de Representación Baja California*\n\n`;
+        texto += `*${pinData.fechaTexto.toUpperCase()}*\n\n`;
+        texto += `Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo *${pinData.vuelo_numero}* proveniente de Pekín con *${pinData.total_pasajeros} pasajeros*.\n\n`;
         
-    } catch (error) {
-        console.error('Error al copiar con Clipboard API:', error);
-        
-        // Fallback: usar método de textarea
-        try {
-            const textarea = document.createElement('textarea');
-            textarea.value = texto;
-            textarea.style.position = 'fixed';
-            textarea.style.left = '-9999px';
-            document.body.appendChild(textarea);
-            textarea.select();
+        if (pinData.total_sr > 0) {
+            texto += `En dicho proceso migratorio se llevó a cabo *${String(pinData.total_sr).padStart(2, '0')} segunda${pinData.total_sr != 1 ? 's' : ''} revisión${pinData.total_sr != 1 ? 'es' : ''}*, las cuales, derivaron en:\n`;
             
-            const exitoso = document.execCommand('copy');
-            document.body.removeChild(textarea);
-            
-            if (exitoso) {
-                btnCopiar.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" /></svg> ¡Copiado!';
-                btnCopiar.classList.remove('btn-primary');
-                btnCopiar.classList.add('btn-success');
-                
-                mostrarNotificacionExito();
-                
-                setTimeout(() => {
-                    btnCopiar.innerHTML = textoOriginal;
-                    btnCopiar.classList.remove('btn-success');
-                    btnCopiar.classList.add('btn-primary');
-                    btnCopiar.disabled = false;
-                }, 2000);
-            } else {
-                throw new Error('execCommand falló');
+            if (pinData.total_internaciones > 0) {
+                texto += `${String(pinData.total_internaciones).padStart(2, '0')} internación${pinData.total_internaciones != 1 ? 'es' : ''} por entrevista.\n`;
             }
-        } catch (fallbackError) {
-            console.error('Error en fallback:', fallbackError);
             
-            // Último recurso: mostrar el texto en un modal para copia manual
-            btnCopiar.innerHTML = textoOriginal;
-            btnCopiar.disabled = false;
-            mostrarModalCopiaManual(texto);
+            if (pinData.total_rechazos > 0) {
+                texto += `${String(pinData.total_rechazos).padStart(2, '0')} rechazo${pinData.total_rechazos != 1 ? 's' : ''} por entrevista.\n`;
+            }
+            texto += '\n';
+        } else {
+            texto += `En dicho proceso migratorio no se llevó a cabo ninguna segunda revisión.\n\n`;
         }
+        
+        // Detalles de rechazos
+        if (pinData.rechazados_detalle && pinData.rechazados_detalle.length > 0) {
+            texto += `*RECHAZO${pinData.total_rechazos != 1 ? 'S' : ''}*\n`;
+            pinData.rechazados_detalle.forEach((rechazado, index) => {
+                texto += `${index + 1}. NOMBRE: ${rechazado.nombre.toUpperCase()}\n`;
+                texto += `   GÉNERO: ${rechazado.genero}\n`;
+                texto += `   NACIONALIDAD: ${rechazado.nacionalidad.toUpperCase()}\n`;
+                texto += `   N. PASAPORTE: ${rechazado.pasaporte}\n`;
+                texto += `   FDN: ${rechazado.fecha_nacimiento}\n\n`;
+            });
+        }
+        
+        texto += `Cabe resaltar que los procesos mencionados fueron en apego a Derechos Humanos.\n\n`;
+        texto += `*Conexiones: ${pinData.total_conexiones}*\n\n`;
+        texto += `Sin otro particular, se envía un cordial saludo.`;
+        
+        // Copiar al portapapeles
+        await navigator.clipboard.writeText(texto);
+        
+        // Mostrar notificación toast
+        mostrarNotificacion('✅ Texto copiado', 'success');
+        
+    } catch (err) {
+        console.error('Error al copiar:', err);
+        mostrarNotificacion('❌ Error al copiar', 'error');
     }
+}
+
+// Función para mostrar notificaciones toast
+function mostrarNotificacion(mensaje, tipo = 'success') {
+    const toast = document.createElement('div');
+    const bgColor = tipo === 'success' ? 'alert-success' : 'alert-error';
+    
+    toast.className = `alert ${bgColor} shadow-lg fixed top-4 right-4 w-auto animate-fade-in`;
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            ${tipo === 'success' 
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+            }
+        </svg>
+        <span>${mensaje}</span>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remover la notificación después de 2 segundos
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.5s';
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 500);
+    }, 2000);
 }
 
 function mostrarNotificacionExito() {
@@ -352,4 +357,155 @@ function mostrarModalCopiaManual(texto) {
     
     textarea.select();
     textarea.focus();
+}
+
+// Función para generar PDF con PIN e imágenes
+async function generarPDF() {
+    if (!pinData) {
+        alert('❌ No hay datos del PIN disponibles');
+        return;
+    }
+    
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        let y = 20;
+        const margen = 20;
+        const anchoMaximo = 170;
+        
+        // Función auxiliar para agregar texto con negritas
+        const agregarTexto = (texto, isBold = false) => {
+            doc.setFont('helvetica', isBold ? 'bold' : 'normal');
+            const lineas = doc.splitTextToSize(texto, anchoMaximo);
+            lineas.forEach(linea => {
+                if (y > 270) {
+                    doc.addPage();
+                    y = 20;
+                }
+                doc.text(linea, margen, y);
+                y += 7;
+            });
+        };
+        
+        // PÁGINA 1: Texto del PIN
+        agregarTexto('INSTITUTO NACIONAL DE MIGRACIÓN', true);
+        agregarTexto('Oficina de Representación Baja California', true);
+        y += 5;
+        
+        agregarTexto(pinData.fechaTexto.toUpperCase(), true);
+        y += 5;
+        
+        agregarTexto(`Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo ${pinData.vuelo_numero} proveniente de Pekín con ${pinData.total_pasajeros} pasajeros.`);
+        y += 3;
+        
+        if (pinData.total_sr > 0) {
+            agregarTexto(`En dicho proceso migratorio se llevó a cabo ${String(pinData.total_sr).padStart(2, '0')} segunda${pinData.total_sr != 1 ? 's' : ''} revisión${pinData.total_sr != 1 ? 'es' : ''}, las cuales, derivaron en:`);
+            
+            if (pinData.total_internaciones > 0) {
+                agregarTexto(`${String(pinData.total_internaciones).padStart(2, '0')} internación${pinData.total_internaciones != 1 ? 'es' : ''} por entrevista.`);
+            }
+            
+            if (pinData.total_rechazos > 0) {
+                agregarTexto(`${String(pinData.total_rechazos).padStart(2, '0')} rechazo${pinData.total_rechazos != 1 ? 's' : ''} por entrevista.`);
+            }
+            y += 3;
+        } else {
+            agregarTexto('En dicho proceso migratorio no se llevó a cabo ninguna segunda revisión.');
+            y += 3;
+        }
+        
+        // Detalles de rechazos
+        if (pinData.rechazados_detalle && pinData.rechazados_detalle.length > 0) {
+            agregarTexto(`RECHAZO${pinData.total_rechazos != 1 ? 'S' : ''}`, true);
+            y += 3;
+            
+            pinData.rechazados_detalle.forEach((rechazado, index) => {
+                agregarTexto(`${index + 1}. NOMBRE: ${rechazado.nombre.toUpperCase()}`);
+                agregarTexto(`   GÉNERO: ${rechazado.genero}`);
+                agregarTexto(`   NACIONALIDAD: ${rechazado.nacionalidad.toUpperCase()}`);
+                agregarTexto(`   N. PASAPORTE: ${rechazado.pasaporte}`);
+                agregarTexto(`   FDN: ${rechazado.fecha_nacimiento}`);
+                y += 3;
+            });
+        }
+        
+        agregarTexto('Cabe resaltar que los procesos mencionados fueron en apego a Derechos Humanos.');
+        y += 5;
+        
+        agregarTexto(`Conexiones: ${pinData.total_conexiones}`, true);
+        y += 5;
+        
+        agregarTexto('Sin otro particular, se envía un cordial saludo.');
+        
+        // PÁGINA 2: Imágenes de rechazos (si las hay)
+        if (pinData.rechazados_detalle && pinData.rechazados_detalle.length > 0) {
+            const fotosPromesas = [];
+            
+            pinData.rechazados_detalle.forEach(rechazado => {
+                if (rechazado.fotos && rechazado.fotos.length > 0) {
+                    rechazado.fotos.forEach(fotoUrl => {
+                        fotosPromesas.push(
+                            fetch(fotoUrl)
+                                .then(res => res.blob())
+                                .then(blob => {
+                                    return new Promise((resolve) => {
+                                        const reader = new FileReader();
+                                        reader.onloadend = () => resolve({
+                                            data: reader.result,
+                                            nombre: rechazado.nombre
+                                        });
+                                        reader.readAsDataURL(blob);
+                                    });
+                                })
+                        );
+                    });
+                }
+            });
+            
+            if (fotosPromesas.length > 0) {
+                const fotos = await Promise.all(fotosPromesas);
+                
+                if (fotos.length > 0) {
+                    doc.addPage();
+                    y = 20;
+                    
+                    doc.setFont('helvetica', 'bold');
+                    doc.text('FOTOGRAFÍAS DE RECHAZOS', margen, y);
+                    y += 15;
+                    
+                    fotos.forEach((foto, index) => {
+                        if (y > 200) {
+                            doc.addPage();
+                            y = 20;
+                        }
+                        
+                        doc.setFont('helvetica', 'normal');
+                        doc.text(`Rechazo ${index + 1}: ${foto.nombre}`, margen, y);
+                        y += 10;
+                        
+                        // Agregar imagen (ajustar tamaño para que quepa)
+                        try {
+                            doc.addImage(foto.data, 'JPEG', margen, y, 170, 100);
+                            y += 110;
+                        } catch (e) {
+                            console.error('Error al agregar imagen:', e);
+                            doc.text('Error al cargar imagen', margen, y);
+                            y += 10;
+                        }
+                    });
+                }
+            }
+        }
+        
+        // Descargar PDF
+        const nombreArchivo = `PIN_${pinData.fechaTexto.replace(/\s+/g, '_').replace(/,/g, '')}.pdf`;
+        doc.save(nombreArchivo);
+        
+        alert('✅ PDF generado correctamente');
+        
+    } catch (error) {
+        console.error('Error al generar PDF:', error);
+        alert('❌ Error al generar el PDF: ' + error.message);
+    }
 }

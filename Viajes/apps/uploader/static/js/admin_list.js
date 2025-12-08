@@ -140,3 +140,192 @@ function closeEditModal() {
         modal.close();
     }
 }
+
+// Interceptar el formulario de Rechazo para abrir modal de foto
+document.addEventListener('DOMContentLoaded', function() {
+    // Interceptar todos los botones de "R" (Rechazo)
+    document.querySelectorAll('button[type="submit"]').forEach(button => {
+        const form = button.closest('form');
+        if (form && form.querySelector('input[name="rechazado"]')) {
+            form.addEventListener('submit', function(e) {
+                const rechazadoInput = this.querySelector('input[name="rechazado"]');
+                const nuevoValor = rechazadoInput.value === 'true';
+                
+                // Si está activando "R", interceptar y abrir modal
+                if (nuevoValor) {
+                    e.preventDefault();
+                    
+                    // Primero marcar como rechazado
+                    fetch(this.action, {
+                        method: 'POST',
+                        body: new FormData(this),
+                        headers: {
+                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+                        }
+                    })
+                    .then(response => {
+                        if (response.ok) {
+                            // Obtener ID del registro desde la URL del form
+                            const registroId = this.action.match(/update\/(\d+)\//)[1];
+                            
+                            // Abrir modal de foto
+                            abrirModalFoto(registroId);
+                        }
+                    });
+                }
+            });
+        }
+    });
+});
+
+// Función para abrir modal de subida de foto
+function abrirModalFoto(registroId) {
+    const modal = document.getElementById('modalFotoRechazo');
+    const form = document.getElementById('formFotoRechazo');
+    
+    // Configurar la acción del formulario con el ID del registro
+    form.action = `/camara/subir/${registroId}/`;
+    
+    // Limpiar preview anterior
+    limpiarFotoRechazo();
+    
+    // Mostrar modal
+    modal.showModal();
+    
+    // Agregar event listener para pegar desde portapapeles
+    document.addEventListener('paste', manejarPegadoImagen);
+}
+
+// Función para manejar pegado desde portapapeles
+function manejarPegadoImagen(event) {
+    const modal = document.getElementById('modalFotoRechazo');
+    
+    // Solo procesar si el modal está abierto
+    if (!modal.open) {
+        return;
+    }
+    
+    const items = event.clipboardData?.items;
+    if (!items) return;
+    
+    // Buscar imagen en el portapapeles
+    for (let i = 0; i < items.length; i++) {
+        const item = items[i];
+        
+        // Validar que sea una imagen
+        if (item.type.indexOf('image') !== -1) {
+            event.preventDefault();
+            
+            const blob = item.getAsFile();
+            
+            // Validar formato de imagen
+            const formatosPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
+            if (!formatosPermitidos.includes(blob.type)) {
+                alert('❌ Formato no permitido. Solo JPG, JPEG, PNG o WEBP.');
+                return;
+            }
+            
+            // Crear archivo para el input
+            const inputFile = document.getElementById('inputFotoRechazo');
+            const dataTransfer = new DataTransfer();
+            
+            // Crear archivo con nombre descriptivo
+            const nombreArchivo = `rechazo_${new Date().getTime()}.${blob.type.split('/')[1]}`;
+            const file = new File([blob], nombreArchivo, { type: blob.type });
+            
+            dataTransfer.items.add(file);
+            inputFile.files = dataTransfer.files;
+            
+            // Mostrar preview
+            mostrarPreviewFotoRechazo(file);
+            
+            break;
+        }
+    }
+}
+
+// Función para mostrar preview de la imagen
+function mostrarPreviewFotoRechazo(file) {
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+        const preview = document.getElementById('previewFotoRechazo');
+        const img = document.getElementById('imgPreviewRechazo');
+        
+        img.src = e.target.result;
+        preview.classList.remove('hidden');
+    };
+    
+    reader.readAsDataURL(file);
+}
+
+// Función para limpiar la foto y preview
+function limpiarFotoRechazo() {
+    const inputFile = document.getElementById('inputFotoRechazo');
+    const preview = document.getElementById('previewFotoRechazo');
+    const img = document.getElementById('imgPreviewRechazo');
+    
+    inputFile.value = '';
+    img.src = '';
+    preview.classList.add('hidden');
+}
+
+// Event listener para mostrar preview cuando se selecciona archivo
+document.addEventListener('DOMContentLoaded', function() {
+    const inputFile = document.getElementById('inputFotoRechazo');
+    if (inputFile) {
+        inputFile.addEventListener('change', function(e) {
+            if (this.files && this.files[0]) {
+                mostrarPreviewFotoRechazo(this.files[0]);
+            }
+        });
+    }
+});
+
+// Función para subir foto
+async function subirFotoRechazo(event) {
+    event.preventDefault();
+    
+    const form = event.target;
+    const formData = new FormData(form);
+    const inputFile = document.getElementById('inputFotoRechazo');
+    
+    // Validar que haya un archivo
+    if (!inputFile.files || inputFile.files.length === 0) {
+        alert('❌ Por favor selecciona o pega una imagen');
+        return;
+    }
+    
+    // Validar que sea una imagen
+    const file = inputFile.files[0];
+    if (!file.type.startsWith('image/')) {
+        alert('❌ El archivo debe ser una imagen');
+        return;
+    }
+    
+    try {
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            alert('✅ Foto subida correctamente');
+            
+            // Remover event listener de paste
+            document.removeEventListener('paste', manejarPegadoImagen);
+            
+            document.getElementById('modalFotoRechazo').close();
+            location.reload(); // Recargar para ver el rechazo aplicado
+        } else {
+            alert('❌ Error: ' + data.error);
+        }
+    } catch (error) {
+        alert('❌ Error al subir la foto: ' + error);
+    }
+}

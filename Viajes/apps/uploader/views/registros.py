@@ -223,12 +223,19 @@ def generar_pin(request, fecha):
     # Datos completos de personas rechazadas
     rechazados_detalle = []
     for registro in registros_rechazo:
+        # Obtener las URLs de las fotos de rechazo
+        fotos_urls = []
+        fotos_rechazo = registro.fotos_rechazo.all()
+        for foto in fotos_rechazo:
+            fotos_urls.append(request.build_absolute_uri(foto.foto.url))
+        
         rechazados_detalle.append({
             'nombre': registro.nombre_pasajero,
             'genero': 'HOMBRE' if registro.genero == 'M' else 'MUJER' if registro.genero == 'F' else 'N/A',
             'nacionalidad': registro.pais_emision or 'N/A',
             'pasaporte': registro.numero_documento,
-            'fecha_nacimiento': registro.fecha_nacimiento.strftime('%d.%m.%Y') if registro.fecha_nacimiento else 'N/A'
+            'fecha_nacimiento': registro.fecha_nacimiento.strftime('%d.%m.%Y') if registro.fecha_nacimiento else 'N/A',
+            'fotos': fotos_urls
         })
     
     # Si es una petición AJAX, devolver JSON

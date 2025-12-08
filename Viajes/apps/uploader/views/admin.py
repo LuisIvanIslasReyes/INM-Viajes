@@ -1,5 +1,9 @@
 """
 Vistas administrativas (solo para superusuarios)
+NO CONFUNDIR CON DJANGO-ADMIN
+Estas vistas permiten al superusuario:
+- Listar y eliminar cargas de archivos
+- Crear usuarios estándar
 """
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User

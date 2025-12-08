@@ -3,4 +3,5 @@ from django.apps import AppConfig
 
 class CamaraConfig(AppConfig):
     default_auto_field = 'django.db.models.BigAutoField'
-    name = 'camara'
+    name = 'apps.camara'
+    verbose_name = "Cámara de Rechazos"
