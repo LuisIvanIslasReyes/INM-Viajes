@@ -20,9 +20,9 @@ urlpatterns = [
     path('pin/<str:fecha>/', views.generar_pin, name='generar_pin'),
     
     # Casos Especiales
-    path('casos-especiales/', views.casos_especiales_list, name='casos_especiales_list'),
-    path('casos-especiales/aceptar/<int:caso_id>/', views.resolver_caso_aceptar, name='resolver_caso_aceptar'),
-    path('casos-especiales/editar/<int:caso_id>/<int:registro_id>/', views.resolver_caso_editar, name='resolver_caso_editar'),
-    path('casos-especiales/inadmitir/<int:caso_id>/<int:registro_id>/', views.resolver_caso_inadmitir, name='resolver_caso_inadmitir'),
-    path('casos-especiales/eliminar/<int:caso_id>/<int:registro_id>/', views.resolver_caso_eliminar, name='resolver_caso_eliminar'),
+    path('casos_especiales/', views.casos_especiales_list, name='casos_especiales_list'),
+    path('casos_especiales/aceptar/<int:caso_id>/', views.resolver_caso_aceptar, name='resolver_caso_aceptar'),
+    path('casos_especiales/editar/<int:caso_id>/<int:registro_id>/', views.resolver_caso_editar, name='resolver_caso_editar'),
+    path('casos_especiales/inadmitir/<int:caso_id>/<int:registro_id>/', views.resolver_caso_inadmitir, name='resolver_caso_inadmitir'),
+    path('casos_especiales/eliminar/<int:caso_id>/<int:registro_id>/', views.resolver_caso_eliminar, name='resolver_caso_eliminar'),
 ]
