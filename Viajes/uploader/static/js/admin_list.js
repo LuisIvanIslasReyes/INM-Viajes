@@ -128,7 +128,7 @@ function openEditModal(registroId, comentario) {
     const comentarioTextarea = document.getElementById('comentario');
     
     if (editForm && comentarioTextarea) {
-        editForm.action = '/update/' + registroId + '/';
+        editForm.action = '/viajes/update/' + registroId + '/';
         comentarioTextarea.value = comentario;
         modal.showModal();
     }
