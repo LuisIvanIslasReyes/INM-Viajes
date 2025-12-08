@@ -168,7 +168,9 @@ document.addEventListener('DOMContentLoaded', function() {
             const notifId = this.dataset.notifId;
             
             try {
-                const response = await fetch(`/notificaciones/marcar-leida/${notifId}/`, {
+                const url = "{% url 'marcar_notificacion_leida' 0 %}".replace('0', notifId);
+                
+                const response = await fetch(url, {
                     method: 'POST',
                     headers: {
                         'X-CSRFToken': '{{ csrf_token }}',
