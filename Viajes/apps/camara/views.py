@@ -30,6 +30,12 @@ def subir_foto_rechazo(request, registro_id):
         foto.usuario_captura = request.user
         foto.save()
         
+        # Actualizar el comentario del registro si se proporcionó
+        comentario = request.POST.get('comentario', '').strip()
+        if comentario:
+            registro.comentario = comentario
+            registro.save(update_fields=['comentario'])
+        
         return JsonResponse({
             'success': True,
             'message': f'Foto subida correctamente para {registro.nombre_pasajero}',

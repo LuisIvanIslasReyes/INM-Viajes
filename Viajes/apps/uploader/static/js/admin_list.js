@@ -182,12 +182,24 @@ document.addEventListener('DOMContentLoaded', function() {
 function abrirModalFoto(registroId) {
     const modal = document.getElementById('modalFotoRechazo');
     const form = document.getElementById('formFotoRechazo');
+    const comentarioTextarea = document.getElementById('comentarioRechazo');
     
     // Configurar la acción del formulario con el ID del registro
     form.action = `/camara/subir/${registroId}/`;
     
     // Limpiar preview anterior
     limpiarFotoRechazo();
+    
+    // Obtener el comentario actual del registro desde la fila de la tabla
+    const filaRegistro = document.getElementById(`registro-${registroId}`);
+    if (filaRegistro) {
+        // Buscar el td que contiene el comentario (4ta columna sticky)
+        const comentarioTd = filaRegistro.querySelector('td:nth-child(4) div');
+        const comentarioActual = comentarioTd ? comentarioTd.getAttribute('title') : '';
+        comentarioTextarea.value = comentarioActual || '';
+    } else {
+        comentarioTextarea.value = '';
+    }
     
     // Mostrar modal
     modal.showModal();
