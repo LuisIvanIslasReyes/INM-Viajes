@@ -1,4 +1,4 @@
-"""
+"""  
 Vistas relacionadas con la gestión de registros de pasajeros
 """
 from django.contrib.auth.decorators import login_required
@@ -10,10 +10,9 @@ from django.http import JsonResponse
 from django.urls import reverse
 from datetime import datetime, timedelta
 import logging
+from decouple import config
 
 from ..models import Registro, UploadBatch, Notificacion
-
-
 @login_required
 def update_registro(request, registro_id):
     """Vista para actualizar campos (TODOS pueden editar TODO)"""
@@ -149,11 +148,15 @@ def admin_list(request):
         leida=False
     ).count()
     
+    # Detectar si estamos en producción (cuando DJANGO_ENV != 'local')
+    is_production = config('DJANGO_ENV', default='local') != 'local'
+    
     context = {
         'page_obj': page_obj,
         'batches': batches,
         'is_superuser': request.user.is_superuser,
         'notificaciones_no_leidas': notificaciones_no_leidas,
+        'is_production': is_production,
     }
     
     return render(request, 'uploader/admin_list.html', context)

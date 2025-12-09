@@ -553,5 +553,9 @@
 {% endblock %}
 
 {% block extra_js %}
+<script>
+    // Configuración del prefijo de URL según el entorno
+    window.URL_PREFIX = {{ is_production|yesno:"'/viajes',''"|safe }};
+</script>
 <script src="{% static 'js/admin_list.js' %}"></script>
 {% endblock %}

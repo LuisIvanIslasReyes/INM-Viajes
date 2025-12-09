@@ -128,7 +128,8 @@ function openEditModal(registroId, comentario) {
     const comentarioTextarea = document.getElementById('comentario');
     
     if (editForm && comentarioTextarea) {
-        editForm.action = `${window.location.origin}/viajes/update/${registroId}/`;
+        const urlPrefix = window.URL_PREFIX || '';
+        editForm.action = `${window.location.origin}${urlPrefix}/update/${registroId}/`;
         comentarioTextarea.value = comentario;
         modal.showModal();
     }
@@ -185,7 +186,8 @@ function abrirModalFoto(registroId) {
     const comentarioTextarea = document.getElementById('comentarioRechazo');
     
     // Configurar la acción del formulario con el ID del registro
-    form.action = `${window.location.origin}/viajes/camara/subir/${registroId}/`;
+    const urlPrefix = window.URL_PREFIX || '';
+    form.action = `${window.location.origin}${urlPrefix}/camara/subir/${registroId}/`;
     
     // Limpiar preview anterior
     limpiarFotoRechazo();
