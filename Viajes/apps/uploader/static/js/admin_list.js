@@ -302,17 +302,22 @@ async function subirFotoRechazo(event) {
     const formData = new FormData(form);
     const inputFile = document.getElementById('inputFotoRechazo');
     
-    // Validar que haya un archivo
-    if (!inputFile.files || inputFile.files.length === 0) {
-        alert('❌ Por favor selecciona o pega una imagen');
+    // Validar que haya archivo O comentario
+    const tieneArchivo = inputFile.files && inputFile.files.length > 0;
+    const comentario = formData.get('comentario');
+    
+    if (!tieneArchivo && !comentario) {
+        mostrarNotificacionRechazo('Sube una imagen o escribe un comentario', 'error');
         return;
     }
     
-    // Validar que sea una imagen
-    const file = inputFile.files[0];
-    if (!file.type.startsWith('image/')) {
-        alert('❌ El archivo debe ser una imagen');
-        return;
+    // Si hay archivo, validar que sea una imagen
+    if (tieneArchivo) {
+        const file = inputFile.files[0];
+        if (!file.type.startsWith('image/')) {
+            mostrarNotificacionRechazo('El archivo debe ser una imagen', 'error');
+            return;
+        }
     }
     
     try {
@@ -327,17 +332,52 @@ async function subirFotoRechazo(event) {
         const data = await response.json();
         
         if (data.success) {
-            alert('✅ Foto subida correctamente');
+            mostrarNotificacionRechazo(data.message || 'Guardado correctamente', 'success');
             
             // Remover event listener de paste
             document.removeEventListener('paste', manejarPegadoImagen);
             
             document.getElementById('modalFotoRechazo').close();
-            location.reload(); // Recargar para ver el rechazo aplicado
+            
+            // Esperar 2 segundos antes de recargar para que el usuario vea el mensaje
+            setTimeout(() => {
+                location.reload();
+            }, 2000);
         } else {
-            alert('❌ Error: ' + data.error);
+            mostrarNotificacionRechazo(data.error || 'Error al guardar', 'error');
         }
     } catch (error) {
-        alert('❌ Error al subir la foto: ' + error);
+        mostrarNotificacionRechazo('Error al guardar: ' + error.message, 'error');
     }
+}
+
+// Función para mostrar notificaciones toast en rechazos
+function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
+    const toast = document.createElement('div');
+    const bgColor = tipo === 'success' ? 'alert-success' : 'alert-error';
+    
+    toast.className = `alert ${bgColor} shadow-lg fixed top-4 right-4 w-auto animate-fade-in`;
+    toast.style.zIndex = '9999';
+    toast.innerHTML = `
+        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+            ${tipo === 'success' 
+                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
+            }
+        </svg>
+        <span>${mensaje}</span>
+    `;
+    
+    document.body.appendChild(toast);
+    
+    // Remover la notificación después de 4 segundos
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        toast.style.transition = 'opacity 0.5s';
+        setTimeout(() => {
+            if (document.body.contains(toast)) {
+                document.body.removeChild(toast);
+            }
+        }, 500);
+    }, 4000);
 }

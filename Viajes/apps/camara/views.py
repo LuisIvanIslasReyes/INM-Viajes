@@ -22,32 +22,40 @@ def subir_foto_rechazo(request, registro_id):
             'error': 'El registro debe estar marcado como rechazado para subir una foto.'
         }, status=400)
     
-    form = FotoRechazoForm(request.POST, request.FILES)
+    # Actualizar el comentario del registro si se proporcionó
+    comentario = request.POST.get('comentario', '').strip()
+    if comentario:
+        registro.comentario = comentario
+        registro.save(update_fields=['comentario'])
     
-    if form.is_valid():
-        foto = form.save(commit=False)
-        foto.registro = registro
-        foto.usuario_captura = request.user
-        foto.save()
+    # Si hay foto, procesarla
+    if 'foto' in request.FILES:
+        form = FotoRechazoForm(request.POST, request.FILES)
         
-        # Actualizar el comentario del registro si se proporcionó
-        comentario = request.POST.get('comentario', '').strip()
-        if comentario:
-            registro.comentario = comentario
-            registro.save(update_fields=['comentario'])
-        
+        if form.is_valid():
+            foto = form.save(commit=False)
+            foto.registro = registro
+            foto.usuario_captura = request.user
+            foto.save()
+            
+            return JsonResponse({
+                'success': True,
+                'message': f'Foto y comentario guardados correctamente para {registro.nombre_pasajero}',
+                'foto_id': foto.id,
+                'foto_url': foto.foto.url
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'error': 'Archivo inválido. Solo se permiten imágenes JPG, JPEG, PNG o WEBP.',
+                'errors': form.errors
+            }, status=400)
+    else:
+        # Solo se guardó el comentario
         return JsonResponse({
             'success': True,
-            'message': f'Foto subida correctamente para {registro.nombre_pasajero}',
-            'foto_id': foto.id,
-            'foto_url': foto.foto.url
+            'message': f'Comentario guardado correctamente para {registro.nombre_pasajero}'
         })
-    else:
-        return JsonResponse({
-            'success': False,
-            'error': 'Archivo inválido. Solo se permiten imágenes JPG, JPEG, PNG o WEBP.',
-            'errors': form.errors
-        }, status=400)
 
 
 @login_required
