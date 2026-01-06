@@ -7,6 +7,7 @@ from django.contrib import messages
 from django.http import FileResponse
 from django.db.models import Q
 from collections import OrderedDict
+from datetime import datetime, timedelta
 import os
 
 from ..models import Registro, UploadBatch
@@ -14,25 +15,22 @@ from ..models import Registro, UploadBatch
 
 @login_required
 def date_range_report(request):
-    """Vista de reporte por rango de fechas - Solo muestra registros con SR, R o I"""
+    """Vista de reporte por rango de fechas - Muestra TODOS los días con vuelos"""
     fecha_inicio = request.GET.get('fecha_inicio')
     fecha_fin = request.GET.get('fecha_fin')
     
-    # FILTRO PRINCIPAL: Solo registros que tienen SR, R o I
-    # (Los que no tienen nada están OK y no se muestran aquí)
-    registros = Registro.objects.filter(
-        Q(segunda_revision=True) | Q(rechazado=True) | Q(internacion=True)
-    ).select_related('batch', 'batch__usuario').order_by('-vuelo_fecha', 'vuelo_numero')
+    # Obtener TODOS los registros del rango (incluso los que no tienen SR, R o I)
+    registros_todos = Registro.objects.select_related('batch', 'batch__usuario').order_by('-vuelo_fecha', 'vuelo_numero')
     
     # Aplicar filtros de fecha
     if fecha_inicio:
-        registros = registros.filter(vuelo_fecha__gte=fecha_inicio)
+        registros_todos = registros_todos.filter(vuelo_fecha__gte=fecha_inicio)
     if fecha_fin:
-        registros = registros.filter(vuelo_fecha__lte=fecha_fin)
+        registros_todos = registros_todos.filter(vuelo_fecha__lte=fecha_fin)
     
-    # Agrupar por fecha
+    # Agrupar por fecha - TODOS los registros
     registros_por_fecha = OrderedDict()
-    for registro in registros:
+    for registro in registros_todos:
         fecha = registro.vuelo_fecha
         if fecha not in registros_por_fecha:
             registros_por_fecha[fecha] = []
@@ -41,10 +39,13 @@ def date_range_report(request):
     # Calcular totales por fecha
     estadisticas_por_fecha = []
     for fecha, regs in registros_por_fecha.items():
+        # Filtrar solo los que tienen SR, R o I para la tabla
+        regs_especiales = [r for r in regs if r.segunda_revision or r.rechazado or r.internacion]
+        
         estadisticas_por_fecha.append({
             'fecha': fecha,
-            'registros': regs,
-            'total': len(regs),
+            'registros': regs_especiales,  # Solo mostrar SR, R, I en la tabla
+            'total': len(regs_especiales),
             'segunda_revisions': sum(1 for r in regs if r.segunda_revision),
             'rechazados': sum(1 for r in regs if r.rechazado),
             'internaciones': sum(1 for r in regs if r.internacion),
@@ -54,7 +55,7 @@ def date_range_report(request):
         'fecha_inicio': fecha_inicio if fecha_inicio else '',
         'fecha_fin': fecha_fin if fecha_fin else '',
         'estadisticas_por_fecha': estadisticas_por_fecha,
-        'total_registros': registros.count(),
+        'total_registros': registros_todos.count(),
         'is_superuser': request.user.is_superuser,
     }
     

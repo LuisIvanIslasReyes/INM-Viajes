@@ -147,8 +147,11 @@ Por este medio se informa que el día de la fecha arribó al Aeropuerto Internac
 
 `;
 
+        // Siempre mostrar el número de segundas revisiones
+        pinTexto += `En dicho proceso migratorio se llevó a cabo <strong>${String(data.total_sr).padStart(2, '0')} segunda${data.total_sr != 1 ? 's' : ''} revisión${data.total_sr != 1 ? 'es' : ''}</strong>`;
+        
         if (data.total_sr > 0) {
-            pinTexto += `En dicho proceso migratorio se llevó a cabo <strong>${String(data.total_sr).padStart(2, '0')} segunda${data.total_sr != 1 ? 's' : ''} revisión${data.total_sr != 1 ? 'es' : ''}</strong>, las cuales, derivaron en:\n`;
+            pinTexto += `, las cuales, derivaron en:\n`;
             
             if (data.total_internaciones > 0) {
                 pinTexto += `${String(data.total_internaciones).padStart(2, '0')} internación${data.total_internaciones != 1 ? 'es' : ''} por entrevista.\n`;
@@ -159,7 +162,7 @@ Por este medio se informa que el día de la fecha arribó al Aeropuerto Internac
             }
             pinTexto += '\n';
         } else {
-            pinTexto += `En dicho proceso migratorio no se llevó a cabo ninguna segunda revisión.\n\n`;
+            pinTexto += `.\n\n`;
         }
         
         // Detalles de rechazos
@@ -228,8 +231,11 @@ async function copiarPin(event) {
         texto += `*${pinData.fechaTexto.toUpperCase()}*\n\n`;
         texto += `Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo *${pinData.vuelo_numero}* proveniente de Pekín con *${pinData.total_pasajeros} pasajeros*.\n\n`;
         
+        // Siempre mostrar el número de segundas revisiones
+        texto += `En dicho proceso migratorio se llevó a cabo *${String(pinData.total_sr).padStart(2, '0')} segunda${pinData.total_sr != 1 ? 's' : ''} revisión${pinData.total_sr != 1 ? 'es' : ''}*`;
+        
         if (pinData.total_sr > 0) {
-            texto += `En dicho proceso migratorio se llevó a cabo *${String(pinData.total_sr).padStart(2, '0')} segunda${pinData.total_sr != 1 ? 's' : ''} revisión${pinData.total_sr != 1 ? 'es' : ''}*, las cuales, derivaron en:\n`;
+            texto += `, las cuales, derivaron en:\n`;
             
             if (pinData.total_internaciones > 0) {
                 texto += `${String(pinData.total_internaciones).padStart(2, '0')} internación${pinData.total_internaciones != 1 ? 'es' : ''} por entrevista.\n`;
@@ -240,7 +246,7 @@ async function copiarPin(event) {
             }
             texto += '\n';
         } else {
-            texto += `En dicho proceso migratorio no se llevó a cabo ninguna segunda revisión.\n\n`;
+            texto += `.\n\n`;
         }
         
         // Detalles de rechazos
@@ -399,6 +405,7 @@ async function generarPDF() {
         agregarTexto(`Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo ${pinData.vuelo_numero} proveniente de Pekín con ${pinData.total_pasajeros} pasajeros.`);
         y += 3;
         
+        // Siempre mostrar el número de segundas revisiones
         if (pinData.total_sr > 0) {
             agregarTexto(`En dicho proceso migratorio se llevó a cabo ${String(pinData.total_sr).padStart(2, '0')} segunda${pinData.total_sr != 1 ? 's' : ''} revisión${pinData.total_sr != 1 ? 'es' : ''}, las cuales, derivaron en:`);
             
@@ -411,7 +418,7 @@ async function generarPDF() {
             }
             y += 3;
         } else {
-            agregarTexto('En dicho proceso migratorio no se llevó a cabo ninguna segunda revisión.');
+            agregarTexto(`En dicho proceso migratorio se llevó a cabo ${String(pinData.total_sr).padStart(2, '0')} segundas revisiones.`);
             y += 3;
         }
         

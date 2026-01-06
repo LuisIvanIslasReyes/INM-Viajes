@@ -42,21 +42,12 @@ Accede a: `http://127.0.0.1:8000/`
 ## Uso del Sistema
 
 ### Para Usuarios Normales:
-1. Iniciar sesión en `http://127.0.0.1:8000/admin/` con tus credenciales
-2. Ir a `http://127.0.0.1:8000/` para subir archivos Excel
+1. Iniciar sesión en `http://127.0.0.1:8000/` con tus credenciales de prueba.
+    Usuario: PruebaRandom
+    Contraseña: Azdsfkh-ko/1.cvghydfvvnmgq
+2. Ir a `http://127.0.0.1:8000/upload` para subir archivos Excel
 3. Seleccionar un archivo Excel (.xlsx) con la estructura correcta
 4. Hacer clic en "Cargar Archivo"
-
-### Para Superusuarios:
-1. Iniciar sesión como superusuario
-2. Acceder a la lista de registros en `http://127.0.0.1:8000/admin-list/`
-3. Ver todos los registros en formato tabla
-4. Modificar campos administrativos:
-   - ✅ **Confirmado**: Hacer clic en el checkbox
-   - ❌ **Inadmitido**: Hacer clic en el checkbox
-   - ✏️ **Comentario**: Hacer clic en "Editar" para agregar/modificar comentarios
-5. Usar filtros para buscar por lote, confirmado o inadmitido
-
 ---
 
 ## 📊 Estructura de los Modelos
