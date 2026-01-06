@@ -11,27 +11,7 @@ Abre MySQL Workbench y ejecuta los siguientes comandos SQL:
 CREATE DATABASE viajes_db CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 2. Configurar Django para MySQL
-
-Edita el archivo `Viajes/settings.py` y actualiza la configuración de DATABASES:
-
-```python
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'viajes_db', # O cualquier nombre que identifiques la BD
-        'USER': 'root',  
-        'PASSWORD': 'tu_password',  # Reemplaza con tu password de MySQL
-        'HOST': 'localhost',
-        'PORT': '3306',
-        'OPTIONS': {
-            'charset': 'utf8mb4',
-        },
-    }
-}
-```
-
-### 3. Aplicar las Migraciones
+### 2. Aplicar las Migraciones
 
 Ejecuta estos comandos en PowerShell desde la carpeta `Viajes`:
 
