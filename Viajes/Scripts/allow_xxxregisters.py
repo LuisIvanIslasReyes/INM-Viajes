@@ -11,7 +11,7 @@ from django.utils import timezone
 BASE_DIR = Path(__file__).resolve().parent.parent.parent if '__file__' in globals() else Path.cwd().parent
 excel_path = BASE_DIR / 'context' / 'HU7925_PEK-TIJ_12ENE26.xlsx'
 
-print(f"📁 Leyendo archivo: {excel_path}")
+print(f"Leyendo archivo: {excel_path}")
 df = pd.read_excel(excel_path)
 
 # Obtener el batch más reciente para este vuelo
@@ -27,7 +27,7 @@ if not batch:
         usuario=usuario
     )
 
-print(f"✅ Usando batch ID: {batch.id}")
+print(f"Usando batch ID: {batch.id}")
 
 # Mapeo de columnas
 column_mapping = {
@@ -119,16 +119,16 @@ for index in range(45, 59):
         nuevo_registro = Registro.objects.create(**registro_data)
         registros_creados += 1
         fila_excel = index + 2  # índice 45 + 2 = fila 47 Excel
-        print(f"✅ Fila {fila_excel}: {registro_data.get('nombre_pasajero')} (Doc: {registro_data.get('numero_documento')})")
+        print(f"Fila {fila_excel}: {registro_data.get('nombre_pasajero')} (Doc: {registro_data.get('numero_documento')})")
     
     except Exception as e:
         fila_excel = index + 2
         nombre_error = row.get('旅客姓名', 'N/A') if 'row' in locals() else 'N/A'
         doc_error = row.get('证件号', 'N/A') if 'row' in locals() else 'N/A'
-        print(f"❌ ERROR en fila {fila_excel}: {nombre_error} (Doc: {doc_error}) - {str(e)}")
+        print(f"ERROR en fila {fila_excel}: {nombre_error} (Doc: {doc_error}) - {str(e)}")
         registros_error += 1
 
 print("\n" + "="*60)
-print(f"✅ Registros creados: {registros_creados}")
-print(f"❌ Errores: {registros_error}")
+print(f" Registros creados: {registros_creados}")
+print(f" Errores: {registros_error}")
 print("="*60)
