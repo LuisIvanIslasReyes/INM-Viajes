@@ -97,12 +97,15 @@
                 <div class="form-control flex-1 min-w-[300px]">
                     <label class="label">
                         <span class="label-text font-semibold">Buscar por Documento o Pasajero</span>
+                        <span class="label-text-alt text-xs text-base-content/60">
+                            <kbd class="kbd kbd-xs">Enter</kbd> para buscar ya
+                        </span>
                     </label>
                     <div class="relative">
                         <input 
                             type="text" 
                             id="searchInput" 
-                            placeholder="Escribe número de documento o nombre..." 
+                            placeholder="Escribe número de documento o nombre... (Enter para buscar)" 
                             class="input input-bordered w-full pr-10"
                             value="{{ request.GET.search }}"
                         >

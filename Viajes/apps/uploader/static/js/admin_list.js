@@ -44,9 +44,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-// Función de búsqueda en tiempo real (búsqueda del lado del servidor)
+// Función para mostrar/ocultar botón de limpiar mientras escribes
 searchInput.addEventListener('input', function() {
-    clearTimeout(searchTimeout);
     const searchValue = this.value.trim();
     
     // Mostrar/ocultar botón de limpiar
@@ -55,11 +54,14 @@ searchInput.addEventListener('input', function() {
     } else {
         clearSearchBtn.classList.add('hidden');
     }
-    
-    // Esperar 500ms antes de buscar en el servidor (debounce)
-    searchTimeout = setTimeout(() => {
+});
+
+// Búsqueda SOLO al presionar Enter (sin búsqueda automática)
+searchInput.addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+        e.preventDefault();
         applyFilters();
-    }, 500);
+    }
 });
 
 // Limpiar búsqueda
