@@ -13,6 +13,12 @@
 
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/admin_list.css' %}">
+<style>
+@keyframes pulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.7; transform: scale(1.15); }
+}
+</style>
 {% endblock %}
 
 {% block content %}
@@ -66,10 +72,15 @@
             </a>
             
             <!-- Casos Especiales -->
-            <a href="{% url 'casos_especiales_list' %}" class="btn btn-warning btn-circle btn-lg" title="Casos Especiales">
+            <a href="{% url 'casos_especiales_list' %}" class="btn btn-warning btn-circle btn-lg relative" title="Casos Especiales Pendientes">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
                 </svg>
+                {% if casos_urgentes > 0 %}
+                <span class="badge badge-error badge-sm absolute -top-1 -right-1" style="animation: pulse 1.5s infinite;">{{ casos_pendientes }}</span>
+                {% elif casos_pendientes > 0 %}
+                <span class="badge badge-warning badge-sm absolute -top-1 -right-1" style="border: 2px solid #d97706; background: #1d1d1d; color: white;">{{ casos_pendientes }}</span>
+                {% endif %}
             </a>
             
             <!-- Búsqueda por Fecha -->

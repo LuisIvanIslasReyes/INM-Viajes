@@ -35,6 +35,7 @@ def upload_excel(request):
         total_registros_creados = 0
         total_casos_especiales = 0
         total_registros_error = 0
+        total_sin_documento = 0
         archivos_procesados = 0
         
         for archivo in archivos:
@@ -106,15 +107,16 @@ def upload_excel(request):
                 registros_creados = 0
                 registros_error = 0
                 casos_especiales_creados = 0
-                
+                sin_documento_creados = 0
+
                 for index, row in df.iterrows():
                     try:
                         registro_data = {'batch': batch}
-                        
+
                         for excel_col, model_field in column_mapping.items():
                             if excel_col in df.columns:
                                 value = row[excel_col]
-                                
+
                                 if pd.isna(value):
                                     value = None
                                 elif isinstance(value, pd.Timestamp):
@@ -132,7 +134,7 @@ def upload_excel(request):
                                             value = None
                                     except:
                                         value = None
-                                elif model_field in ['numero_documento', 'numero_equipaje', 'informacion_contacto', 'contacto_reserva', 
+                                elif model_field in ['numero_documento', 'numero_equipaje', 'informacion_contacto', 'contacto_reserva',
                                                     'contacto_pasajero', 'numero_ticket', 'salida_planificada', 'numero_asiento']:
                                     # Convertir a string para manejar tanto números como texto con prefijos
                                     if value is not None and not pd.isna(value):
@@ -144,26 +146,47 @@ def upload_excel(request):
                                             value = str(value).strip()
                                     else:
                                         value = None
-                                
+
                                 registro_data[model_field] = value
-                        
+
+                        # CharFields NOT NULL en DB no aceptan None — convertir a ''
+                        _char_not_null = [
+                            'vuelo_numero', 'aeropuerto_salida', 'aeropuerto_llegada',
+                            'nombre_pasajero', 'numero_asiento', 'estado_checkin',
+                            'numero_ticket', 'genero', 'codigo_pais_emision', 'pais_emision',
+                        ]
+                        for _f in _char_not_null:
+                            if registro_data.get(_f) is None:
+                                registro_data[_f] = ''
+
                         # Parsear nacionalidad desde el código ISO
                         if 'codigo_pais_emision' in registro_data and registro_data['codigo_pais_emision']:
                             codigo_iso = registro_data['codigo_pais_emision']
                             registro_data['pais_emision'] = obtener_nacionalidad(codigo_iso)
-                        
+
                         # Verificar duplicados
                         numero_doc = registro_data.get('numero_documento')
                         vuelo_num = registro_data.get('vuelo_numero')
                         vuelo_fecha = registro_data.get('vuelo_fecha')
                         nombre = registro_data.get('nombre_pasajero')
-                        
+
                         # Crear el registro SIEMPRE (no bloqueamos nada)
                         nuevo_registro = Registro.objects.create(**registro_data)
                         registros_creados += 1
-                        
-                        # DESPUÉS de crear, verificar si es un Caso Especial
-                        if numero_doc and vuelo_num and vuelo_fecha:
+
+                        # CASO ESPECIAL URGENTE: pasajero sin número de documento
+                        if not numero_doc:
+                            CasoEspecial.objects.create(
+                                registro=nuevo_registro,
+                                razon='sin_documento',
+                                estado='pendiente',
+                                documento_original='',
+                                registros_conflictivos_ids=[]
+                            )
+                            sin_documento_creados += 1
+
+                        # DESPUÉS de crear, verificar si es un Caso Especial por duplicado
+                        elif vuelo_num and vuelo_fecha:
                             # Buscar registros con mismo documento + mismo vuelo + misma fecha
                             registros_mismo_vuelo_doc = Registro.objects.filter(
                                 numero_documento=numero_doc,
@@ -172,17 +195,17 @@ def upload_excel(request):
                             ).exclude(
                                 id=nuevo_registro.id  # Excluir el que acabamos de crear
                             )
-                            
+
                             # Si encontramos coincidencias, SIEMPRE crear caso especial
                             if registros_mismo_vuelo_doc.exists():
                                 # Determinar razón basada en si el nombre es diferente o igual
                                 nombre_diferente = registros_mismo_vuelo_doc.exclude(nombre_pasajero=nombre).exists()
-                                
+
                                 # SIEMPRE crear caso especial, pero con diferentes razones:
                                 # - NOMBRE DIFERENTE = documento_duplicado (fraude/error grave)
                                 # - NOMBRE IGUAL = mismo_vuelo_fecha (carga duplicada)
                                 razon = 'documento_duplicado' if nombre_diferente else 'mismo_vuelo_fecha'
-                                
+
                                 CasoEspecial.objects.create(
                                     registro=nuevo_registro,
                                     razon=razon,
@@ -191,7 +214,7 @@ def upload_excel(request):
                                     registros_conflictivos_ids=list(registros_mismo_vuelo_doc.values_list('id', flat=True))
                                 )
                                 casos_especiales_creados += 1
-                    
+
                     except Exception as e:
                         # Mostrar información detallada del error
                         fila_excel = index + 2  # +2 porque Excel empieza en 1 y tiene encabezado
@@ -205,6 +228,7 @@ def upload_excel(request):
                 total_registros_creados += registros_creados
                 total_casos_especiales += casos_especiales_creados
                 total_registros_error += registros_error
+                total_sin_documento += sin_documento_creados
                 archivos_procesados += 1
                 
             except Exception as e:
@@ -228,9 +252,21 @@ def upload_excel(request):
                     enlace=reverse('admin_list')
                 )
             
+            if total_sin_documento > 0:
+                messages.error(request, f'🚨 URGENTE: {total_sin_documento} pasajero(s) ingresaron SIN número de documento. Requieren atención inmediata en "Casos Especiales".')
+
+                Notificacion.objects.create(
+                    usuario=request.user,
+                    tipo='importante',
+                    categoria='casos_especiales',
+                    titulo=f'🚨 URGENTE: {total_sin_documento} pasajero(s) sin documento',
+                    mensaje=f'{total_sin_documento} pasajero(s) fueron registrados sin número de documento. Se requiere revisión y corrección inmediata antes del vuelo.',
+                    enlace=reverse('casos_especiales_list')
+                )
+
             if total_casos_especiales > 0:
                 messages.warning(request, f'🔔 IMPORTANTE: Se crearon {total_casos_especiales} Caso(s) Especial(es) que requieren tu revisión. Ve a "Casos Especiales" en el menú.')
-                
+
                 # Crear notificación IMPORTANTE de casos especiales
                 Notificacion.objects.create(
                     usuario=request.user,

@@ -43,7 +43,7 @@ class Registro(models.Model):
     aeropuerto_llegada = models.CharField(max_length=50, verbose_name='落地机场')
     salida_planificada = models.CharField(max_length=50, verbose_name='计划离港', blank=True, null=True)
     nombre_pasajero = models.CharField(max_length=200, verbose_name='旅客姓名')
-    numero_documento = models.CharField(max_length=100, verbose_name='证件号')
+    numero_documento = models.CharField(max_length=100, verbose_name='证件号', blank=True, null=True)
     numero_asiento = models.CharField(max_length=20, verbose_name='座位号')
     numero_equipaje = models.TextField(verbose_name='行李号', blank=True, null=True)
     piezas = models.IntegerField(verbose_name='件数', default=0)
@@ -92,6 +92,7 @@ class CasoEspecial(models.Model):
         ('documento_duplicado', 'Número de Documento Duplicado'),
         ('mismo_vuelo_fecha', 'Mismo Vuelo y Fecha'),
         ('datos_sospechosos', 'Datos Sospechosos'),
+        ('sin_documento', 'Sin Número de Documento'),
     ]
     
     # Registro afectado

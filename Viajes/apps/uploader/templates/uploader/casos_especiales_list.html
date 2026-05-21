@@ -4,6 +4,12 @@
 {% block extra_css %}
 <link rel="stylesheet" href="{% static 'css/casos_especiales.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+<style>
+@keyframes pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -86,11 +92,16 @@ function updateRegistro(registroId, campo, valor) {
         {% for caso in casos %}
         <div class="caso-card">
             <!-- Header del caso -->
-            <div class="caso-header-custom">
+            <div class="caso-header-custom" {% if caso.razon == 'sin_documento' %}style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%) !important;"{% endif %}>
                 <div class="flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <h3 class="text-2xl font-bold mb-2">
                             <i class="fas fa-folder-open"></i> Caso #{{ caso.id }}
+                            {% if caso.razon == 'sin_documento' %}
+                            <span class="badge badge-lg ml-2" style="background: #dc2626; color: white; border: none; font-size: 0.85rem; padding: 8px 14px; animation: pulse 1.5s infinite;">
+                                <i class="fas fa-exclamation-circle"></i> URGENTE
+                            </span>
+                            {% endif %}
                             <span class="badge badge-{{ caso.estado }} ml-2">
                                 {{ caso.get_estado_display }}
                             </span>
@@ -102,13 +113,31 @@ function updateRegistro(registroId, campo, valor) {
                             {% endif %}
                         </div>
                     </div>
+                    {% if caso.razon == 'sin_documento' %}
+                    <div class="badge badge-lg" style="background: white; color: #7c3aed; border: 2px solid white; padding: 12px 20px; font-size: 1rem;">
+                        <i class="fas fa-id-card-alt"></i> SIN DOCUMENTO
+                    </div>
+                    {% else %}
                     <div class="badge badge-lg" style="background: white; color: #f59e0b; border: 2px solid white; padding: 12px 20px; font-size: 1rem;">
                         <i class="fas fa-id-card"></i> Doc: {{ caso.documento_original }}
                     </div>
+                    {% endif %}
                 </div>
             </div>
 
             <!-- Información del motivo -->
+            {% if caso.razon == 'sin_documento' %}
+            <div class="alert mb-4" style="background: #f3e8ff; border: 2px solid #7c3aed; color: #4c1d95;">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                </svg>
+                <span>
+                    <strong>URGENTE — Pasajero sin número de documento</strong>
+                    <br>
+                    Este pasajero fue registrado sin número de documento. Se debe capturar el documento correcto antes del vuelo.
+                </span>
+            </div>
+            {% else %}
             <div class="alert-warning-custom">
                 <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
@@ -116,7 +145,7 @@ function updateRegistro(registroId, campo, valor) {
                 <span>
                     <strong>{{ caso.get_razon_display }}</strong>
                     <br>
-                    Se encontraron {{ caso.conflictivos.count|add:1 }} registro(s) con el mismo número de documento 
+                    Se encontraron {{ caso.conflictivos.count|add:1 }} registro(s) con el mismo número de documento
                     {% if caso.razon == 'mismo_vuelo_fecha' %}
                         <strong>en el mismo vuelo {{ caso.registro.vuelo_numero }} del {{ caso.registro.vuelo_fecha|date:"d/m/Y" }}</strong>.
                     {% else %}
@@ -124,21 +153,27 @@ function updateRegistro(registroId, campo, valor) {
                     {% endif %}
                 </span>
             </div>
+            {% endif %}
 
-            <!-- COMPARACIÓN EN 2 COLUMNAS -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <!-- COMPARACIÓN EN 2 COLUMNAS (sin_documento solo usa 1 columna) -->
+            <div class="grid grid-cols-1 {% if caso.razon != 'sin_documento' %}md:grid-cols-2{% endif %} gap-6">
                 <!-- COLUMNA IZQUIERDA: REGISTRO NUEVO (Azul Cyan) -->
                 <div class="flex flex-col">
                     <!-- Header Registro Nuevo -->
-                    <div style="background: linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); padding: 16px; border-radius: 12px 12px 0 0; box-shadow: 0 4px 6px rgba(6, 182, 212, 0.3);">
+                    <div style="background: {% if caso.razon == 'sin_documento' %}linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); box-shadow: 0 4px 6px rgba(124, 58, 237, 0.3){% else %}linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); box-shadow: 0 4px 6px rgba(6, 182, 212, 0.3){% endif %}; padding: 16px; border-radius: 12px 12px 0 0;">
                         <h3 class="text-xl font-bold text-white flex items-center gap-2">
+                            {% if caso.razon == 'sin_documento' %}
+                            <i class="fas fa-user-times"></i>
+                            Pasajero sin Documento
+                            {% else %}
                             <i class="fas fa-file-alt"></i>
                             Registro Nuevo (Este Caso)
+                            {% endif %}
                         </h3>
                     </div>
 
                     <!-- Info Registro Nuevo -->
-                    <div style="background: #ecfeff; border: 3px solid #06b6d4; border-top: none; padding: 20px; border-radius: 0 0 12px 12px; flex-grow: 1;">
+                    <div style="background: {% if caso.razon == 'sin_documento' %}#f3e8ff; border: 3px solid #7c3aed{% else %}#ecfeff; border: 3px solid #06b6d4{% endif %}; border-top: none; padding: 20px; border-radius: 0 0 12px 12px; flex-grow: 1;">
                         <div class="grid grid-cols-2 gap-x-4 gap-y-3">
                             <div class="flex items-start gap-3" {% if caso.razon == 'mismo_vuelo_fecha' or caso.razon == 'documento_duplicado' %}style="border: 2px solid #000; border-radius: 8px; padding: 8px; background: rgba(255, 255, 255, 0.5);"{% endif %}>
                                 <i class="fas fa-user text-cyan-600 text-lg mt-1"></i>
@@ -200,25 +235,29 @@ function updateRegistro(registroId, campo, valor) {
 
                         <!-- ACCIONES PARA REGISTRO NUEVO (solo si está pendiente) -->
                         {% if caso.estado == 'pendiente' %}
-                        <div class="mt-6 pt-4 border-t-2 border-cyan-300">
-                            <h4 class="font-bold text-cyan-800 mb-3 flex items-center gap-2">
+                        <div class="mt-6 pt-4 border-t-2 {% if caso.razon == 'sin_documento' %}border-purple-300{% else %}border-cyan-300{% endif %}">
+                            <h4 class="font-bold mb-3 flex items-center gap-2 {% if caso.razon == 'sin_documento' %}text-purple-800{% else %}text-cyan-800{% endif %}">
                                 <i class="fas fa-cog"></i> Acciones para este registro:
                             </h4>
                             <div class="space-y-2">
-                                <!-- Editar -->
-                                <button onclick="editModal{{ caso.id }}_nuevo.showModal()" class="w-full btn btn-sm" style="background: #0891b2; color: white; border: none;">
+                                <!-- Editar / Capturar -->
+                                <button onclick="editModal{{ caso.id }}_nuevo.showModal()" class="w-full btn btn-sm" style="background: {% if caso.razon == 'sin_documento' %}#7c3aed{% else %}#0891b2{% endif %}; color: white; border: none;">
+                                    {% if caso.razon == 'sin_documento' %}
+                                    <i class="fas fa-id-card"></i> Capturar Documento
+                                    {% else %}
                                     <i class="fas fa-edit"></i> Editar Documento
+                                    {% endif %}
                                 </button>
-                                
+
                                 <!-- Inadmitir -->
                                 <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id caso.registro.id %}" onsubmit="return confirm('¿Marcar este registro como INADMITIDO?\n\nSe activará automáticamente:\n✓ SR (Segunda Revisión)\n✓ R (Rechazado)');">
                                     {% csrf_token %}
-                                    <input type="hidden" name="motivo" value="Documento duplicado - registro inadmitido">
+                                    <input type="hidden" name="motivo" value="{% if caso.razon == 'sin_documento' %}Sin documento - registro inadmitido{% else %}Documento duplicado - registro inadmitido{% endif %}">
                                     <button type="submit" class="w-full btn btn-sm" style="background: #dc2626; color: white; border: none;" title="Activa SR + R automáticamente">
                                         <i class="fas fa-ban"></i> Rechazar (SR + R)
                                     </button>
                                 </form>
-                                
+
                                 <!-- Eliminar -->
                                 <form method="POST" action="{% url 'resolver_caso_eliminar' caso.id caso.registro.id %}" onsubmit="return confirm('⚠️ ¿ELIMINAR permanentemente? NO se puede deshacer.');">
                                     {% csrf_token %}
@@ -231,11 +270,15 @@ function updateRegistro(registroId, campo, valor) {
                         {% endif %}
                     </div>
 
-                    <!-- Modal Editar Nuevo -->
+                    <!-- Modal Editar / Capturar Documento -->
                     <dialog id="editModal{{ caso.id }}_nuevo" class="modal">
                         <div class="modal-box">
-                            <h3 class="font-bold text-lg text-cyan-700">
+                            <h3 class="font-bold text-lg {% if caso.razon == 'sin_documento' %}text-purple-700{% else %}text-cyan-700{% endif %}">
+                                {% if caso.razon == 'sin_documento' %}
+                                <i class="fas fa-id-card"></i> Capturar Número de Documento
+                                {% else %}
                                 <i class="fas fa-edit"></i> Editar Documento
+                                {% endif %}
                             </h3>
                             <p class="text-sm text-gray-600 mt-2">
                                 Pasajero: <strong>{{ caso.registro.nombre_pasajero }}</strong>
@@ -243,17 +286,23 @@ function updateRegistro(registroId, campo, valor) {
                             <form method="POST" action="{% url 'resolver_caso_editar' caso.id caso.registro.id %}">
                                 {% csrf_token %}
                                 <div class="form-control mt-4">
+                                    {% if caso.razon != 'sin_documento' %}
                                     <label class="label">
                                         <span class="label-text">Documento Actual:</span>
                                         <span class="label-text-alt badge badge-ghost">{{ caso.documento_original }}</span>
                                     </label>
+                                    {% endif %}
                                     <label class="label">
-                                        <span class="label-text font-semibold">Nuevo Número de Documento:</span>
+                                        <span class="label-text font-semibold">
+                                            {% if caso.razon == 'sin_documento' %}Número de Documento:{% else %}Nuevo Número de Documento:{% endif %}
+                                        </span>
                                     </label>
-                                    <input type="text" name="nuevo_documento" class="input input-bordered" required value="{{ caso.documento_original }}" placeholder="Ingrese el número correcto">
+                                    <input type="text" name="nuevo_documento" class="input input-bordered" required
+                                        value="{% if caso.razon != 'sin_documento' %}{{ caso.documento_original }}{% endif %}"
+                                        placeholder="{% if caso.razon == 'sin_documento' %}Ingrese el número de documento del pasajero{% else %}Ingrese el número correcto{% endif %}">
                                 </div>
                                 <div class="modal-action">
-                                    <button type="submit" class="btn" style="background: #0891b2; color: white;">
+                                    <button type="submit" class="btn" style="background: {% if caso.razon == 'sin_documento' %}#7c3aed{% else %}#0891b2{% endif %}; color: white;">
                                         <i class="fas fa-save"></i> Guardar
                                     </button>
                                     <button type="button" onclick="editModal{{ caso.id }}_nuevo.close()" class="btn">Cancelar</button>
@@ -263,8 +312,8 @@ function updateRegistro(registroId, campo, valor) {
                     </dialog>
                 </div>
 
-                <!-- COLUMNA DERECHA: REGISTROS CONFLICTIVOS (Rojo) -->
-                {% if caso.conflictivos %}
+                <!-- COLUMNA DERECHA: REGISTROS CONFLICTIVOS (Rojo) — oculta para sin_documento -->
+                {% if caso.razon != 'sin_documento' and caso.conflictivos %}
                 {% for reg_conf in caso.conflictivos %}
                 <div class="flex flex-col">
                     <!-- Header Registro Conflictivo -->
@@ -416,8 +465,8 @@ function updateRegistro(registroId, campo, valor) {
             </div>
             {% endif %}
 
-            <!-- BOTÓN ACEPTAR AMBOS (solo para pendientes, abarca todo el ancho) -->
-            {% if caso.estado == 'pendiente' %}
+            <!-- BOTÓN ACEPTAR AMBOS (solo para pendientes y no sin_documento) -->
+            {% if caso.estado == 'pendiente' and caso.razon != 'sin_documento' %}
             <div class="mt-6 pt-6 border-t-2 border-gray-300">
                 <form method="POST" action="{% url 'resolver_caso_aceptar' caso.id %}" onsubmit="return confirm('¿Confirma que AMBOS registros son válidos?\n\nSe activará automáticamente:\n✓ SR (Segunda Revisión) en TODOS los registros');">
                     {% csrf_token %}

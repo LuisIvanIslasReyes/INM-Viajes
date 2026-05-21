@@ -12,7 +12,7 @@ from datetime import datetime, timedelta
 import logging
 from decouple import config
 
-from ..models import Registro, UploadBatch, Notificacion
+from ..models import Registro, UploadBatch, Notificacion, CasoEspecial
 @login_required
 def update_registro(request, registro_id):
     """Vista para actualizar campos (TODOS pueden editar TODO)"""
@@ -147,15 +147,21 @@ def admin_list(request):
         usuario=request.user,
         leida=False
     ).count()
-    
+
+    # Contar casos especiales pendientes (incluye urgentes sin_documento)
+    casos_pendientes = CasoEspecial.objects.filter(estado='pendiente').count()
+    casos_urgentes = CasoEspecial.objects.filter(estado='pendiente', razon='sin_documento').count()
+
     # Detectar si estamos en producción (cuando DJANGO_ENV != 'local')
     is_production = config('DJANGO_ENV', default='local') != 'local'
-    
+
     context = {
         'page_obj': page_obj,
         'batches': batches,
         'is_superuser': request.user.is_superuser,
         'notificaciones_no_leidas': notificaciones_no_leidas,
+        'casos_pendientes': casos_pendientes,
+        'casos_urgentes': casos_urgentes,
         'is_production': is_production,
     }
     
