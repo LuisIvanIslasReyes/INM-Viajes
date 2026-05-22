@@ -5,31 +5,95 @@ Estas vistas permiten al superusuario:
 - Listar y eliminar cargas de archivos
 - Crear usuarios estándar
 """
+from datetime import datetime, date, timedelta
+
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import User
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import models
+from django.utils import timezone
 
 from ..forms import CreateUserForm
 from ..models import UploadBatch
+
+
+def _parse_date(value):
+    """Convierte 'YYYY-MM-DD' a date, o None si es inválido/vacío."""
+    if not value:
+        return None
+    try:
+        return datetime.strptime(value, '%Y-%m-%d').date()
+    except (ValueError, TypeError):
+        return None
 
 
 @login_required
 @user_passes_test(lambda u: u.is_superuser, login_url='admin_list')
 def batch_list(request):
     """Vista para listar todas las cargas de archivos (SOLO ADMIN)"""
-    batches = UploadBatch.objects.select_related('usuario').annotate(
+    fecha_exacta = _parse_date(request.GET.get('fecha'))
+    fecha_inicio = _parse_date(request.GET.get('fecha_inicio'))
+    fecha_fin = _parse_date(request.GET.get('fecha_fin'))
+    busqueda = (request.GET.get('q') or '').strip()
+    usuario_id = (request.GET.get('usuario') or '').strip()
+
+    # Queryset base con los filtros aplicados (sin annotate, para stats limpios)
+    base = UploadBatch.objects.select_related('usuario')
+
+    if fecha_exacta:
+        base = base.filter(fecha_carga__date=fecha_exacta)
+    else:
+        if fecha_inicio:
+            base = base.filter(fecha_carga__date__gte=fecha_inicio)
+        if fecha_fin:
+            base = base.filter(fecha_carga__date__lte=fecha_fin)
+
+    if busqueda:
+        base = base.filter(archivo__icontains=busqueda)
+
+    if usuario_id.isdigit():
+        base = base.filter(usuario_id=int(usuario_id))
+
+    # Stats (consultas separadas para evitar conflictos con annotate)
+    total_cargas = base.count()
+    total_registros = base.aggregate(total=models.Count('registros'))['total'] or 0
+    stats = {
+        'total_cargas': total_cargas,
+        'total_registros': total_registros,
+    }
+    hoy = timezone.localdate()
+    stats_hoy = UploadBatch.objects.filter(fecha_carga__date=hoy).count()
+
+    # Queryset paginado con el conteo por fila
+    batches = base.annotate(
         total_registros=models.Count('registros')
     ).order_by('-fecha_carga')
 
     paginator = Paginator(batches, 20)
-    page_number = request.GET.get('page')
-    page_obj = paginator.get_page(page_number)
+    page_obj = paginator.get_page(request.GET.get('page'))
+
+    # Querystring para preservar filtros en la paginación
+    params = request.GET.copy()
+    params.pop('page', None)
+    querystring = params.urlencode()
+
+    usuarios = User.objects.filter(uploadbatch__isnull=False).distinct().order_by('username')
 
     context = {
         'page_obj': page_obj,
+        'fecha_exacta': fecha_exacta.isoformat() if fecha_exacta else '',
+        'fecha_inicio': fecha_inicio.isoformat() if fecha_inicio else '',
+        'fecha_fin': fecha_fin.isoformat() if fecha_fin else '',
+        'busqueda': busqueda,
+        'usuario_id': usuario_id,
+        'usuarios': usuarios,
+        'stats': stats,
+        'stats_hoy': stats_hoy,
+        'hoy': hoy.isoformat(),
+        'querystring': querystring,
+        'filtros_activos': bool(fecha_exacta or fecha_inicio or fecha_fin or busqueda or usuario_id),
     }
 
     return render(request, 'uploader/batch_list.html', context)
