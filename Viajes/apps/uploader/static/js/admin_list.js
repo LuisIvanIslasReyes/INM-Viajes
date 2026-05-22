@@ -144,42 +144,16 @@ function closeEditModal() {
     }
 }
 
-// Interceptar el formulario de Rechazo para abrir modal de foto
-document.addEventListener('DOMContentLoaded', function() {
-    // Interceptar todos los botones de "R" (Rechazo)
-    document.querySelectorAll('button[type="submit"]').forEach(button => {
-        const form = button.closest('form');
-        if (form && form.querySelector('input[name="rechazado"]')) {
-            form.addEventListener('submit', function(e) {
-                const rechazadoInput = this.querySelector('input[name="rechazado"]');
-                const nuevoValor = rechazadoInput.value === 'true';
-                
-                // Si está activando "R", interceptar y abrir modal
-                if (nuevoValor) {
-                    e.preventDefault();
-                    
-                    // Primero marcar como rechazado
-                    fetch(this.action, {
-                        method: 'POST',
-                        body: new FormData(this),
-                        headers: {
-                            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                        }
-                    })
-                    .then(response => {
-                        if (response.ok) {
-                            // Obtener ID del registro desde la URL del form
-                            const registroId = this.action.match(/update\/(\d+)\//)[1];
-                            
-                            // Abrir modal de foto
-                            abrirModalFoto(registroId);
-                        }
-                    });
-                }
-            });
-        }
-    });
-});
+// Router de modal desde botón Acciones:
+//   rechazado=true  -> modal foto+comentario
+//   en otro caso    -> modal de comentario simple
+function openAccionesModal(registroId, comentario, rechazado) {
+    if (rechazado) {
+        abrirModalFoto(registroId);
+    } else {
+        openEditModal(registroId, comentario);
+    }
+}
 
 // Función para abrir modal de subida de foto
 function abrirModalFoto(registroId) {

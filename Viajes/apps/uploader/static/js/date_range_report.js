@@ -216,6 +216,139 @@ function cerrarModalPin() {
     document.getElementById('modalPin').close();
 }
 
+// =====================================================
+// PIN Binacional (versión corta)
+// =====================================================
+// Versión abreviada del PIN: solo encabezado, fecha,
+// segundas revisiones y RECHAZOS. Sin párrafo del vuelo,
+// sin Derechos Humanos, sin Conexiones, sin despedida.
+let pinBinacionalData = null;
+
+async function abrirModalPinBinacional(fecha, fechaTexto) {
+    const modal = document.getElementById('modalPinBinacional');
+    const contenido = document.getElementById('contenidoPinBinacional');
+
+    contenido.innerHTML = '<div class="text-center"><span class="loading loading-spinner loading-lg"></span></div>';
+    modal.showModal();
+
+    try {
+        const urlPrefix = window.URL_PREFIX || '';
+        const url = `${urlPrefix}/pin/${fecha}/`;
+
+        const response = await fetch(url, {
+            headers: { 'X-Requested-With': 'XMLHttpRequest' }
+        });
+
+        if (!response.ok) {
+            if (response.status === 401 || response.status === 403) {
+                throw new Error('Sesión expirada. Por favor, recarga la página e inicia sesión nuevamente.');
+            }
+            if (response.status === 404) {
+                throw new Error('No se encontraron registros para esta fecha.');
+            }
+            throw new Error(`Error del servidor (${response.status}). Por favor, intenta de nuevo.`);
+        }
+
+        const contentType = response.headers.get('content-type');
+        if (!contentType || !contentType.includes('application/json')) {
+            throw new Error('La respuesta del servidor no es válida. Por favor, recarga la página.');
+        }
+
+        const data = await response.json();
+
+        if (!data || typeof data.total_sr === 'undefined') {
+            throw new Error('Datos incompletos recibidos del servidor.');
+        }
+
+        pinBinacionalData = { fechaTexto, ...data };
+
+        let pinTexto = `<strong>INSTITUTO NACIONAL DE MIGRACIÓN</strong>
+<strong>Oficina de Representación Baja California</strong>
+
+<strong>${fechaTexto.toUpperCase()}</strong>
+
+`;
+
+        pinTexto += `En dicho proceso migratorio se llevó a cabo <strong>${String(data.total_sr).padStart(2, '0')} segunda${data.total_sr != 1 ? 's' : ''} revisión${data.total_sr != 1 ? 'es' : ''}</strong>`;
+
+        if (data.total_sr > 0) {
+            pinTexto += `, las cuales, derivaron en:\n`;
+
+            if (data.total_internaciones > 0) {
+                pinTexto += `${String(data.total_internaciones).padStart(2, '0')} internación${data.total_internaciones != 1 ? 'es' : ''} por entrevista.\n`;
+            }
+
+            if (data.total_rechazos > 0) {
+                pinTexto += `${String(data.total_rechazos).padStart(2, '0')} rechazo${data.total_rechazos != 1 ? 's' : ''} por entrevista.\n`;
+            }
+            pinTexto += '\n';
+        } else {
+            pinTexto += `.\n\n`;
+        }
+
+        contenido.innerHTML = `<div style="white-space: pre-wrap;">${pinTexto.trimEnd()}</div>`;
+
+    } catch (error) {
+        console.error('Error al cargar el PIN Binacional:', error);
+        contenido.innerHTML = `
+            <div class="alert alert-error shadow-lg">
+                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                <div>
+                    <h3 class="font-bold">Error al cargar el PIN Binacional</h3>
+                    <div class="text-sm">${error.message}</div>
+                </div>
+            </div>
+            <div class="mt-4 text-center">
+                <button onclick="location.reload()" class="btn btn-primary btn-sm">Recargar Página</button>
+            </div>
+        `;
+    }
+}
+
+function cerrarModalPinBinacional() {
+    document.getElementById('modalPinBinacional').close();
+}
+
+async function copiarPinBinacional(event) {
+    event.preventDefault();
+
+    if (!pinBinacionalData) {
+        alert('❌ No hay datos del PIN Binacional disponibles');
+        return;
+    }
+
+    try {
+        let texto = `*INSTITUTO NACIONAL DE MIGRACIÓN*\n*Oficina de Representación Baja California*\n\n`;
+        texto += `*${pinBinacionalData.fechaTexto.toUpperCase()}*\n\n`;
+
+        texto += `En dicho proceso migratorio se llevó a cabo *${String(pinBinacionalData.total_sr).padStart(2, '0')} segunda${pinBinacionalData.total_sr != 1 ? 's' : ''} revisión${pinBinacionalData.total_sr != 1 ? 'es' : ''}*`;
+
+        if (pinBinacionalData.total_sr > 0) {
+            texto += `, las cuales, derivaron en:\n`;
+
+            if (pinBinacionalData.total_internaciones > 0) {
+                texto += `${String(pinBinacionalData.total_internaciones).padStart(2, '0')} internación${pinBinacionalData.total_internaciones != 1 ? 'es' : ''} por entrevista.\n`;
+            }
+
+            if (pinBinacionalData.total_rechazos > 0) {
+                texto += `${String(pinBinacionalData.total_rechazos).padStart(2, '0')} rechazo${pinBinacionalData.total_rechazos != 1 ? 's' : ''} por entrevista.\n`;
+            }
+            texto += '\n';
+        } else {
+            texto += `.\n\n`;
+        }
+
+        await navigator.clipboard.writeText(texto.trimEnd());
+        mostrarNotificacion('✅ PIN Binacional copiado', 'success');
+
+    } catch (err) {
+        console.error('Error al copiar PIN Binacional:', err);
+        mostrarNotificacion('❌ Error al copiar', 'error');
+    }
+}
+
 // Función para copiar PIN (con ** para negritas de WhatsApp)
 async function copiarPin(event) {
     event.preventDefault();
