@@ -24,14 +24,16 @@ def date_range_report(request):
     
     # Aplicar filtros de fecha
     if fecha_inicio:
-        registros_todos = registros_todos.filter(vuelo_fecha__gte=fecha_inicio)
+        registros_todos = registros_todos.filter(vuelo_fecha__date__gte=fecha_inicio)
     if fecha_fin:
-        registros_todos = registros_todos.filter(vuelo_fecha__lte=fecha_fin)
+        registros_todos = registros_todos.filter(vuelo_fecha__date__lte=fecha_fin)
     
     # Agrupar por fecha - TODOS los registros
     registros_por_fecha = OrderedDict()
     for registro in registros_todos:
-        fecha = registro.vuelo_fecha
+        if not registro.vuelo_fecha:
+            continue
+        fecha = registro.vuelo_fecha.date()
         if fecha not in registros_por_fecha:
             registros_por_fecha[fecha] = []
         registros_por_fecha[fecha].append(registro)
@@ -41,11 +43,12 @@ def date_range_report(request):
     for fecha, regs in registros_por_fecha.items():
         # Filtrar solo los que tienen SR, R o I para la tabla
         regs_especiales = [r for r in regs if r.segunda_revision or r.rechazado or r.internacion]
+        total_registros = len(regs)
         
         estadisticas_por_fecha.append({
             'fecha': fecha,
             'registros': regs_especiales,  # Solo mostrar SR, R, I en la tabla
-            'total': len(regs_especiales),
+            'total': total_registros,
             'segunda_revisions': sum(1 for r in regs if r.segunda_revision),
             'rechazados': sum(1 for r in regs if r.rechazado),
             'internaciones': sum(1 for r in regs if r.internacion),

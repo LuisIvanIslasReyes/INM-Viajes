@@ -171,36 +171,64 @@
             }
         });
 
-        // Manejar envío del formulario con indicadores visuales
+        // Manejar envío del formulario con modal de fecha + indicadores visuales
         const uploadForm = document.getElementById('uploadForm');
+        const modalFechaCarga = document.getElementById('modalFechaCarga');
+        const inputFechaCarga = document.getElementById('inputFechaCarga');
+        const fechaCargaHidden = document.getElementById('fecha_carga_seleccionada');
+        const formFechaCarga = document.getElementById('formFechaCarga');
+        const btnCancelarFechaCarga = document.getElementById('btnCancelarFechaCarga');
+
+        // Flag para saber si la fecha ya fue confirmada
+        let fechaConfirmada = false;
+
+        // Devuelve la fecha de hoy en formato YYYY-MM-DD (hora local del navegador)
+        function fechaHoyLocal() {
+            const hoy = new Date();
+            const yyyy = hoy.getFullYear();
+            const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+            const dd = String(hoy.getDate()).padStart(2, '0');
+            return `${yyyy}-${mm}-${dd}`;
+        }
+
+        // Interceptar submit del form principal: abrir modal si falta confirmar fecha
         uploadForm.addEventListener('submit', function(e) {
-            // Deshabilitar el botón para evitar doble clic
+            if (!fechaConfirmada) {
+                e.preventDefault();
+
+                // Precargar con la fecha de hoy
+                inputFechaCarga.value = fechaHoyLocal();
+                modalFechaCarga.showModal();
+
+                // Foco al input para permitir teclear y/o presionar Enter
+                setTimeout(() => inputFechaCarga.focus(), 50);
+                return;
+            }
+
+            // Ya hay fecha confirmada: continuar con el flujo de progreso visual
             submitBtn.disabled = true;
-            
-            // Cambiar el ícono y texto del botón
+
             const submitBtnIcon = document.getElementById('submitBtnIcon');
             const submitBtnSpinner = document.getElementById('submitBtnSpinner');
             const uploadProgress = document.getElementById('uploadProgress');
-            
+
             submitBtnIcon.classList.add('hidden');
             submitBtnSpinner.classList.remove('hidden');
             submitBtnText.textContent = 'Subiendo archivos...';
-            
-            // Mostrar barra de progreso
+
             uploadProgress.classList.remove('hidden');
-            
-            // Simular progreso (ya que no podemos capturar el progreso real sin AJAX)
+
             let progress = 0;
             const progressBar = document.getElementById('progressBar');
             const progressText = document.getElementById('progressText');
-            
+
             const interval = setInterval(() => {
                 if (progress < 90) {
                     progress += Math.random() * 15;
                     if (progress > 90) progress = 90;
-                    
+
                     progressBar.value = progress;
-                    
+
                     if (progress < 30) {
                         progressText.textContent = 'Validando archivos...';
                     } else if (progress < 60) {
@@ -210,6 +238,30 @@
                     }
                 }
             }, 300);
-            
-            // El formulario se enviará normalmente
+        });
+
+        // Submit del form del modal: valida fecha, la pone en el hidden y envía el form real.
+        // Enter en el input también dispara este submit (comportamiento nativo del form).
+        formFechaCarga.addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const fecha = inputFechaCarga.value;
+            if (!fecha) {
+                alert('⚠️ Selecciona una fecha para continuar.');
+                inputFechaCarga.focus();
+                return;
+            }
+
+            fechaCargaHidden.value = fecha;
+            fechaConfirmada = true;
+            modalFechaCarga.close();
+
+            // Reenviar el form principal
+            uploadForm.requestSubmit();
+        });
+
+        // Cancelar cierra el modal y resetea el flag (el usuario puede reintentar)
+        btnCancelarFechaCarga.addEventListener('click', function() {
+            fechaConfirmada = false;
+            modalFechaCarga.close();
         });

@@ -30,9 +30,8 @@ def _parse_date(value):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser, login_url='admin_list')
 def batch_list(request):
-    """Vista para listar todas las cargas de archivos (SOLO ADMIN)"""
+    """Vista para listar todas las cargas de archivos (TODOS los usuarios)"""
     fecha_exacta = _parse_date(request.GET.get('fecha'))
     fecha_inicio = _parse_date(request.GET.get('fecha_inicio'))
     fecha_fin = _parse_date(request.GET.get('fecha_fin'))
@@ -100,9 +99,8 @@ def batch_list(request):
 
 
 @login_required
-@user_passes_test(lambda u: u.is_superuser, login_url='admin_list')
 def delete_batch(request, batch_id):
-    """Vista para que el administrador elimine una carga de archivo (SOLO ADMIN)"""
+    """Vista para eliminar una carga de archivo (TODOS los usuarios)"""
     if request.method == 'POST':
         try:
             batch = UploadBatch.objects.get(id=batch_id)

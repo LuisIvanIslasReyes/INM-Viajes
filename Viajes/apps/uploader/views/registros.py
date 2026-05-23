@@ -217,13 +217,36 @@ def generar_pin(request, fecha):
     # Calcular conexiones (pasajeros que van a MEX y NO fueron rechazados)
     # Detectar MEX por aeropuerto_llegada
     registros_mex = registros_del_dia.filter(
-        models.Q(aeropuerto_llegada__icontains='MEX') | 
+        models.Q(aeropuerto_llegada__icontains='MEX') |
         models.Q(aeropuerto_llegada__icontains='MEXICO') |
         models.Q(aeropuerto_llegada__icontains='MÉXICO')
     )
     # Conexiones = Total PEK-MEX - Rechazados PEK-MEX
     rechazados_mex = registros_mex.filter(rechazado=True).count()
     total_conexiones = registros_mex.count() - rechazados_mex
+
+    # Desglose por destino para el PIN Binacional.
+    # Se combinan varias señales porque batch.tipo_vuelo puede estar en
+    # NULL (lotes cargados antes de la migración 0008 o cuando el primer
+    # registro no contenía TIJ/MEX): tipo_vuelo del batch, nombre del
+    # archivo cargado y aeropuerto_llegada en sus variantes habituales.
+    filtro_tij = (
+        models.Q(batch__tipo_vuelo='PEK-TIJ') |
+        models.Q(batch__archivo__icontains='PEK-TIJ') |
+        models.Q(aeropuerto_llegada__icontains='TIJ') |
+        models.Q(aeropuerto_llegada__icontains='TIJUANA') |
+        models.Q(aeropuerto_llegada__icontains='蒂华纳')
+    )
+    filtro_mex = (
+        models.Q(batch__tipo_vuelo='PEK-MEX') |
+        models.Q(batch__archivo__icontains='PEK-MEX') |
+        models.Q(aeropuerto_llegada__icontains='MEX') |
+        models.Q(aeropuerto_llegada__icontains='MEXICO') |
+        models.Q(aeropuerto_llegada__icontains='MÉXICO') |
+        models.Q(aeropuerto_llegada__icontains='墨西哥')
+    )
+    total_pekin_tijuana = registros_del_dia.filter(filtro_tij).distinct().count()
+    total_pekin_mexico = registros_del_dia.filter(filtro_mex).distinct().count()
     
     # Obtener número de vuelo del primer registro
     primer_registro = registros_del_dia.first()
@@ -254,6 +277,8 @@ def generar_pin(request, fecha):
                 'fecha': fecha_obj.strftime('%Y-%m-%d'),
                 'vuelo_numero': vuelo_numero,
                 'total_pasajeros': total_pasajeros,
+                'total_pekin_tijuana': total_pekin_tijuana,
+                'total_pekin_mexico': total_pekin_mexico,
                 'total_sr': total_sr,
                 'total_internaciones': total_internaciones,
                 'total_rechazos': total_rechazos,

@@ -131,6 +131,12 @@
                             Casos Especiales
                         </a>
                     </li>
+                    <li>
+                        <a href="{% url 'batch_list' %}" class="text-base">
+                            <i class="fas fa-boxes-stacked w-5"></i>
+                            Gestionar Cargas
+                        </a>
+                    </li>
 
                     {% if user.is_superuser %}
                     <div class="divider my-2"></div>
@@ -138,12 +144,6 @@
                     <!-- Administración -->
                     <li class="menu-title">
                         <span class="text-lg"><i class="fas fa-tools mr-2"></i>Administración</span>
-                    </li>
-                    <li>
-                        <a href="{% url 'batch_list' %}" class="text-base">
-                            <i class="fas fa-boxes-stacked w-5"></i>
-                            Gestionar Cargas
-                        </a>
                     </li>
                     <li>
                         <a href="{% url 'create_user' %}" class="text-base">

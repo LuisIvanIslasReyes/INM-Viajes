@@ -6,7 +6,8 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.urls import reverse
 from django.db import models
-from datetime import datetime
+from django.utils import timezone
+from datetime import datetime, time
 import pandas as pd
 
 from ..forms import ExcelUploadForm
@@ -20,16 +21,34 @@ def upload_excel(request):
     
     if request.method == 'POST':
         form = ExcelUploadForm(request.POST, request.FILES)
-        
+
         # Validar que se hayan seleccionado archivos
         archivos = request.FILES.getlist('archivo')
         if not archivos:
             messages.error(request, '📁 Por favor, selecciona al menos un archivo Excel antes de subir.')
             return redirect('upload_excel')
-        
+
         if len(archivos) > 2:
             messages.error(request, '❌ Solo puedes subir máximo 2 archivos a la vez.')
             return redirect('upload_excel')
+
+        # Fecha del vuelo elegida por el usuario en el modal previo al submit.
+        # Si no viene (envío directo sin modal), usamos la fecha de hoy local.
+        # Esta fecha sustituye a la columna 航班日期 del Excel para evitar
+        # discrepancias por zona horaria o por convenciones de la aerolínea.
+        fecha_str = request.POST.get('fecha_carga_seleccionada', '').strip()
+        fecha_usuario = None
+        if fecha_str:
+            try:
+                fecha_usuario = datetime.strptime(fecha_str, '%Y-%m-%d').date()
+            except ValueError:
+                fecha_usuario = None
+        if fecha_usuario is None:
+            fecha_usuario = timezone.localdate()
+
+        # Datetime al inicio del día en hora local para sobreescribir vuelo_fecha
+        # de cada registro. Usamos make_aware para respetar USE_TZ=True.
+        vuelo_fecha_dt = timezone.make_aware(datetime.combine(fecha_usuario, time.min))
         
         # Procesar cada archivo
         total_registros_creados = 0
@@ -49,20 +68,13 @@ def upload_excel(request):
                 # Extraer información del vuelo del primer registro
                 primer_registro = df.iloc[0]
                 vuelo_numero = str(primer_registro.get('航班号', '')).strip() if '航班号' in df.columns else None
-                
-                # Detectar fecha del vuelo
-                fecha_vuelo = None
-                if '航班日期' in df.columns:
-                    fecha_valor = primer_registro.get('航班日期')
-                    if pd.notna(fecha_valor):
-                        if isinstance(fecha_valor, pd.Timestamp):
-                            fecha_vuelo = fecha_valor.date()
-                        else:
-                            try:
-                                fecha_vuelo = pd.to_datetime(fecha_valor).date()
-                            except:
-                                pass
-                
+
+                # La fecha del vuelo viene del usuario (modal), NO del Excel.
+                # Esto evita discrepancias por zona horaria o por convenciones
+                # de la aerolínea (p.ej. MEX-PEK registrado con fecha de llegada
+                # a Pekín en vez de fecha de salida de México).
+                fecha_vuelo = fecha_usuario
+
                 # Detectar tipo de vuelo basado en el aeropuerto de llegada
                 tipo_vuelo = None
                 if '落地机场' in df.columns:
@@ -71,7 +83,7 @@ def upload_excel(request):
                         tipo_vuelo = 'PEK-TIJ'
                     elif 'MEX' in aeropuerto_llegada or 'MEXICO' in aeropuerto_llegada or 'MÉXICO' in aeropuerto_llegada:
                         tipo_vuelo = 'PEK-MEX'
-                
+
                 # Crear batch asociado al usuario que sube
                 batch = UploadBatch.objects.create(
                     archivo=archivo,
@@ -158,6 +170,11 @@ def upload_excel(request):
                         for _f in _char_not_null:
                             if registro_data.get(_f) is None:
                                 registro_data[_f] = ''
+
+                        # Sobreescribir vuelo_fecha de cada registro con la fecha
+                        # elegida por el usuario en el modal. La columna 航班日期
+                        # del Excel se ignora a propósito (ver explicación arriba).
+                        registro_data['vuelo_fecha'] = vuelo_fecha_dt
 
                         # Parsear nacionalidad desde el código ISO
                         if 'codigo_pais_emision' in registro_data and registro_data['codigo_pais_emision']:

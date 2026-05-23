@@ -267,6 +267,12 @@ async function abrirModalPinBinacional(fecha, fechaTexto) {
 
 <strong>${fechaTexto.toUpperCase()}</strong>
 
+Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo <strong>${data.vuelo_numero}</strong> proveniente de Pekín con:
+
+<strong>Total: Número de Pasajeros: ${data.total_pasajeros}</strong>
+Pekín - Tijuana (local): <strong>${data.total_pekin_tijuana}</strong> Pasajeros.
+Pekín – México (tránsito): <strong>${data.total_pekin_mexico}</strong> Pasajeros.
+
 `;
 
         pinTexto += `En dicho proceso migratorio se llevó a cabo <strong>${String(data.total_sr).padStart(2, '0')} segunda${data.total_sr != 1 ? 's' : ''} revisión${data.total_sr != 1 ? 'es' : ''}</strong>`;
@@ -274,16 +280,15 @@ async function abrirModalPinBinacional(fecha, fechaTexto) {
         if (data.total_sr > 0) {
             pinTexto += `, las cuales, derivaron en:\n`;
 
-            if (data.total_internaciones > 0) {
-                pinTexto += `${String(data.total_internaciones).padStart(2, '0')} internación${data.total_internaciones != 1 ? 'es' : ''} por entrevista.\n`;
+            if (data.total_rechazos > 0) {
+                pinTexto += `Rechazo${data.total_rechazos != 1 ? 's' : ''} ${String(data.total_rechazos).padStart(2, '0')} por entrevista.\n`;
             }
 
-            if (data.total_rechazos > 0) {
-                pinTexto += `${String(data.total_rechazos).padStart(2, '0')} rechazo${data.total_rechazos != 1 ? 's' : ''} por entrevista.\n`;
+            if (data.total_internaciones > 0) {
+                pinTexto += `Internaci${data.total_internaciones != 1 ? 'ones' : 'ón'} ${String(data.total_internaciones).padStart(2, '0')} por entrevista.\n`;
             }
-            pinTexto += '\n';
         } else {
-            pinTexto += `.\n\n`;
+            pinTexto += `.`;
         }
 
         contenido.innerHTML = `<div style="white-space: pre-wrap;">${pinTexto.trimEnd()}</div>`;
@@ -323,21 +328,25 @@ async function copiarPinBinacional(event) {
         let texto = `*INSTITUTO NACIONAL DE MIGRACIÓN*\n*Oficina de Representación Baja California*\n\n`;
         texto += `*${pinBinacionalData.fechaTexto.toUpperCase()}*\n\n`;
 
+        texto += `Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo *${pinBinacionalData.vuelo_numero}* proveniente de Pekín con:\n\n`;
+        texto += `*Total: Número de Pasajeros: ${pinBinacionalData.total_pasajeros}*\n`;
+        texto += `Pekín - Tijuana (local): *${pinBinacionalData.total_pekin_tijuana}* Pasajeros.\n`;
+        texto += `Pekín – México (tránsito): *${pinBinacionalData.total_pekin_mexico}* Pasajeros.\n\n`;
+
         texto += `En dicho proceso migratorio se llevó a cabo *${String(pinBinacionalData.total_sr).padStart(2, '0')} segunda${pinBinacionalData.total_sr != 1 ? 's' : ''} revisión${pinBinacionalData.total_sr != 1 ? 'es' : ''}*`;
 
         if (pinBinacionalData.total_sr > 0) {
             texto += `, las cuales, derivaron en:\n`;
 
-            if (pinBinacionalData.total_internaciones > 0) {
-                texto += `${String(pinBinacionalData.total_internaciones).padStart(2, '0')} internación${pinBinacionalData.total_internaciones != 1 ? 'es' : ''} por entrevista.\n`;
+            if (pinBinacionalData.total_rechazos > 0) {
+                texto += `Rechazo${pinBinacionalData.total_rechazos != 1 ? 's' : ''} ${String(pinBinacionalData.total_rechazos).padStart(2, '0')} por entrevista.\n`;
             }
 
-            if (pinBinacionalData.total_rechazos > 0) {
-                texto += `${String(pinBinacionalData.total_rechazos).padStart(2, '0')} rechazo${pinBinacionalData.total_rechazos != 1 ? 's' : ''} por entrevista.\n`;
+            if (pinBinacionalData.total_internaciones > 0) {
+                texto += `Internaci${pinBinacionalData.total_internaciones != 1 ? 'ones' : 'ón'} ${String(pinBinacionalData.total_internaciones).padStart(2, '0')} por entrevista.\n`;
             }
-            texto += '\n';
         } else {
-            texto += `.\n\n`;
+            texto += `.`;
         }
 
         await navigator.clipboard.writeText(texto.trimEnd());
