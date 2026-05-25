@@ -1,4 +1,4 @@
-"""  
+"""
 Vistas relacionadas con la gestión de registros de pasajeros
 """
 from django.contrib.auth.decorators import login_required
@@ -6,6 +6,7 @@ from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import models
+from django.db.models import Count
 from django.http import JsonResponse
 from django.urls import reverse
 from datetime import datetime, timedelta
@@ -13,6 +14,11 @@ import logging
 from decouple import config
 
 from ..models import Registro, UploadBatch, Notificacion, CasoEspecial
+
+MESES_ES = {
+    1: 'ene', 2: 'feb', 3: 'mar', 4: 'abr', 5: 'may', 6: 'jun',
+    7: 'jul', 8: 'ago', 9: 'sep', 10: 'oct', 11: 'nov', 12: 'dic'
+}
 @login_required
 def update_registro(request, registro_id):
     """Vista para actualizar campos (TODOS pueden editar TODO)"""
@@ -314,3 +320,339 @@ def generar_pin(request, fecha):
     }
     
     return render(request, 'uploader/pin_reporte.html', context)
+
+
+DIAS_ES = {
+    0: 'Lunes', 1: 'Martes', 2: 'Miércoles', 3: 'Jueves',
+    4: 'Viernes', 5: 'Sábado', 6: 'Domingo'
+}
+
+
+def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
+    """Calcula los datos del reporte de inadmitidos para un rango de fechas."""
+    filtro_tij = (
+        models.Q(batch__tipo_vuelo='PEK-TIJ') |
+        models.Q(batch__archivo__icontains='PEK-TIJ') |
+        models.Q(aeropuerto_llegada__icontains='TIJ') |
+        models.Q(aeropuerto_llegada__icontains='TIJUANA') |
+        models.Q(aeropuerto_llegada__icontains='蒂华纳')
+    )
+    filtro_mex = (
+        models.Q(batch__tipo_vuelo='PEK-MEX') |
+        models.Q(batch__archivo__icontains='PEK-MEX') |
+        models.Q(aeropuerto_llegada__icontains='MEX') |
+        models.Q(aeropuerto_llegada__icontains='MEXICO') |
+        models.Q(aeropuerto_llegada__icontains='MÉXICO') |
+        models.Q(aeropuerto_llegada__icontains='墨西哥')
+    )
+
+    dias = []
+    dia_actual = fecha_inicio
+    while dia_actual <= fecha_fin:
+        dias.append(dia_actual)
+        dia_actual += timedelta(days=1)
+
+    dates, raw_dates = [], []
+    totals_inadmitidos, totals_internaciones, totals_sr = [], [], []
+    local, transito, total_pasajeros_list = [], [], []
+    nationalities_by_day = {}
+    motivos_rechazo = []
+
+    for i, dia in enumerate(dias):
+        raw_dates.append(dia.strftime('%Y-%m-%d'))
+        dates.append(f"{dia.day}.{MESES_ES[dia.month]}.{dia.strftime('%y')}")
+
+        registros_dia = Registro.objects.filter(vuelo_fecha=dia).select_related('batch')
+
+        inadmitidos = registros_dia.filter(segunda_revision=True, rechazado=True)
+        totals_inadmitidos.append(inadmitidos.count())
+        totals_internaciones.append(registros_dia.filter(segunda_revision=True, internacion=True).count())
+        totals_sr.append(registros_dia.filter(segunda_revision=True).count())
+        local.append(registros_dia.filter(filtro_tij).distinct().count())
+        transito.append(registros_dia.filter(filtro_mex).distinct().count())
+        total_pasajeros_list.append(registros_dia.count())
+
+        nats_hoy = set()
+        for item in inadmitidos.values('pais_emision').annotate(count=Count('id')):
+            nat = item['pais_emision'] or 'Sin especificar'
+            nats_hoy.add(nat)
+            if nat not in nationalities_by_day:
+                nationalities_by_day[nat] = [0] * i
+            nationalities_by_day[nat].append(item['count'])
+
+        for nat in list(nationalities_by_day.keys()):
+            if nat not in nats_hoy:
+                nationalities_by_day[nat].append(0)
+
+        for registro in inadmitidos:
+            if registro.comentario:
+                motivos_rechazo.append({
+                    'nombre': registro.nombre_pasajero or 'Sin nombre',
+                    'fecha': dates[i],
+                    'comentario': registro.comentario,
+                })
+
+    return {
+        'vuelo': 'HU7925',
+        'origen': 'China',
+        'dates': dates,
+        'raw_dates': raw_dates,
+        'nationalities': nationalities_by_day,
+        'totals_inadmitidos': totals_inadmitidos,
+        'totals_internaciones': totals_internaciones,
+        'totals_sr': totals_sr,
+        'local': local,
+        'transito': transito,
+        'total_pasajeros': total_pasajeros_list,
+        'motivos_rechazo': motivos_rechazo,
+    }
+
+
+@login_required
+def inadmitidos_page(request):
+    """Página principal del reporte de inadmitidos"""
+    return render(request, 'uploader/inadmitidos_report.html', {
+        'is_superuser': request.user.is_superuser,
+    })
+
+
+@login_required
+def inadmitidos_data(request):
+    """Endpoint AJAX que devuelve datos de inadmitidos por rango de fechas"""
+    fecha_inicio_str = request.GET.get('fecha_inicio')
+    fecha_fin_str = request.GET.get('fecha_fin')
+
+    if not fecha_inicio_str or not fecha_fin_str:
+        return JsonResponse({'error': 'Se requieren fecha_inicio y fecha_fin'}, status=400)
+
+    try:
+        fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+        fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'error': 'Formato de fecha inválido. Use YYYY-MM-DD'}, status=400)
+
+    if fecha_fin < fecha_inicio:
+        return JsonResponse({'error': 'La fecha fin debe ser mayor o igual a la fecha inicio'}, status=400)
+
+    data = _compute_inadmitidos_data(fecha_inicio, fecha_fin)
+    return JsonResponse(data)
+
+
+@login_required
+def generar_inadmitidos_pdf(request):
+    """Genera el reporte de inadmitidos como PDF con ReportLab"""
+    from io import BytesIO
+    from django.http import HttpResponse
+    from reportlab.lib import colors
+    from reportlab.lib.colors import HexColor
+    from reportlab.lib.pagesizes import letter, landscape
+    from reportlab.lib.styles import ParagraphStyle
+    from reportlab.lib.enums import TA_CENTER, TA_LEFT
+    from reportlab.platypus import SimpleDocTemplate, Table, TableStyle, Paragraph, Spacer
+
+    fecha_inicio_str = request.GET.get('fecha_inicio')
+    fecha_fin_str = request.GET.get('fecha_fin')
+
+    if not fecha_inicio_str or not fecha_fin_str:
+        return HttpResponse('Se requieren fecha_inicio y fecha_fin', status=400)
+
+    try:
+        fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+        fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+    except ValueError:
+        return HttpResponse('Formato de fecha inválido', status=400)
+
+    if fecha_fin < fecha_inicio:
+        return HttpResponse('La fecha fin debe ser mayor o igual a la fecha inicio', status=400)
+
+    data = _compute_inadmitidos_data(fecha_inicio, fecha_fin)
+    n = len(data['dates'])
+    nats = list(data['nationalities'].keys())
+
+    # Colores
+    ROJO = HexColor('#700606')
+    ROSA = HexColor('#FED8D8')
+    GRIS = HexColor('#DDDDDD')
+    BLANCO_GRIS = HexColor('#F3F3F2')
+
+    # Orientación según cantidad de días
+    pagesize = landscape(letter) if n > 5 else letter
+    page_w = pagesize[0] - 72  # ancho disponible con márgenes de 36pt
+
+    label_w = 165
+    date_col_w = max((page_w - label_w) / n, 55) if n > 0 else page_w
+    col_widths = [label_w] + [date_col_w] * n
+
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(
+        buffer, pagesize=pagesize,
+        leftMargin=36, rightMargin=36, topMargin=36, bottomMargin=36,
+    )
+
+    # ─── Filas de la tabla ───
+    rows = []
+
+    # Fila 0: encabezado Vuelo / Origen
+    if n >= 3:
+        header_row = ['Vuelo:', data['vuelo'], 'Origen:', data['origen']] + [''] * (n - 3)
+    elif n == 2:
+        header_row = ['Vuelo:', data['vuelo'], f"Origen: {data['origen']}"]
+    else:
+        header_row = [f"Vuelo: {data['vuelo']}   Origen: {data['origen']}"] + [''] * n
+    rows.append(header_row)
+
+    # Fila 1: INADMITIDOS (span completo)
+    rows.append(['INADMITIDOS'] + [''] * n)
+
+    # Fila 2: días de la semana
+    day_names = [DIAS_ES[datetime.strptime(r, '%Y-%m-%d').date().weekday()] for r in data['raw_dates']]
+    rows.append([''] + day_names)
+
+    # Fila 3: Nacionalidad + fechas
+    rows.append(['Nacionalidad'] + data['dates'])
+
+    # Filas de nacionalidades
+    NAT_START = 4
+    for nat in nats:
+        rows.append([nat] + [str(v) for v in data['nationalities'][nat]])
+
+    nat_count = len(nats)
+
+    # 2 filas vacías
+    blank1 = len(rows); rows.append([''] * (n + 1))
+    blank2 = len(rows); rows.append([''] * (n + 1))
+
+    # Total Inadmitidos
+    r_total_inad = len(rows)
+    rows.append(['Total Inadmitidos'] + [str(v) for v in data['totals_inadmitidos']])
+
+    # Separador
+    r_sep1 = len(rows); rows.append([''] * (n + 1))
+
+    # Total Internaciones / Total SR
+    r_total_int = len(rows)
+    rows.append(['Total Internaciones:'] + [str(v) for v in data['totals_internaciones']])
+    r_total_sr = len(rows)
+    rows.append(['Total Segundas Revisiones:'] + [str(v) for v in data['totals_sr']])
+
+    # Separador
+    r_sep2 = len(rows); rows.append([''] * (n + 1))
+
+    # Local / Tránsito / Total pasajeros
+    r_local = len(rows); rows.append(['Local:'] + [str(v) for v in data['local']])
+    r_trans = len(rows); rows.append(['En tr\xe1nsito:'] + [str(v) for v in data['transito']])
+    r_total_pas = len(rows); rows.append(['Total pasajeros:'] + [str(v) for v in data['total_pasajeros']])
+
+    # ─── Estilos ───
+    cmd = [
+        ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
+        ('FONTSIZE', (0, 0), (-1, -1), 8),
+        ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+        ('ALIGN', (1, 0), (-1, -1), 'CENTER'),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('GRID', (0, 0), (-1, -1), 0.5, colors.grey),
+        ('TOPPADDING', (0, 0), (-1, -1), 4),
+        ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+        ('LEFTPADDING', (0, 0), (-1, -1), 5),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 5),
+
+        # Fila 0: encabezado rojo
+        ('BACKGROUND', (0, 0), (-1, 0), ROJO),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.white),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+
+        # Fila 1: INADMITIDOS rosado
+        ('SPAN', (0, 1), (-1, 1)),
+        ('BACKGROUND', (0, 1), (-1, 1), ROSA),
+        ('TEXTCOLOR', (0, 1), (-1, 1), ROJO),
+        ('FONTNAME', (0, 1), (-1, 1), 'Helvetica-Bold'),
+        ('ALIGN', (0, 1), (-1, 1), 'CENTER'),
+
+        # Fila 2: días de semana rojo
+        ('BACKGROUND', (0, 2), (-1, 2), ROJO),
+        ('TEXTCOLOR', (0, 2), (-1, 2), colors.white),
+        ('FONTNAME', (0, 2), (-1, 2), 'Helvetica-Bold'),
+        ('ALIGN', (0, 2), (-1, 2), 'CENTER'),
+
+        # Fila 3: Nacionalidad/fechas rosado
+        ('BACKGROUND', (0, 3), (-1, 3), ROSA),
+        ('TEXTCOLOR', (0, 3), (-1, 3), ROJO),
+        ('FONTNAME', (0, 3), (-1, 3), 'Helvetica-Bold'),
+        ('ALIGN', (0, 3), (-1, 3), 'CENTER'),
+        ('ALIGN', (0, 3), (0, 3), 'LEFT'),
+
+        # Total Inadmitidos rojo
+        ('BACKGROUND', (0, r_total_inad), (-1, r_total_inad), ROJO),
+        ('TEXTCOLOR', (0, r_total_inad), (-1, r_total_inad), colors.white),
+        ('FONTNAME', (0, r_total_inad), (-1, r_total_inad), 'Helvetica-Bold'),
+
+        # Total Internaciones / SR rosado
+        ('BACKGROUND', (0, r_total_int), (-1, r_total_int), ROSA),
+        ('TEXTCOLOR', (0, r_total_int), (-1, r_total_int), ROJO),
+        ('FONTNAME', (0, r_total_int), (-1, r_total_int), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, r_total_sr), (-1, r_total_sr), ROSA),
+        ('TEXTCOLOR', (0, r_total_sr), (-1, r_total_sr), ROJO),
+        ('FONTNAME', (0, r_total_sr), (-1, r_total_sr), 'Helvetica-Bold'),
+
+        # Local / Tránsito blanco-gris
+        ('BACKGROUND', (0, r_local), (-1, r_local), BLANCO_GRIS),
+        ('BACKGROUND', (0, r_trans), (-1, r_trans), BLANCO_GRIS),
+
+        # Total pasajeros gris + negrita
+        ('BACKGROUND', (0, r_total_pas), (-1, r_total_pas), GRIS),
+        ('FONTNAME', (0, r_total_pas), (-1, r_total_pas), 'Helvetica-Bold'),
+
+        # Separadores y filas vacías en blanco-gris
+        ('BACKGROUND', (0, blank1), (-1, blank1), BLANCO_GRIS),
+        ('BACKGROUND', (0, blank2), (-1, blank2), BLANCO_GRIS),
+        ('BACKGROUND', (0, r_sep1), (-1, r_sep1), BLANCO_GRIS),
+        ('BACKGROUND', (0, r_sep2), (-1, r_sep2), BLANCO_GRIS),
+    ]
+
+    # Span "China" en encabezado si hay columnas suficientes
+    if n >= 3:
+        cmd.append(('SPAN', (3, 0), (-1, 0)))
+
+    # Colores alternos en filas de nacionalidades
+    for i in range(nat_count):
+        row_idx = NAT_START + i
+        bg = BLANCO_GRIS if i % 2 == 0 else GRIS
+        cmd.append(('BACKGROUND', (0, row_idx), (-1, row_idx), bg))
+        cmd.append(('FONTNAME', (0, row_idx), (0, row_idx), 'Helvetica-Bold'))
+
+    tabla = Table(rows, colWidths=col_widths)
+    tabla.setStyle(TableStyle(cmd))
+
+    elements = [tabla]
+
+    # ─── Motivos de rechazo ───
+    if data['motivos_rechazo']:
+        elements.append(Spacer(1, 10))
+        estilo_normal = ParagraphStyle('mn', fontName='Helvetica', fontSize=8, leading=12)
+        motivos_rows = []
+        for i, m in enumerate(data['motivos_rechazo']):
+            texto = f"<b>Rechazo {i+1}</b> [{m['fecha']}] {m['nombre']}: {m['comentario']}"
+            motivos_rows.append([Paragraph(texto, estilo_normal)])
+
+        encabezado_style = ParagraphStyle('mh', fontName='Helvetica-Bold', fontSize=8, leading=12)
+        motivos_rows.insert(0, [Paragraph('Motivos de rechazo:', encabezado_style)])
+
+        t_motivos = Table(motivos_rows, colWidths=[page_w])
+        t_motivos.setStyle(TableStyle([
+            ('BOX', (0, 0), (-1, -1), 1, colors.black),
+            ('BACKGROUND', (0, 0), (-1, -1), BLANCO_GRIS),
+            ('TOPPADDING', (0, 0), (-1, -1), 4),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 4),
+            ('LEFTPADDING', (0, 0), (-1, -1), 8),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 8),
+        ]))
+        elements.append(t_motivos)
+
+    doc.build(elements)
+    pdf_bytes = buffer.getvalue()
+    buffer.close()
+
+    nombre = f"Inadmitidos_HU7925_{fecha_inicio_str}_{fecha_fin_str}.pdf"
+    response = HttpResponse(pdf_bytes, content_type='application/pdf')
+    response['Content-Disposition'] = f'attachment; filename="{nombre}"'
+    return response

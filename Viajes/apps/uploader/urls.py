@@ -18,6 +18,11 @@ urlpatterns = [
     
     # PIN Oficial
     path('pin/<str:fecha>/', views.generar_pin, name='generar_pin'),
+
+    # Reporte Inadmitidos
+    path('inadmitidos/', views.inadmitidos_page, name='inadmitidos_page'),
+    path('inadmitidos-data/', views.inadmitidos_data, name='inadmitidos_data'),
+    path('inadmitidos-pdf/', views.generar_inadmitidos_pdf, name='generar_inadmitidos_pdf'),
     
     # Casos Especiales
     path('casos_especiales/', views.casos_especiales_list, name='casos_especiales_list'),

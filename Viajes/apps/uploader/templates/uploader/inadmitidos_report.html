@@ -1,0 +1,195 @@
+{% extends 'uploader/base.html' %}
+{% load static %}
+
+{% block extra_css %}
+<style>
+    /* Tabla de previsualización con los colores de la paleta */
+    .inadmitidos-preview-table {
+        border-collapse: collapse;
+        width: 100%;
+        font-size: 0.85rem;
+    }
+    .inadmitidos-preview-table th,
+    .inadmitidos-preview-table td {
+        border: 1px solid #ccc;
+        padding: 6px 10px;
+        text-align: center;
+    }
+    .inadmitidos-preview-table .header-vuelo {
+        background-color: #700606;
+        color: white;
+        font-weight: bold;
+    }
+    .inadmitidos-preview-table .header-inadmitidos {
+        background-color: #FED8D8;
+        font-weight: bold;
+        color: #700606;
+    }
+    .inadmitidos-preview-table .header-dias {
+        background-color: #700606;
+        color: white;
+        font-weight: bold;
+    }
+    .inadmitidos-preview-table .row-nacionalidad td:first-child {
+        font-weight: bold;
+        text-align: left;
+        background-color: #F3F3F2;
+    }
+    .inadmitidos-preview-table .row-nacionalidad td {
+        background-color: #F3F3F2;
+    }
+    .inadmitidos-preview-table .row-nacionalidad:nth-child(even) td {
+        background-color: #DDDDDD;
+    }
+    .inadmitidos-preview-table .row-total-inadmitidos td {
+        background-color: #700606;
+        color: white;
+        font-weight: bold;
+    }
+    .inadmitidos-preview-table .row-subtotal td {
+        background-color: #FED8D8;
+        font-weight: bold;
+        color: #700606;
+    }
+    .inadmitidos-preview-table .row-pasajeros td:first-child {
+        text-align: left;
+    }
+    .inadmitidos-preview-table .row-pasajeros td {
+        background-color: #F3F3F2;
+    }
+    .inadmitidos-preview-table .row-total-pasajeros td {
+        background-color: #DDDDDD;
+        font-weight: bold;
+    }
+
+    .motivos-box {
+        border: 1px solid #ccc;
+        border-radius: 6px;
+        padding: 12px 16px;
+        background-color: #F3F3F2;
+    }
+    .motivos-box h4 {
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #700606;
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    window.URL_PREFIX = '{{ request.META.SCRIPT_NAME|default:"" }}';
+    window.INADMITIDOS_DATA_URL = '{% url "inadmitidos_data" %}';
+    window.INADMITIDOS_PDF_URL = '{% url "generar_inadmitidos_pdf" %}';
+</script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=2"></script>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-6">
+
+    <!-- Header -->
+    <div class="mb-6">
+        <h1 class="text-3xl font-bold mb-2">
+            <i class="fas fa-file-alt mr-2" style="color:#700606;"></i>
+            Reporte de Inadmitidos
+        </h1>
+        <p class="text-base-content/70">
+            <i class="fas fa-info-circle mr-1" style="color:#700606;"></i>
+            Vuelo <strong>HU7925</strong> • Origen <strong>China</strong>.
+            Selecciona el rango de fechas para generar la tabla y descargar el PDF.
+        </p>
+    </div>
+
+    <!-- Formulario de rango de fechas -->
+    <div class="card bg-white shadow-xl border mb-6" style="border-color:#FED8D8;">
+        <div class="card-body">
+            <h2 class="card-title mb-4">
+                <i class="fas fa-calendar-alt mr-2" style="color:#700606;"></i>
+                Rango de fechas
+            </h2>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">
+                            <i class="fas fa-calendar-day mr-1"></i>
+                            Fecha Inicio
+                        </span>
+                    </label>
+                    <input
+                        type="date"
+                        id="fecha_inicio"
+                        class="input input-bordered"
+                        min="2026-05-20"
+                        value="2026-05-20"
+                    >
+                </div>
+
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">
+                            <i class="fas fa-calendar-day mr-1"></i>
+                            Fecha Fin
+                        </span>
+                    </label>
+                    <input
+                        type="date"
+                        id="fecha_fin"
+                        class="input input-bordered"
+                        min="2026-05-20"
+                    >
+                </div>
+            </div>
+
+            <div class="card-actions justify-end mt-4 gap-3">
+                <button id="btn-generar" onclick="generarReporte()" class="btn text-white" style="background-color:#700606; border-color:#700606;">
+                    <i class="fas fa-table mr-1"></i>
+                    Generar Reporte
+                </button>
+                <button id="btn-pdf" onclick="descargarPDF()" class="btn text-white hidden" style="background-color:#700606; border-color:#700606;">
+                    <i class="fas fa-file-pdf mr-1"></i>
+                    Descargar PDF
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Spinner de carga -->
+    <div id="loading-spinner" class="hidden flex justify-center py-12">
+        <span class="loading loading-spinner loading-lg" style="color:#700606;"></span>
+    </div>
+
+    <!-- Mensaje de error -->
+    <div id="error-msg" class="hidden alert alert-error mb-4">
+        <i class="fas fa-exclamation-circle"></i>
+        <span id="error-text"></span>
+    </div>
+
+    <!-- Previsualización de la tabla -->
+    <div id="tabla-preview" class="hidden">
+        <div class="card bg-white shadow-xl border mb-4" style="border-color:#FED8D8;">
+            <div class="card-body">
+                <div class="flex justify-between items-center mb-4">
+                    <h2 class="card-title" style="color:#700606;">
+                        <i class="fas fa-eye mr-2"></i>
+                        Previsualización
+                    </h2>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="inadmitidos-preview-table" id="tabla-inadmitidos"></table>
+                </div>
+
+                <!-- Motivos de rechazo -->
+                <div id="motivos-section" class="mt-6 hidden">
+                    <div class="motivos-box">
+                        <h4><i class="fas fa-list mr-1"></i> Motivos de rechazo:</h4>
+                        <div id="motivos-lista"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}
