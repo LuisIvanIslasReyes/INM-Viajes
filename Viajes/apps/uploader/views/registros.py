@@ -42,36 +42,38 @@ def update_registro(request, registro_id):
             # R solo se puede activar si SR está activo
             elif 'rechazado' in request.POST:
                 nuevo_valor = request.POST.get('rechazado') == 'true'
-                
+
                 # Si está intentando ACTIVAR R, validar que SR esté activo
                 if nuevo_valor and not registro.segunda_revision:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': '⚠️ Debes marcar SR antes de poder rechazar.'})
                     messages.warning(request, '⚠️ Debes marcar "Segunda Revisión (SR)" antes de poder rechazar.')
-                    # Redirigir sin guardar
                     params = request.GET.copy()
                     params['highlight'] = str(registro_id)
                     redirect_url = reverse('admin_list') + '?' + urlencode(params)
                     return redirect(redirect_url)
-                
+
                 # Si la validación pasa (o está desactivando), actualizar
                 registro.rechazado = nuevo_valor
                 # Si se marca como Rechazo, desmarcar Internación
                 if registro.rechazado:
                     registro.internacion = False
-                
-        
+
+
             # I solo se puede activar si SR está activo
             elif 'internacion' in request.POST:
                 nuevo_valor = request.POST.get('internacion') == 'true'
-                
+
                 # Si está intentando ACTIVAR I, validar que SR esté activo
                 if nuevo_valor and not registro.segunda_revision:
+                    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                        return JsonResponse({'success': False, 'error': '⚠️ Debes marcar SR antes de marcar Internación.'})
                     messages.warning(request, '⚠️ Debes marcar "Segunda Revisión (SR)" antes de marcar Internación (I).')
-                    # Redirigir sin guardar
                     params = request.GET.copy()
                     params['highlight'] = str(registro_id)
                     redirect_url = reverse('admin_list') + '?' + urlencode(params)
                     return redirect(redirect_url)
-                
+
                 # Si la validación pasa (o está desactivando), actualizar
                 registro.internacion = nuevo_valor
                 # Si se marca I, desmarcar Rechazo
@@ -82,14 +84,23 @@ def update_registro(request, registro_id):
                 registro.comentario = request.POST.get('comentario')
             
             registro.save()
+
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({
+                    'success': True,
+                    'segunda_revision': registro.segunda_revision,
+                    'rechazado': registro.rechazado,
+                    'internacion': registro.internacion,
+                })
+
             messages.success(request, '✅ Registro actualizado exitosamente.')
-            
+
             # Mantener TODOS los parámetros GET que venían en la URL
             params = request.GET.copy()
-            
+
             # Agregar el parámetro highlight
             params['highlight'] = str(registro_id)
-            
+
             # Construir la URL completa manteniendo búsqueda, filtros, paginación, etc.
             redirect_url = reverse('admin_list') + '?' + urlencode(params)
             return redirect(redirect_url)

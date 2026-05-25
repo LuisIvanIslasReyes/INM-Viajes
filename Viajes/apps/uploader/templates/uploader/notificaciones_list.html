@@ -4,131 +4,176 @@
 
 {% block content %}
 <div class="container mx-auto p-6">
+
+    <!-- Header -->
     <div class="flex justify-between items-center mb-6">
-        <h1 class="text-3xl font-bold">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-8 w-8 inline-block mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <h1 class="text-2xl font-bold flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
             </svg>
             Notificaciones
         </h1>
-        
-        <a href="{% url 'admin_list' %}" class="btn btn-ghost">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <a href="{% url 'admin_list' %}" class="btn btn-ghost btn-sm gap-1">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
             </svg>
             Volver
         </a>
     </div>
 
-    <!-- Tabs de filtro -->
-    <div class="tabs tabs-boxed mb-6">
-        <a href="?tipo=todas" class="tab {% if filtro_tipo == 'todas' %}tab-active{% endif %}">
+    <!-- Tabs -->
+    <div class="flex items-center gap-1 mb-6 border-b border-base-200 pb-0">
+        <a href="?tipo=todas"
+           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
+                  {% if filtro_tipo == 'todas' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
             Todas
             {% if filtro_tipo == 'todas' %}
-                <span class="badge badge-sm ml-2">{{ notificaciones.paginator.count }}</span>
+                <span class="badge badge-primary badge-sm">{{ notificaciones.paginator.count }}</span>
             {% endif %}
         </a>
-        <a href="?tipo=importante" class="tab {% if filtro_tipo == 'importante' %}tab-active{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <a href="?tipo=importante"
+           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
+                  {% if filtro_tipo == 'importante' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
             </svg>
             Importante
         </a>
-        <a href="?tipo=no_importante" class="tab {% if filtro_tipo == 'no_importante' %}tab-active{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <a href="?tipo=no_importante"
+           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
+                  {% if filtro_tipo == 'no_importante' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
             No Importante
         </a>
     </div>
 
+    <!-- Notificaciones de carga exitosa (auto-dismiss) -->
+    {% if notificaciones_exitosas %}
+    <div id="exitosas-container" class="space-y-3 mb-6">
+        <p class="text-xs text-base-content/40 font-medium uppercase tracking-wider">Cargas completadas — se cerrarán automáticamente</p>
+        {% for notif in notificaciones_exitosas %}
+        <div class="notif-exitosa relative overflow-hidden rounded-lg border border-success/30 bg-success/5 flex flex-col md:flex-row transition-all duration-700 ease-in-out">
+            <div class="absolute left-0 inset-y-0 w-1 bg-success"></div>
+            <div class="flex-1 pl-6 pr-4 py-3 flex items-center gap-3">
+                <span class="badge badge-success badge-sm gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                    </svg>
+                    Carga Exitosa
+                </span>
+                <span class="text-sm font-medium text-base-content/70">{{ notif.titulo }}</span>
+                {% if notif.mensaje %}
+                    <span class="text-xs text-base-content/50 hidden md:inline">— {{ notif.mensaje }}</span>
+                {% endif %}
+            </div>
+            <div class="px-4 py-3 flex items-center border-t md:border-t-0 md:border-l border-success/20">
+                <span class="text-xs text-base-content/40">{{ notif.fecha_creacion|date:"d/m/Y H:i" }}</span>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
     <!-- Lista de notificaciones -->
     {% if notificaciones %}
-        <div class="space-y-4">
+        <div class="space-y-3">
             {% for notif in notificaciones %}
-            <div class="card bg-base-100 shadow-md border-l-4 
-                        {% if notif.tipo == 'importante' %}border-error{% else %}border-info{% endif %}
-                        {% if notif.leida %}bg-base-200 opacity-60{% else %}bg-white{% endif %}">
-                <div class="card-body">
-                    <div class="flex justify-between items-start">
-                        <div class="flex-1">
-                            <!-- Categoría badge -->
-                            <div class="flex gap-2 items-center mb-2">
-                                {% if notif.categoria == 'duplicados' %}
-                                    <span class="badge badge-warning gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                        </svg>
-                                        Duplicados
-                                    </span>
-                                {% elif notif.categoria == 'casos_especiales' %}
-                                    <span class="badge badge-error gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                        </svg>
-                                        Casos Especiales
-                                    </span>
-                                {% elif notif.categoria == 'error_registro' %}
-                                    <span class="badge badge-error gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                        </svg>
-                                        Error
-                                    </span>
-                                {% elif notif.categoria == 'carga_exitosa' %}
-                                    <span class="badge badge-success gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                        </svg>
-                                        Carga Exitosa
-                                    </span>
-                                {% elif notif.categoria == 'sistema' %}
-                                    <span class="badge badge-info gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        Sistema
-                                    </span>
-                                {% endif %}
-                                
-                                {% if not notif.leida %}
-                                    <span class="badge badge-sm">Nueva</span>
-                                {% endif %}
-                            </div>
-                            
-                            <!-- Título -->
-                            <h3 class="card-title text-lg">{{ notif.titulo }}</h3>
-                            
-                            <!-- Mensaje -->
-                            <p class="text-base-content/70 mt-2">{{ notif.mensaje }}</p>
-                            
-                            <!-- Fecha -->
-                            <p class="text-xs text-base-content/50 mt-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3 inline-block mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+            <div class="group relative overflow-hidden rounded-lg border flex flex-col md:flex-row transition-all duration-200
+                        {% if notif.leida %}
+                            bg-base-200/50 border-base-300
+                        {% else %}
+                            bg-white border-primary/20 shadow hover:-translate-y-0.5
+                        {% endif %}">
+
+                <!-- Accent bar izquierdo -->
+                <div class="absolute left-0 inset-y-0 w-1
+                            {% if notif.categoria == 'casos_especiales' or notif.categoria == 'error_registro' %}bg-error{% elif notif.categoria == 'duplicados' %}bg-warning{% elif notif.categoria == 'carga_exitosa' %}bg-success{% else %}bg-info{% endif %}
+                            {% if notif.leida %}opacity-20{% endif %}">
+                </div>
+
+                <!-- Contenido principal -->
+                <div class="flex-1 pl-6 pr-4 py-4 flex flex-col gap-2">
+
+                    <!-- Badges -->
+                    <div class="flex flex-wrap items-center gap-2">
+                        {% if notif.categoria == 'duplicados' %}
+                            <span class="badge badge-sm gap-1 {% if notif.leida %}badge-ghost text-base-content/40{% else %}badge-warning{% endif %}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                                 </svg>
-                                {{ notif.fecha_creacion|date:"d/m/Y H:i" }}
-                            </p>
-                        </div>
-                        
-                        <!-- Acciones -->
-                        <div class="flex flex-col gap-2 ml-4">
-                            {% if notif.enlace %}
-                                <a href="{{ notif.enlace }}" class="btn btn-sm btn-primary">
-                                    Ver Detalles
-                                </a>
-                            {% endif %}
-                            
-                            {% if not notif.leida %}
-                                <button class="btn btn-sm btn-ghost marcar-leida-btn" data-notif-id="{{ notif.id }}">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                                    </svg>
-                                    Marcar leída
-                                </button>
-                            {% endif %}
-                        </div>
+                                Duplicados
+                            </span>
+                        {% elif notif.categoria == 'casos_especiales' %}
+                            <span class="badge badge-sm gap-1 {% if notif.leida %}badge-ghost text-base-content/40{% else %}badge-error{% endif %}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+                                </svg>
+                                Casos Especiales
+                            </span>
+                        {% elif notif.categoria == 'error_registro' %}
+                            <span class="badge badge-sm gap-1 {% if notif.leida %}badge-ghost text-base-content/40{% else %}badge-error{% endif %}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                                </svg>
+                                Error
+                            </span>
+                        {% elif notif.categoria == 'sistema' %}
+                            <span class="badge badge-sm gap-1 {% if notif.leida %}badge-ghost text-base-content/40{% else %}badge-info{% endif %}">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                </svg>
+                                Sistema
+                            </span>
+                        {% endif %}
+
+                        {% if not notif.leida %}
+                            <span class="badge badge-outline badge-primary badge-sm font-semibold">Nueva</span>
+                        {% endif %}
                     </div>
+
+                    <!-- Título -->
+                    <h3 class="text-base leading-snug
+                               {% if notif.leida %}text-base-content/50 font-normal{% else %}text-base-content font-semibold{% endif %}">
+                        {{ notif.titulo }}
+                    </h3>
+
+                    <!-- Mensaje -->
+                    <p class="text-sm {% if notif.leida %}text-base-content/40{% else %}text-base-content/65{% endif %}">
+                        {{ notif.mensaje }}
+                    </p>
+
+                    <!-- Fecha -->
+                    <p class="text-xs mt-1 flex items-center gap-1
+                              {% if notif.leida %}text-base-content/30{% else %}text-primary/70{% endif %}">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        {{ notif.fecha_creacion|date:"d/m/Y H:i" }}
+                    </p>
+                </div>
+
+                <!-- Panel de acciones -->
+                <div class="flex md:flex-col justify-end items-center md:items-stretch gap-2 px-4 py-4
+                            border-t md:border-t-0 md:border-l border-base-200
+                            {% if notif.leida %}bg-base-200/30{% else %}bg-base-100/40{% endif %}">
+                    {% if notif.enlace %}
+                        <a href="{{ notif.enlace }}"
+                           class="btn btn-sm {% if notif.leida %}btn-ghost text-base-content/40{% else %}btn-primary{% endif %}">
+                            Ver Detalles
+                        </a>
+                    {% endif %}
+
+                    {% if not notif.leida %}
+                        <button class="btn btn-sm btn-ghost text-base-content/55 marcar-leida-btn gap-1"
+                                data-notif-id="{{ notif.id }}">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                            </svg>
+                            Marcar leída
+                        </button>
+                    {% endif %}
                 </div>
             </div>
             {% endfor %}
@@ -137,39 +182,70 @@
         <!-- Paginación -->
         {% if notificaciones.has_other_pages %}
         <div class="flex justify-center mt-8">
-            <div class="btn-group">
+            <div class="join">
                 {% if notificaciones.has_previous %}
-                    <a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.previous_page_number }}" class="btn btn-sm">«</a>
+                    <a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.previous_page_number }}" class="join-item btn btn-sm">«</a>
                 {% endif %}
-                
-                <button class="btn btn-sm btn-active">Página {{ notificaciones.number }}</button>
-                
+                <button class="join-item btn btn-sm btn-active">Página {{ notificaciones.number }}</button>
                 {% if notificaciones.has_next %}
-                    <a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.next_page_number }}" class="btn btn-sm">»</a>
+                    <a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.next_page_number }}" class="join-item btn btn-sm">»</a>
                 {% endif %}
             </div>
         </div>
         {% endif %}
+
     {% else %}
-        <div class="alert alert-info">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <div class="alert">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
             </svg>
-            <span>No tienes notificaciones en esta categoría.</span>
+            <span class="text-base-content/50">No tienes notificaciones en esta categoría.</span>
         </div>
     {% endif %}
 </div>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    // Auto-dismiss notificaciones de carga exitosa
+    const exitosasContainer = document.getElementById('exitosas-container');
+    if (exitosasContainer) {
+        const cards = exitosasContainer.querySelectorAll('.notif-exitosa');
+
+        setTimeout(() => {
+            cards.forEach((card, i) => {
+                setTimeout(() => {
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateX(20px)';
+                    card.style.maxHeight = card.offsetHeight + 'px';
+
+                    setTimeout(() => {
+                        card.style.maxHeight = '0';
+                        card.style.marginBottom = '0';
+                        card.style.overflow = 'hidden';
+                    }, 600);
+                }, i * 120);
+            });
+
+            setTimeout(() => {
+                exitosasContainer.style.opacity = '0';
+                setTimeout(() => exitosasContainer.remove(), 400);
+            }, cards.length * 120 + 700);
+        }, 2000);
+    }
+
     // Marcar notificación como leída
     document.querySelectorAll('.marcar-leida-btn').forEach(btn => {
         btn.addEventListener('click', async function() {
             const notifId = this.dataset.notifId;
-            
+            const card = this.closest('.group');
+
+            // Feedback visual inmediato
+            card.style.opacity = '0.5';
+            card.style.pointerEvents = 'none';
+
             try {
                 const url = "{% url 'marcar_notificacion_leida' 0 %}".replace('0', notifId);
-                
+
                 const response = await fetch(url, {
                     method: 'POST',
                     headers: {
@@ -177,15 +253,19 @@ document.addEventListener('DOMContentLoaded', function() {
                         'Content-Type': 'application/json'
                     }
                 });
-                
+
                 const data = await response.json();
-                
+
                 if (data.success) {
-                    // Recargar página para reflejar cambios
                     location.reload();
+                } else {
+                    card.style.opacity = '1';
+                    card.style.pointerEvents = 'auto';
                 }
             } catch (error) {
                 console.error('Error al marcar como leída:', error);
+                card.style.opacity = '1';
+                card.style.pointerEvents = 'auto';
             }
         });
     });

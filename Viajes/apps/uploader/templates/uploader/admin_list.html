@@ -262,7 +262,7 @@
                             <!-- CAMPOS ADMINISTRATIVOS (FIJOS A LA IZQUIERDA) -->
                             <!-- SR - Segunda Revisión (Siempre activo) -->
                             <td class="sticky left-0 z-10 text-center bg-base-100">
-                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline">
+                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline ajax-toggle">
                                     {% csrf_token %}
                                     <input type="hidden" name="segunda_revision" value="{% if registro.segunda_revision %}false{% else %}true{% endif %}">
                                     <button type="submit" class="btn btn-ghost btn-sm" title="Segunda Revisión">
@@ -281,7 +281,7 @@
                             
                             <!-- R - Rechazo (Solo se habilita cuando SR está activo, SI I está activo, R se desactiva) -->
                             <td class="sticky left-[60px] z-10 text-center bg-base-100">
-                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline">
+                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline ajax-toggle">
                                     {% csrf_token %}
                                     <input type="hidden" name="rechazado" value="{% if registro.rechazado %}false{% else %}true{% endif %}">
                                     <button type="submit" class="btn btn-ghost btn-sm" 
@@ -302,7 +302,7 @@
                             
                             <!-- I - Internación (Solo se habilita si SR está activo) -->
                             <td class="sticky left-[120px] z-10 text-center bg-base-100">
-                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline">
+                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline ajax-toggle">
                                     {% csrf_token %}
                                     <input type="hidden" name="internacion" value="{% if registro.internacion %}false{% else %}true{% endif %}">
                                     <button type="submit" class="btn btn-ghost btn-sm" 

@@ -14,7 +14,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     // Si hay búsqueda activa, SIEMPRE hacer focus en el buscador
     if (searchInput.value.trim()) {
-        // Mostrar botón de limpiar
+        // Mostrar botón de limpiarp
         clearSearchBtn.classList.remove('hidden');
         
         // Hacer focus inmediato en el buscador
@@ -327,6 +327,101 @@ async function subirFotoRechazo(event) {
     } catch (error) {
         mostrarNotificacionRechazo('Error al guardar: ' + error.message, 'error');
     }
+}
+
+// AJAX toggle para SR, R e I (sin reload de página)
+document.addEventListener('submit', async function(e) {
+    const form = e.target;
+    if (!form.classList.contains('ajax-toggle')) return;
+
+    e.preventDefault();
+
+    const formData = new FormData(form);
+    const csrfToken = formData.get('csrfmiddlewaretoken');
+
+    try {
+        const response = await fetch(form.action, {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': csrfToken,
+            }
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            const row = form.closest('tr');
+            actualizarFilaToggle(row, data);
+            mostrarToastRapido('Actualizado', 'success');
+        } else {
+            mostrarToastRapido(data.error || 'Error al actualizar', 'error');
+        }
+    } catch (err) {
+        mostrarToastRapido('Error de conexión', 'error');
+    }
+});
+
+function actualizarFilaToggle(row, data) {
+    const srInput = row.querySelector('[name=segunda_revision]');
+    const rInput  = row.querySelector('[name=rechazado]');
+    const iInput  = row.querySelector('[name=internacion]');
+
+    // Actualizar valores hidden para el próximo clic
+    if (srInput) srInput.value = data.segunda_revision ? 'false' : 'true';
+    if (rInput)  rInput.value  = data.rechazado         ? 'false' : 'true';
+    if (iInput)  iInput.value  = data.internacion       ? 'false' : 'true';
+
+    // SR
+    const srBtn = srInput?.closest('form')?.querySelector('button');
+    if (srBtn) srBtn.innerHTML = svgSR(data.segunda_revision);
+
+    // R
+    const rBtn = rInput?.closest('form')?.querySelector('button');
+    if (rBtn) {
+        rBtn.disabled = !data.segunda_revision;
+        rBtn.innerHTML = svgR(data.rechazado);
+    }
+
+    // I
+    const iBtn = iInput?.closest('form')?.querySelector('button');
+    if (iBtn) {
+        iBtn.disabled = !data.segunda_revision;
+        iBtn.innerHTML = svgI(data.internacion, data.segunda_revision);
+    }
+}
+
+function svgSR(activo) {
+    const color = activo ? 'text-success' : 'text-gray-300';
+    const sw    = activo ? '2.5' : '2';
+    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 ${color}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${sw}"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+}
+
+function svgR(activo) {
+    const color = activo ? 'text-error' : 'text-gray-300';
+    const sw    = activo ? '2.5' : '2';
+    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 ${color}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${sw}"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
+}
+
+function svgI(activo, srActivo) {
+    const color = activo ? 'text-info' : (srActivo ? 'text-gray-400' : 'text-gray-200');
+    const sw    = activo ? '2.5' : '2';
+    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 ${color}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${sw}"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>`;
+}
+
+function mostrarToastRapido(mensaje, tipo = 'success') {
+    document.querySelectorAll('.toast-rapido').forEach(t => t.remove());
+    const toast = document.createElement('div');
+    const bg    = tipo === 'success' ? 'alert-success' : 'alert-error';
+    toast.className = `toast-rapido alert ${bg} shadow-lg fixed top-4 right-4 w-auto z-50 py-2 px-4`;
+    toast.style.transition = 'opacity 0.3s';
+    toast.innerHTML = `<span>${mensaje}</span>`;
+    document.body.appendChild(toast);
+    setTimeout(() => {
+        toast.style.opacity = '0';
+        setTimeout(() => toast.remove(), 300);
+    }, 1500);
 }
 
 // Función para mostrar notificaciones toast en rechazos

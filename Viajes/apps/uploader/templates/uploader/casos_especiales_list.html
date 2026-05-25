@@ -5,10 +5,30 @@
 <link rel="stylesheet" href="{% static 'css/casos_especiales.css' %}">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <style>
-@keyframes pulse {
-    0%, 100% { opacity: 1; }
-    50% { opacity: 0.6; }
-}
+    .accordion-content {
+        max-height: 0;
+        overflow: hidden;
+        opacity: 0;
+        transition: max-height 0.35s ease-out, opacity 0.2s ease-out;
+    }
+    .accordion-item.open .accordion-content {
+        max-height: 5000px;
+        opacity: 1;
+        transition: max-height 0.4s ease-in, opacity 0.25s ease-in;
+    }
+    .chevron-icon {
+        transition: transform 0.25s ease;
+    }
+    .accordion-item.open .chevron-icon {
+        transform: rotate(180deg);
+    }
+    .urgent-accent  { box-shadow: -4px 0 0 0 #dc2626; }
+    .standard-accent { box-shadow: -4px 0 0 0 #4f46e5; }
+    @keyframes pulseUrgente {
+        0%, 100% { opacity: 1; }
+        50% { opacity: 0.5; }
+    }
+    .pulse-urgente { animation: pulseUrgente 1.4s infinite; }
 </style>
 {% endblock %}
 
@@ -18,495 +38,541 @@ function updateRegistro(registroId, campo, valor) {
     const formData = new FormData();
     formData.append('csrfmiddlewaretoken', '{{ csrf_token }}');
     formData.append(campo, valor);
-    
     fetch(`/update-registro/${registroId}/`, {
         method: 'POST',
         body: formData,
-        headers: {
-            'X-Requested-With': 'XMLHttpRequest'
-        }
+        headers: { 'X-Requested-With': 'XMLHttpRequest' }
     })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            // Recargar la página para actualizar el estado de los checkboxes
-            location.reload();
-        } else {
-            alert('Error al actualizar el registro');
-            location.reload();
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('Error al actualizar el registro');
-        location.reload();
-    });
+    .then(r => r.json())
+    .then(data => { if (data.success) { location.reload(); } else { alert('Error al actualizar'); location.reload(); } })
+    .catch(() => { alert('Error al actualizar'); location.reload(); });
+}
+
+function toggleCaso(id) {
+    document.getElementById(id).classList.toggle('open');
 }
 </script>
 {% endblock %}
 
 {% block content %}
 <div class="container mx-auto px-4 py-6">
+
     <!-- Header -->
     <div class="flex justify-between items-center mb-6">
         <div>
-            <h1 class="text-3xl font-bold">
+            <h1 class="text-2xl font-bold flex items-center gap-2">
                 <i class="fas fa-exclamation-triangle text-warning"></i> Casos Especiales
             </h1>
-            <p class="text-base-content/70 mt-1">
-                Documentos duplicados que requieren revisión manual
-            </p>
+            <p class="text-sm text-base-content/60 mt-1">Documentos duplicados que requieren revisión manual</p>
         </div>
-        <div class="text-right">
-            <div class="stat bg-base-200 rounded-lg p-4">
-                <div class="stat-title">Casos Pendientes</div>
-                <div class="stat-value text-warning">{{ total_pendientes }}</div>
-            </div>
+        <div class="flex items-center gap-2 bg-red-100 border border-red-200 text-red-800 px-4 py-2 rounded-xl">
+            <span class="font-bold text-xl">{{ total_pendientes }}</span>
+            <span class="text-sm font-medium">Pendientes</span>
         </div>
     </div>
 
-    <!-- Filtros -->
-    <div class="tabs tabs-boxed mb-6">
-        <a href="?estado=pendiente" class="tab {% if filtro_estado == 'pendiente' %}tab-active{% endif %}">
-            <i class="fas fa-bell"></i>&nbsp; Pendientes ({{ total_pendientes }})
+    <!-- Tabs -->
+    <div class="flex items-center gap-1 mb-6 border-b border-base-200">
+        <a href="?estado=pendiente"
+           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
+                  {% if filtro_estado == 'pendiente' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
+            <i class="fas fa-bell text-xs"></i> Pendientes
+            <span class="badge badge-error badge-sm">{{ total_pendientes }}</span>
         </a>
-        <a href="?estado=aceptado" class="tab {% if filtro_estado == 'aceptado' %}tab-active{% endif %}">
-            <i class="fas fa-check-circle"></i>&nbsp; Aceptados
+        <a href="?estado=aceptado"
+           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
+                  {% if filtro_estado == 'aceptado' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
+            <i class="fas fa-check-circle text-xs"></i> Aceptados
         </a>
-        <a href="?estado=editado" class="tab {% if filtro_estado == 'editado' %}tab-active{% endif %}">
-            <i class="fas fa-edit"></i>&nbsp; Editados
+        <a href="?estado=editado"
+           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
+                  {% if filtro_estado == 'editado' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
+            <i class="fas fa-edit text-xs"></i> Editados
         </a>
-        <a href="?estado=inadmitido" class="tab {% if filtro_estado == 'inadmitido' %}tab-active{% endif %}">
-            <i class="fas fa-ban"></i>&nbsp; Inadmitidos
+        <a href="?estado=inadmitido"
+           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
+                  {% if filtro_estado == 'inadmitido' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
+            <i class="fas fa-ban text-xs"></i> Inadmitidos
         </a>
-        <a href="?estado=eliminado" class="tab {% if filtro_estado == 'eliminado' %}tab-active{% endif %}">
-            <i class="fas fa-trash"></i>&nbsp; Eliminados
+        <a href="?estado=eliminado"
+           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
+                  {% if filtro_estado == 'eliminado' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
+            <i class="fas fa-trash text-xs"></i> Eliminados
         </a>
-        <a href="?estado=todos" class="tab {% if filtro_estado == 'todos' %}tab-active{% endif %}">
-            <i class="fas fa-list"></i>&nbsp; Todos
+        <a href="?estado=todos"
+           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
+                  {% if filtro_estado == 'todos' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
+            <i class="fas fa-list text-xs"></i> Todos
         </a>
     </div>
 
     <!-- Lista de casos -->
     {% if casos %}
+    <div class="flex flex-col gap-3">
         {% for caso in casos %}
-        <div class="caso-card">
-            <!-- Header del caso -->
-            <div class="caso-header-custom" {% if caso.razon == 'sin_documento' %}style="background: linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%) !important;"{% endif %}>
-                <div class="flex justify-between items-center flex-wrap gap-4">
+
+        <div class="accordion-item" id="caso-{{ caso.id }}">
+
+            <!-- ── HEADER / TRIGGER ─────────────────────────────── -->
+            <div class="bg-white border border-slate-200 rounded-xl px-5 py-4
+                        flex flex-col sm:flex-row sm:items-center justify-between gap-3
+                        cursor-pointer hover:bg-slate-50 transition-colors
+                        {% if caso.razon == 'sin_documento' %}urgent-accent{% else %}standard-accent{% endif %}"
+                 onclick="toggleCaso('caso-{{ caso.id }}')">
+
+                <div class="flex items-center gap-4">
+                    <!-- Folder icon -->
+                    <div class="w-12 h-12 rounded-lg flex items-center justify-center flex-shrink-0
+                                {% if caso.razon == 'sin_documento' %}bg-purple-100{% else %}bg-indigo-100{% endif %}">
+                        <i class="fas fa-folder-open text-xl
+                                  {% if caso.razon == 'sin_documento' %}text-purple-600{% else %}text-indigo-600{% endif %}"></i>
+                    </div>
+                    <!-- Case info -->
                     <div>
-                        <h3 class="text-2xl font-bold mb-2">
-                            <i class="fas fa-folder-open"></i> Caso #{{ caso.id }}
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <h2 class="text-lg font-bold">Caso #{{ caso.id }}</h2>
                             {% if caso.razon == 'sin_documento' %}
-                            <span class="badge badge-lg ml-2" style="background: #dc2626; color: white; border: none; font-size: 0.85rem; padding: 8px 14px; animation: pulse 1.5s infinite;">
-                                <i class="fas fa-exclamation-circle"></i> URGENTE
-                            </span>
-                            {% endif %}
-                            <span class="badge badge-{{ caso.estado }} ml-2">
-                                {{ caso.get_estado_display }}
-                            </span>
-                        </h3>
-                        <div class="text-sm opacity-90">
-                            <i class="far fa-calendar-alt"></i> Creado: {{ caso.fecha_creacion|date:"d/m/Y H:i" }}
-                            {% if caso.fecha_resolucion %}
-                            <br><i class="fas fa-check"></i> Resuelto: {{ caso.fecha_resolucion|date:"d/m/Y H:i" }} por <strong>{{ caso.resuelto_por.username }}</strong>
-                            {% endif %}
-                        </div>
-                    </div>
-                    {% if caso.razon == 'sin_documento' %}
-                    <div class="badge badge-lg" style="background: white; color: #7c3aed; border: 2px solid white; padding: 12px 20px; font-size: 1rem;">
-                        <i class="fas fa-id-card-alt"></i> SIN DOCUMENTO
-                    </div>
-                    {% else %}
-                    <div class="badge badge-lg" style="background: white; color: #f59e0b; border: 2px solid white; padding: 12px 20px; font-size: 1rem;">
-                        <i class="fas fa-id-card"></i> Doc: {{ caso.documento_original }}
-                    </div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Información del motivo -->
-            {% if caso.razon == 'sin_documento' %}
-            <div class="alert mb-4" style="background: #f3e8ff; border: 2px solid #7c3aed; color: #4c1d95;">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>
-                    <strong>URGENTE — Pasajero sin número de documento</strong>
-                    <br>
-                    Este pasajero fue registrado sin número de documento. Se debe capturar el documento correcto antes del vuelo.
-                </span>
-            </div>
-            {% else %}
-            <div class="alert-warning-custom">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                <span>
-                    <strong>{{ caso.get_razon_display }}</strong>
-                    <br>
-                    Se encontraron {{ caso.conflictivos.count|add:1 }} registro(s) con el mismo número de documento
-                    {% if caso.razon == 'mismo_vuelo_fecha' %}
-                        <strong>en el mismo vuelo {{ caso.registro.vuelo_numero }} del {{ caso.registro.vuelo_fecha|date:"d/m/Y" }}</strong>.
-                    {% else %}
-                        en el sistema.
-                    {% endif %}
-                </span>
-            </div>
-            {% endif %}
-
-            <!-- COMPARACIÓN EN 2 COLUMNAS (sin_documento solo usa 1 columna) -->
-            <div class="grid grid-cols-1 {% if caso.razon != 'sin_documento' %}md:grid-cols-2{% endif %} gap-6">
-                <!-- COLUMNA IZQUIERDA: REGISTRO NUEVO (Azul Cyan) -->
-                <div class="flex flex-col">
-                    <!-- Header Registro Nuevo -->
-                    <div style="background: {% if caso.razon == 'sin_documento' %}linear-gradient(135deg, #7c3aed 0%, #5b21b6 100%); box-shadow: 0 4px 6px rgba(124, 58, 237, 0.3){% else %}linear-gradient(135deg, #06b6d4 0%, #0891b2 100%); box-shadow: 0 4px 6px rgba(6, 182, 212, 0.3){% endif %}; padding: 16px; border-radius: 12px 12px 0 0;">
-                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                            {% if caso.razon == 'sin_documento' %}
-                            <i class="fas fa-user-times"></i>
-                            Pasajero sin Documento
+                                <span class="pulse-urgente bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">URGENTE</span>
                             {% else %}
-                            <i class="fas fa-file-alt"></i>
-                            Registro Nuevo (Este Caso)
+                                <span class="bg-indigo-100 text-indigo-800 text-[10px] font-bold px-2 py-0.5 rounded-full uppercase tracking-wider">ESTÁNDAR</span>
                             {% endif %}
-                        </h3>
-                    </div>
-
-                    <!-- Info Registro Nuevo -->
-                    <div style="background: {% if caso.razon == 'sin_documento' %}#f3e8ff; border: 3px solid #7c3aed{% else %}#ecfeff; border: 3px solid #06b6d4{% endif %}; border-top: none; padding: 20px; border-radius: 0 0 12px 12px; flex-grow: 1;">
-                        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-                            <div class="flex items-start gap-3" {% if caso.razon == 'mismo_vuelo_fecha' or caso.razon == 'documento_duplicado' %}style="border: 2px solid #000; border-radius: 8px; padding: 8px; background: rgba(255, 255, 255, 0.5);"{% endif %}>
-                                <i class="fas fa-user text-cyan-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Pasajero:</div>
-                                    <div class="font-bold text-gray-800">{{ caso.registro.nombre_pasajero }}</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3" {% if caso.razon == 'documento_duplicado' %}style="border: 2px solid #000; border-radius: 8px; padding: 8px; background: rgba(255, 255, 255, 0.5);"{% endif %}>
-                                <i class="fas fa-id-card text-cyan-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Documento:</div>
-                                    <div class="font-bold text-gray-800">{{ caso.registro.numero_documento }}</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-plane text-cyan-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Vuelo:</div>
-                                    <div class="font-bold text-gray-800">{{ caso.registro.vuelo_numero }}</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="far fa-calendar text-cyan-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Fecha:</div>
-                                    <div class="font-bold text-gray-800">{{ caso.registro.vuelo_fecha|date:"d/m/Y" }}</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-plane-departure text-cyan-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Salida:</div>
-                                    <div class="font-bold text-gray-800">{{ caso.registro.aeropuerto_salida }}</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-plane-arrival text-cyan-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Llegada:</div>
-                                    <div class="font-bold text-gray-800">{{ caso.registro.aeropuerto_llegada }}</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-chair text-cyan-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Asiento:</div>
-                                    <div class="font-bold text-gray-800">{{ caso.registro.numero_asiento }}</div>
-                                </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-file-excel text-cyan-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Archivo:</div>
-                                    <div class="font-bold text-gray-800">{{ caso.registro.batch.archivo.name|slice:"8:" }}</div>
-                                </div>
-                            </div>
                         </div>
+                        <div class="flex flex-wrap items-center gap-4 mt-1">
+                            <span class="text-sm text-gray-500 flex items-center gap-1">
+                                <i class="fas fa-user text-xs"></i> {{ caso.registro.nombre_pasajero }}
+                            </span>
+                            <span class="text-sm text-gray-500 flex items-center gap-1">
+                                <i class="fas fa-plane text-xs"></i> {{ caso.registro.vuelo_numero }}
+                            </span>
+                        </div>
+                    </div>
+                </div>
 
-                        <!-- ACCIONES PARA REGISTRO NUEVO (solo si está pendiente) -->
+                <div class="flex items-center gap-3 sm:ml-auto">
+                    <!-- Status pill -->
+                    <span class="bg-slate-100 border border-slate-200 text-slate-700 text-sm px-3 py-1.5 rounded-lg flex items-center gap-2 whitespace-nowrap">
                         {% if caso.estado == 'pendiente' %}
-                        <div class="mt-6 pt-4 border-t-2 {% if caso.razon == 'sin_documento' %}border-purple-300{% else %}border-cyan-300{% endif %}">
-                            <h4 class="font-bold mb-3 flex items-center gap-2 {% if caso.razon == 'sin_documento' %}text-purple-800{% else %}text-cyan-800{% endif %}">
-                                <i class="fas fa-cog"></i> Acciones para este registro:
-                            </h4>
-                            <div class="space-y-2">
-                                <!-- Editar / Capturar -->
-                                <button onclick="editModal{{ caso.id }}_nuevo.showModal()" class="w-full btn btn-sm" style="background: {% if caso.razon == 'sin_documento' %}#7c3aed{% else %}#0891b2{% endif %}; color: white; border: none;">
-                                    {% if caso.razon == 'sin_documento' %}
-                                    <i class="fas fa-id-card"></i> Capturar Documento
-                                    {% else %}
-                                    <i class="fas fa-edit"></i> Editar Documento
-                                    {% endif %}
-                                </button>
-
-                                <!-- Inadmitir -->
-                                <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id caso.registro.id %}" onsubmit="return confirm('¿Marcar este registro como INADMITIDO?\n\nSe activará automáticamente:\n✓ SR (Segunda Revisión)\n✓ R (Rechazado)');">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="motivo" value="{% if caso.razon == 'sin_documento' %}Sin documento - registro inadmitido{% else %}Documento duplicado - registro inadmitido{% endif %}">
-                                    <button type="submit" class="w-full btn btn-sm" style="background: #dc2626; color: white; border: none;" title="Activa SR + R automáticamente">
-                                        <i class="fas fa-ban"></i> Rechazar (SR + R)
-                                    </button>
-                                </form>
-
-                                <!-- Eliminar -->
-                                <form method="POST" action="{% url 'resolver_caso_eliminar' caso.id caso.registro.id %}" onsubmit="return confirm('⚠️ ¿ELIMINAR permanentemente? NO se puede deshacer.');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="w-full btn btn-sm btn-outline" style="border-color: #6b7280; color: #6b7280;">
-                                        <i class="fas fa-trash-alt"></i> Eliminar
-                                    </button>
-                                </form>
-                            </div>
-                        </div>
+                            <span class="w-2 h-2 rounded-full {% if caso.razon == 'sin_documento' %}bg-red-500 pulse-urgente{% else %}bg-indigo-500{% endif %}"></span>
+                        {% elif caso.estado == 'aceptado' %}
+                            <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        {% elif caso.estado == 'editado' %}
+                            <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                        {% else %}
+                            <span class="w-2 h-2 rounded-full bg-gray-400"></span>
                         {% endif %}
-                    </div>
+                        {{ caso.get_estado_display }}
+                    </span>
+                    <!-- Chevron -->
+                    <i class="fas fa-chevron-down text-gray-400 chevron-icon text-sm"></i>
+                </div>
+            </div>
 
-                    <!-- Modal Editar / Capturar Documento -->
-                    <dialog id="editModal{{ caso.id }}_nuevo" class="modal">
-                        <div class="modal-box">
-                            <h3 class="font-bold text-lg {% if caso.razon == 'sin_documento' %}text-purple-700{% else %}text-cyan-700{% endif %}">
-                                {% if caso.razon == 'sin_documento' %}
-                                <i class="fas fa-id-card"></i> Capturar Número de Documento
+            <!-- ── COLLAPSIBLE CONTENT ──────────────────────────── -->
+            <div class="accordion-content">
+                <div class="pt-4 flex flex-col gap-4">
+
+                    <!-- Alert banner -->
+                    {% if caso.razon == 'sin_documento' %}
+                    <div class="bg-red-50 border border-red-200 rounded-xl p-4 flex gap-3 items-start">
+                        <i class="fas fa-exclamation-triangle text-red-600 text-2xl flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <h3 class="font-bold text-red-700 mb-1">URGENTE — Pasajero sin número de documento</h3>
+                            <p class="text-sm text-red-600">Este pasajero fue registrado sin número de documento. Se debe capturar el documento correcto antes del vuelo para evitar denegaciones de embarque.</p>
+                        </div>
+                    </div>
+                    {% else %}
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-4 flex gap-3 items-start">
+                        <i class="fas fa-exclamation-circle text-amber-600 text-2xl flex-shrink-0 mt-0.5"></i>
+                        <div>
+                            <h3 class="font-bold text-amber-700 mb-1">{{ caso.get_razon_display }}</h3>
+                            <p class="text-sm text-amber-700">
+                                Se encontraron {{ caso.conflictivos.count|add:1 }} registro(s) con el mismo número de documento
+                                {% if caso.razon == 'mismo_vuelo_fecha' %}
+                                    en el mismo vuelo <strong>{{ caso.registro.vuelo_numero }}</strong> del <strong>{{ caso.registro.vuelo_fecha|date:"d/m/Y" }}</strong>.
                                 {% else %}
-                                <i class="fas fa-edit"></i> Editar Documento
+                                    en el sistema.
                                 {% endif %}
-                            </h3>
-                            <p class="text-sm text-gray-600 mt-2">
-                                Pasajero: <strong>{{ caso.registro.nombre_pasajero }}</strong>
                             </p>
-                            <form method="POST" action="{% url 'resolver_caso_editar' caso.id caso.registro.id %}">
-                                {% csrf_token %}
-                                <div class="form-control mt-4">
-                                    {% if caso.razon != 'sin_documento' %}
-                                    <label class="label">
-                                        <span class="label-text">Documento Actual:</span>
-                                        <span class="label-text-alt badge badge-ghost">{{ caso.documento_original }}</span>
-                                    </label>
-                                    {% endif %}
-                                    <label class="label">
-                                        <span class="label-text font-semibold">
-                                            {% if caso.razon == 'sin_documento' %}Número de Documento:{% else %}Nuevo Número de Documento:{% endif %}
-                                        </span>
-                                    </label>
-                                    <input type="text" name="nuevo_documento" class="input input-bordered" required
-                                        value="{% if caso.razon != 'sin_documento' %}{{ caso.documento_original }}{% endif %}"
-                                        placeholder="{% if caso.razon == 'sin_documento' %}Ingrese el número de documento del pasajero{% else %}Ingrese el número correcto{% endif %}">
-                                </div>
-                                <div class="modal-action">
-                                    <button type="submit" class="btn" style="background: {% if caso.razon == 'sin_documento' %}#7c3aed{% else %}#0891b2{% endif %}; color: white;">
-                                        <i class="fas fa-save"></i> Guardar
-                                    </button>
-                                    <button type="button" onclick="editModal{{ caso.id }}_nuevo.close()" class="btn">Cancelar</button>
-                                </div>
-                            </form>
                         </div>
-                    </dialog>
-                </div>
-
-                <!-- COLUMNA DERECHA: REGISTROS CONFLICTIVOS (Rojo) — oculta para sin_documento -->
-                {% if caso.razon != 'sin_documento' and caso.conflictivos %}
-                {% for reg_conf in caso.conflictivos %}
-                <div class="flex flex-col">
-                    <!-- Header Registro Conflictivo -->
-                    <div style="background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%); padding: 16px; border-radius: 12px 12px 0 0; box-shadow: 0 4px 6px rgba(220, 38, 38, 0.3);">
-                        <h3 class="text-xl font-bold text-white flex items-center gap-2">
-                            <i class="fas fa-exclamation-triangle"></i>
-                            Registro Previo #{{ forloop.counter }}
-                        </h3>
                     </div>
+                    {% endif %}
 
-                    <!-- Info Registro Conflictivo -->
-                    <div style="background: #fee2e2; border: 3px solid #dc2626; border-top: none; padding: 20px; border-radius: 0 0 12px 12px; flex-grow: 1;">
-                        <div class="grid grid-cols-2 gap-x-4 gap-y-3">
-                            <div class="flex items-start gap-3" {% if caso.razon == 'mismo_vuelo_fecha' or caso.razon == 'documento_duplicado' %}style="border: 2px solid #000; border-radius: 8px; padding: 8px; background: rgba(255, 255, 255, 0.5);"{% endif %}>
-                                <i class="fas fa-user text-red-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Pasajero:</div>
-                                    <div class="font-bold text-gray-800">{{ reg_conf.nombre_pasajero }}</div>
-                                </div>
+                    <!-- ── SIN DOCUMENTO: details 8col + actions 4col ── -->
+                    {% if caso.razon == 'sin_documento' %}
+                    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+
+                        <!-- Passenger details -->
+                        <div class="lg:col-span-8 bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-4">
+                            <div class="flex items-center gap-2 pb-3 border-b border-slate-200">
+                                <i class="fas fa-user-search text-indigo-600"></i>
+                                <h3 class="font-semibold">Detalles del Pasajero</h3>
                             </div>
-                            <div class="flex items-start gap-3" {% if caso.razon == 'documento_duplicado' %}style="border: 2px solid #000; border-radius: 8px; padding: 8px; background: rgba(255, 255, 255, 0.5);"{% endif %}>
-                                <i class="fas fa-id-card text-red-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Documento:</div>
-                                    <div class="font-bold text-gray-800">{{ reg_conf.numero_documento }}</div>
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-4">
+                                <div class="flex flex-col gap-0.5">
+                                    <label class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Pasajero</label>
+                                    <span class="font-semibold text-gray-900">{{ caso.registro.nombre_pasajero }}</span>
                                 </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-plane text-red-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Vuelo:</div>
-                                    <div class="font-bold text-gray-800">{{ reg_conf.vuelo_numero }}</div>
+                                <div class="flex flex-col gap-0.5">
+                                    <label class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Documento</label>
+                                    <span class="font-semibold text-red-500 italic">None (Faltante)</span>
                                 </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="far fa-calendar text-red-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Fecha:</div>
-                                    <div class="font-bold text-gray-800">{{ reg_conf.vuelo_fecha|date:"d/m/Y" }}</div>
+                                <div class="flex flex-col gap-0.5">
+                                    <label class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Vuelo</label>
+                                    <span class="font-bold text-indigo-600">{{ caso.registro.vuelo_numero }}</span>
                                 </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-plane-departure text-red-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Salida:</div>
-                                    <div class="font-bold text-gray-800">{{ reg_conf.aeropuerto_salida }}</div>
+                                <div class="flex flex-col gap-0.5">
+                                    <label class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Fecha</label>
+                                    <span class="font-semibold text-gray-900">{{ caso.registro.vuelo_fecha|date:"d/m/Y" }}</span>
                                 </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-plane-arrival text-red-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Llegada:</div>
-                                    <div class="font-bold text-gray-800">{{ reg_conf.aeropuerto_llegada }}</div>
+                                <div class="flex flex-col gap-0.5">
+                                    <label class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Salida</label>
+                                    <span class="font-semibold text-gray-900">{{ caso.registro.aeropuerto_salida }}</span>
                                 </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-chair text-red-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Asiento:</div>
-                                    <div class="font-bold text-gray-800">{{ reg_conf.numero_asiento }}</div>
+                                <div class="flex flex-col gap-0.5">
+                                    <label class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Llegada</label>
+                                    <span class="font-semibold text-gray-900">{{ caso.registro.aeropuerto_llegada }}</span>
                                 </div>
-                            </div>
-                            <div class="flex items-start gap-3">
-                                <i class="fas fa-file-excel text-red-600 text-lg mt-1"></i>
-                                <div class="flex-1">
-                                    <div class="text-xs text-gray-500 font-semibold">Archivo:</div>
-                                    <div class="font-bold text-gray-800">{{ reg_conf.batch.archivo.name|slice:"8:" }}</div>
+                                <div class="flex flex-col gap-0.5">
+                                    <label class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Asiento</label>
+                                    <span class="font-semibold bg-slate-100 px-2 py-0.5 rounded w-fit">{{ caso.registro.numero_asiento }}</span>
+                                </div>
+                                <div class="flex flex-col gap-0.5">
+                                    <label class="text-[10px] text-gray-400 uppercase tracking-widest font-bold">Archivo</label>
+                                    <span class="text-indigo-600 font-mono text-xs truncate">{{ caso.registro.batch.archivo.name|slice:"8:" }}</span>
                                 </div>
                             </div>
                         </div>
 
-                        <!-- ACCIONES PARA REGISTRO CONFLICTIVO (solo si está pendiente) -->
-                        {% if caso.estado == 'pendiente' %}
-                        <div class="mt-6 pt-4 border-t-2 border-red-300">
-                            <h4 class="font-bold text-red-800 mb-3 flex items-center gap-2">
-                                <i class="fas fa-cog"></i> Acciones para este registro:
-                            </h4>
-                            <div class="space-y-2">
-                                <!-- Editar -->
-                                <button onclick="editModal{{ caso.id }}_conf{{ reg_conf.id }}.showModal()" class="w-full btn btn-sm" style="background: #b91c1c; color: white; border: none;">
-                                    <i class="fas fa-edit"></i> Editar Documento
+                        <!-- Action panel -->
+                        <div class="lg:col-span-4">
+                            {% if caso.estado == 'pendiente' %}
+                            <div class="bg-white border border-slate-200 rounded-xl p-5 flex flex-col gap-3 h-full">
+                                <div class="flex items-center gap-2 pb-3 border-b border-slate-200">
+                                    <i class="fas fa-rocket text-indigo-600"></i>
+                                    <h3 class="font-semibold">Resolución</h3>
+                                </div>
+                                <p class="text-xs text-gray-400 italic">Seleccione una acción para procesar este registro.</p>
+
+                                <button onclick="editModal{{ caso.id }}_nuevo.showModal()"
+                                        class="w-full btn btn-sm font-bold"
+                                        style="background:#059669; color:white; border:none;">
+                                    <i class="fas fa-id-card"></i> Capturar Documento
                                 </button>
-                                
-                                <!-- Inadmitir -->
-                                <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id reg_conf.id %}" onsubmit="return confirm('¿Marcar a {{ reg_conf.nombre_pasajero }} como INADMITIDO?\n\nSe activará automáticamente:\n✓ SR (Segunda Revisión)\n✓ R (Rechazado)');">
+
+                                <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id caso.registro.id %}"
+                                      onsubmit="return confirm('¿Marcar este registro como INADMITIDO?\n\n✓ SR (Segunda Revisión)\n✓ R (Rechazado)');">
                                     {% csrf_token %}
-                                    <input type="hidden" name="motivo" value="Documento duplicado - registro inadmitido">
-                                    <button type="submit" class="w-full btn btn-sm" style="background: #dc2626; color: white; border: none;" title="Activa SR + R automáticamente">
+                                    <input type="hidden" name="motivo" value="Sin documento - registro inadmitido">
+                                    <button type="submit" class="w-full btn btn-sm btn-outline font-bold"
+                                            style="border-color:#dc2626; color:#dc2626;">
                                         <i class="fas fa-ban"></i> Rechazar (SR + R)
                                     </button>
                                 </form>
-                                
-                                <!-- Eliminar -->
-                                <form method="POST" action="{% url 'resolver_caso_eliminar' caso.id reg_conf.id %}" onsubmit="return confirm('⚠️ ¿ELIMINAR a {{ reg_conf.nombre_pasajero }}? NO se puede deshacer.');">
-                                    {% csrf_token %}
-                                    <button type="submit" class="w-full btn btn-sm btn-outline" style="border-color: #6b7280; color: #6b7280;">
-                                        <i class="fas fa-trash-alt"></i> Eliminar
-                                    </button>
-                                </form>
+
+                                <div class="mt-auto pt-3">
+                                    <form method="POST" action="{% url 'resolver_caso_eliminar' caso.id caso.registro.id %}"
+                                          onsubmit="return confirm('⚠️ ¿ELIMINAR permanentemente? NO se puede deshacer.');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full btn btn-sm btn-ghost text-gray-400 hover:text-gray-600">
+                                            <i class="fas fa-trash-alt"></i> Eliminar Registro
+                                        </button>
+                                    </form>
+                                </div>
                             </div>
+                            {% else %}
+                            <div class="bg-slate-50 border border-slate-200 rounded-xl p-5 flex flex-col items-center justify-center gap-2 h-full text-center">
+                                <i class="fas fa-check-circle text-green-500 text-3xl"></i>
+                                <p class="text-sm font-medium text-gray-600">{{ caso.get_estado_display }}</p>
+                                {% if caso.fecha_resolucion %}
+                                <p class="text-xs text-gray-400">{{ caso.fecha_resolucion|date:"d/m/Y H:i" }}</p>
+                                <p class="text-xs text-gray-400">por <strong>{{ caso.resuelto_por.username }}</strong></p>
+                                {% endif %}
+                            </div>
+                            {% endif %}
                         </div>
-                        {% endif %}
                     </div>
 
-                    <!-- Modal Editar Conflictivo -->
-                    <dialog id="editModal{{ caso.id }}_conf{{ reg_conf.id }}" class="modal">
-                        <div class="modal-box">
-                            <h3 class="font-bold text-lg text-red-700">
-                                <i class="fas fa-edit"></i> Editar Documento
-                            </h3>
-                            <p class="text-sm text-gray-600 mt-2">
-                                Pasajero: <strong>{{ reg_conf.nombre_pasajero }}</strong>
-                            </p>
-                            <form method="POST" action="{% url 'resolver_caso_editar' caso.id reg_conf.id %}">
-                                {% csrf_token %}
-                                <div class="form-control mt-4">
-                                    <label class="label">
-                                        <span class="label-text">Documento Actual:</span>
-                                        <span class="label-text-alt badge badge-ghost">{{ reg_conf.numero_documento }}</span>
-                                    </label>
-                                    <label class="label">
-                                        <span class="label-text font-semibold">Nuevo Número de Documento:</span>
-                                    </label>
-                                    <input type="text" name="nuevo_documento" class="input input-bordered" required value="{{ reg_conf.numero_documento }}" placeholder="Ingrese el número correcto">
+                    {% else %}
+                    <!-- ── DUPLICADOS: 2-column comparison ─────────── -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+
+                        <!-- New record column -->
+                        <div class="bg-white border border-cyan-200 rounded-xl overflow-hidden flex flex-col">
+                            <div class="p-3" style="background:linear-gradient(135deg,#06b6d4,#0891b2);">
+                                <h3 class="text-white font-bold flex items-center gap-2 text-sm">
+                                    <i class="fas fa-file-alt"></i> Registro Nuevo (Este Caso)
+                                </h3>
+                            </div>
+                            <div class="p-4 flex-1 flex flex-col gap-4">
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+                                    <div class="flex flex-col gap-0.5 {% if caso.razon == 'mismo_vuelo_fecha' or caso.razon == 'documento_duplicado' %}bg-cyan-50 border border-cyan-200 rounded-lg p-2{% endif %}">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Pasajero</label>
+                                        <span class="font-semibold text-sm">{{ caso.registro.nombre_pasajero }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5 {% if caso.razon == 'documento_duplicado' %}bg-cyan-50 border border-cyan-200 rounded-lg p-2{% endif %}">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Documento</label>
+                                        <span class="font-semibold text-sm">{{ caso.registro.numero_documento }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Vuelo</label>
+                                        <span class="font-semibold text-sm">{{ caso.registro.vuelo_numero }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Fecha</label>
+                                        <span class="font-semibold text-sm">{{ caso.registro.vuelo_fecha|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Salida</label>
+                                        <span class="font-semibold text-sm">{{ caso.registro.aeropuerto_salida }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Llegada</label>
+                                        <span class="font-semibold text-sm">{{ caso.registro.aeropuerto_llegada }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Asiento</label>
+                                        <span class="font-semibold text-sm bg-slate-100 px-1.5 py-0.5 rounded w-fit">{{ caso.registro.numero_asiento }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Archivo</label>
+                                        <span class="text-indigo-600 font-mono text-xs truncate">{{ caso.registro.batch.archivo.name|slice:"8:" }}</span>
+                                    </div>
                                 </div>
-                                <div class="modal-action">
-                                    <button type="submit" class="btn" style="background: #b91c1c; color: white;">
-                                        <i class="fas fa-save"></i> Guardar
+
+                                {% if caso.estado == 'pendiente' %}
+                                <div class="mt-auto pt-3 border-t border-cyan-100 space-y-2">
+                                    <button onclick="editModal{{ caso.id }}_nuevo.showModal()"
+                                            class="w-full btn btn-sm font-bold text-white border-0"
+                                            style="background:#0891b2;">
+                                        <i class="fas fa-edit"></i> Editar Documento
                                     </button>
-                                    <button type="button" onclick="editModal{{ caso.id }}_conf{{ reg_conf.id }}.close()" class="btn">Cancelar</button>
+                                    <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id caso.registro.id %}"
+                                          onsubmit="return confirm('¿Marcar como INADMITIDO?\n✓ SR\n✓ R');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="motivo" value="Documento duplicado - registro inadmitido">
+                                        <button type="submit" class="w-full btn btn-sm btn-outline font-bold"
+                                                style="border-color:#dc2626; color:#dc2626;">
+                                            <i class="fas fa-ban"></i> Rechazar (SR + R)
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{% url 'resolver_caso_eliminar' caso.id caso.registro.id %}"
+                                          onsubmit="return confirm('⚠️ ¿ELIMINAR permanentemente?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full btn btn-sm btn-ghost text-gray-400">
+                                            <i class="fas fa-trash-alt"></i> Eliminar
+                                        </button>
+                                    </form>
                                 </div>
-                            </form>
+                                {% endif %}
+                            </div>
                         </div>
-                    </dialog>
-                </div>
-                {% endfor %}
-                {% endif %}
-            </div>
 
-            <!-- Notas de resolución -->
-            {% if caso.notas_admin %}
-            <div class="alert alert-info mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <div>
-                    <strong>Notas:</strong> {{ caso.notas_admin }}
-                </div>
-            </div>
-            {% endif %}
+                        <!-- Conflicting records -->
+                        {% for reg_conf in caso.conflictivos %}
+                        <div class="bg-white border border-red-200 rounded-xl overflow-hidden flex flex-col">
+                            <div class="p-3" style="background:linear-gradient(135deg,#dc2626,#b91c1c);">
+                                <h3 class="text-white font-bold flex items-center gap-2 text-sm">
+                                    <i class="fas fa-exclamation-triangle"></i> Registro Previo #{{ forloop.counter }}
+                                </h3>
+                            </div>
+                            <div class="p-4 flex-1 flex flex-col gap-4">
+                                <div class="grid grid-cols-2 gap-x-4 gap-y-3">
+                                    <div class="flex flex-col gap-0.5 {% if caso.razon == 'mismo_vuelo_fecha' or caso.razon == 'documento_duplicado' %}bg-red-50 border border-red-200 rounded-lg p-2{% endif %}">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Pasajero</label>
+                                        <span class="font-semibold text-sm">{{ reg_conf.nombre_pasajero }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5 {% if caso.razon == 'documento_duplicado' %}bg-red-50 border border-red-200 rounded-lg p-2{% endif %}">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Documento</label>
+                                        <span class="font-semibold text-sm">{{ reg_conf.numero_documento }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Vuelo</label>
+                                        <span class="font-semibold text-sm">{{ reg_conf.vuelo_numero }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Fecha</label>
+                                        <span class="font-semibold text-sm">{{ reg_conf.vuelo_fecha|date:"d/m/Y" }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Salida</label>
+                                        <span class="font-semibold text-sm">{{ reg_conf.aeropuerto_salida }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Llegada</label>
+                                        <span class="font-semibold text-sm">{{ reg_conf.aeropuerto_llegada }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Asiento</label>
+                                        <span class="font-semibold text-sm bg-slate-100 px-1.5 py-0.5 rounded w-fit">{{ reg_conf.numero_asiento }}</span>
+                                    </div>
+                                    <div class="flex flex-col gap-0.5">
+                                        <label class="text-[10px] text-gray-400 uppercase font-bold">Archivo</label>
+                                        <span class="text-indigo-600 font-mono text-xs truncate">{{ reg_conf.batch.archivo.name|slice:"8:" }}</span>
+                                    </div>
+                                </div>
 
-            <!-- BOTÓN ACEPTAR AMBOS (solo para pendientes y no sin_documento) -->
-            {% if caso.estado == 'pendiente' and caso.razon != 'sin_documento' %}
-            <div class="mt-6 pt-6 border-t-2 border-gray-300">
-                <form method="POST" action="{% url 'resolver_caso_aceptar' caso.id %}" onsubmit="return confirm('¿Confirma que AMBOS registros son válidos?\n\nSe activará automáticamente:\n✓ SR (Segunda Revisión) en TODOS los registros');">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-success w-full btn-lg" style="height: 60px; font-size: 1.1rem;" title="Activa SR en todos los registros">
-                        <i class="fas fa-check-double"></i> ACEPTAR AMBOS REGISTROS COMO VÁLIDOS (SR)
-                    </button>
-                    <p class="text-center text-sm text-gray-600 mt-2">
-                        Usa esta opción si ambos registros son correctos (ej. hermanos compartiendo documento familiar).<br>
-                        <strong>Se marcará SR (Segunda Revisión) en todos los registros automáticamente.</strong>
+                                {% if caso.estado == 'pendiente' %}
+                                <div class="mt-auto pt-3 border-t border-red-100 space-y-2">
+                                    <button onclick="editModal{{ caso.id }}_conf{{ reg_conf.id }}.showModal()"
+                                            class="w-full btn btn-sm font-bold text-white border-0"
+                                            style="background:#b91c1c;">
+                                        <i class="fas fa-edit"></i> Editar Documento
+                                    </button>
+                                    <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id reg_conf.id %}"
+                                          onsubmit="return confirm('¿Marcar a {{ reg_conf.nombre_pasajero }} como INADMITIDO?\n✓ SR\n✓ R');">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="motivo" value="Documento duplicado - registro inadmitido">
+                                        <button type="submit" class="w-full btn btn-sm btn-outline font-bold"
+                                                style="border-color:#dc2626; color:#dc2626;">
+                                            <i class="fas fa-ban"></i> Rechazar (SR + R)
+                                        </button>
+                                    </form>
+                                    <form method="POST" action="{% url 'resolver_caso_eliminar' caso.id reg_conf.id %}"
+                                          onsubmit="return confirm('⚠️ ¿ELIMINAR a {{ reg_conf.nombre_pasajero }}?');">
+                                        {% csrf_token %}
+                                        <button type="submit" class="w-full btn btn-sm btn-ghost text-gray-400">
+                                            <i class="fas fa-trash-alt"></i> Eliminar
+                                        </button>
+                                    </form>
+                                </div>
+                                {% endif %}
+                            </div>
+
+                            <!-- Modal editar conflictivo -->
+                            <dialog id="editModal{{ caso.id }}_conf{{ reg_conf.id }}" class="modal">
+                                <div class="modal-box">
+                                    <h3 class="font-bold text-lg text-red-700">
+                                        <i class="fas fa-edit"></i> Editar Documento
+                                    </h3>
+                                    <p class="text-sm text-gray-600 mt-2">Pasajero: <strong>{{ reg_conf.nombre_pasajero }}</strong></p>
+                                    <form method="POST" action="{% url 'resolver_caso_editar' caso.id reg_conf.id %}">
+                                        {% csrf_token %}
+                                        <div class="form-control mt-4">
+                                            <label class="label">
+                                                <span class="label-text">Documento Actual:</span>
+                                                <span class="label-text-alt badge badge-ghost">{{ reg_conf.numero_documento }}</span>
+                                            </label>
+                                            <label class="label">
+                                                <span class="label-text font-semibold">Nuevo Número de Documento:</span>
+                                            </label>
+                                            <input type="text" name="nuevo_documento" class="input input-bordered" required
+                                                   value="{{ reg_conf.numero_documento }}" placeholder="Ingrese el número correcto">
+                                        </div>
+                                        <div class="modal-action">
+                                            <button type="submit" class="btn text-white border-0" style="background:#b91c1c;">
+                                                <i class="fas fa-save"></i> Guardar
+                                            </button>
+                                            <button type="button" onclick="editModal{{ caso.id }}_conf{{ reg_conf.id }}.close()" class="btn">Cancelar</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </dialog>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <!-- Aceptar Ambos (solo casos duplicados pendientes) -->
+                    {% if caso.estado == 'pendiente' %}
+                    <div class="border-t border-slate-200 pt-4">
+                        <form method="POST" action="{% url 'resolver_caso_aceptar' caso.id %}"
+                              onsubmit="return confirm('¿Confirma que AMBOS registros son válidos?\n\n✓ SR (Segunda Revisión) en TODOS los registros');">
+                            {% csrf_token %}
+                            <button type="submit" class="w-full btn btn-success btn-lg" title="Activa SR en todos los registros">
+                                <i class="fas fa-check-double"></i> ACEPTAR AMBOS REGISTROS COMO VÁLIDOS (SR)
+                            </button>
+                            <p class="text-center text-sm text-gray-500 mt-2">
+                                Usa esta opción si ambos son correctos (ej. hermanos con documento familiar).<br>
+                                <strong>Se marcará SR automáticamente en todos los registros.</strong>
+                            </p>
+                        </form>
+                    </div>
+                    {% endif %}
+                    {% endif %}
+
+                    <!-- Notas admin -->
+                    {% if caso.notas_admin %}
+                    <div class="alert alert-info">
+                        <i class="fas fa-info-circle"></i>
+                        <div><strong>Notas:</strong> {{ caso.notas_admin }}</div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Info resolución -->
+                    {% if caso.fecha_resolucion %}
+                    <p class="text-xs text-gray-400 text-right">
+                        <i class="fas fa-check"></i>
+                        Resuelto el {{ caso.fecha_resolucion|date:"d/m/Y H:i" }} por <strong>{{ caso.resuelto_por.username }}</strong>
                     </p>
-                </form>
+                    {% endif %}
+
+                </div>
             </div>
-            {% endif %}
+
+            <!-- Modal editar/capturar registro nuevo -->
+            <dialog id="editModal{{ caso.id }}_nuevo" class="modal">
+                <div class="modal-box">
+                    <h3 class="font-bold text-lg {% if caso.razon == 'sin_documento' %}text-purple-700{% else %}text-cyan-700{% endif %}">
+                        {% if caso.razon == 'sin_documento' %}
+                            <i class="fas fa-id-card"></i> Capturar Número de Documento
+                        {% else %}
+                            <i class="fas fa-edit"></i> Editar Documento
+                        {% endif %}
+                    </h3>
+                    <p class="text-sm text-gray-600 mt-2">Pasajero: <strong>{{ caso.registro.nombre_pasajero }}</strong></p>
+                    <form method="POST" action="{% url 'resolver_caso_editar' caso.id caso.registro.id %}">
+                        {% csrf_token %}
+                        <div class="form-control mt-4">
+                            {% if caso.razon != 'sin_documento' %}
+                            <label class="label">
+                                <span class="label-text">Documento Actual:</span>
+                                <span class="label-text-alt badge badge-ghost">{{ caso.documento_original }}</span>
+                            </label>
+                            {% endif %}
+                            <label class="label">
+                                <span class="label-text font-semibold">
+                                    {% if caso.razon == 'sin_documento' %}Número de Documento:{% else %}Nuevo Número de Documento:{% endif %}
+                                </span>
+                            </label>
+                            <input type="text" name="nuevo_documento" class="input input-bordered" required
+                                   value="{% if caso.razon != 'sin_documento' %}{{ caso.documento_original }}{% endif %}"
+                                   placeholder="{% if caso.razon == 'sin_documento' %}Ingrese el número de documento{% else %}Ingrese el número correcto{% endif %}">
+                        </div>
+                        <div class="modal-action">
+                            <button type="submit" class="btn text-white border-0"
+                                    style="background:{% if caso.razon == 'sin_documento' %}#7c3aed{% else %}#0891b2{% endif %};">
+                                <i class="fas fa-save"></i> Guardar
+                            </button>
+                            <button type="button" onclick="editModal{{ caso.id }}_nuevo.close()" class="btn">Cancelar</button>
+                        </div>
+                    </form>
+                </div>
+            </dialog>
+
         </div>
         {% endfor %}
+    </div>
 
-        <!-- Paginación -->
-        {% if casos.has_other_pages %}
-        <div class="flex justify-center mt-6">
-            <div class="join">
-                {% if casos.has_previous %}
-                <a href="?page={{ casos.previous_page_number }}&estado={{ filtro_estado }}" class="join-item btn">«</a>
-                {% endif %}
-                
-                <button class="join-item btn btn-active">Página {{ casos.number }}</button>
-                
-                {% if casos.has_next %}
-                <a href="?page={{ casos.next_page_number }}&estado={{ filtro_estado }}" class="join-item btn">»</a>
-                {% endif %}
-            </div>
+    <!-- Paginación -->
+    {% if casos.has_other_pages %}
+    <div class="flex justify-center mt-6">
+        <div class="join">
+            {% if casos.has_previous %}
+            <a href="?page={{ casos.previous_page_number }}&estado={{ filtro_estado }}" class="join-item btn">«</a>
+            {% endif %}
+            <button class="join-item btn btn-active">Página {{ casos.number }}</button>
+            {% if casos.has_next %}
+            <a href="?page={{ casos.next_page_number }}&estado={{ filtro_estado }}" class="join-item btn">»</a>
+            {% endif %}
         </div>
-        {% endif %}
+    </div>
+    {% endif %}
 
     {% else %}
-        <div class="alert alert-info">
-            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" class="stroke-current shrink-0 w-6 h-6">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span>No hay casos especiales {{ filtro_estado }} en este momento.</span>
-        </div>
+    <div class="alert">
+        <i class="fas fa-info-circle text-base-content/40"></i>
+        <span class="text-base-content/50">No hay casos especiales con estado "{{ filtro_estado }}" en este momento.</span>
+    </div>
     {% endif %}
+
 </div>
 {% endblock %}
