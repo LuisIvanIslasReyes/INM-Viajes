@@ -34,7 +34,7 @@ async function generarReporte() {
     document.getElementById('tabla-preview').classList.add('hidden');
     document.getElementById('btn-pdf').classList.add('hidden');
 
-    const url = `${window.URL_PREFIX}${window.INADMITIDOS_DATA_URL}?fecha_inicio=${inicio}&fecha_fin=${fin}`;
+    const url = `${window.INADMITIDOS_DATA_URL}?fecha_inicio=${inicio}&fecha_fin=${fin}`;
 
     try {
         const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
@@ -164,7 +164,7 @@ function descargarPDF() {
     const inicio = document.getElementById('fecha_inicio').value;
     const fin = document.getElementById('fecha_fin').value;
     if (!inicio || !fin) return;
-    const url = `${window.URL_PREFIX}${window.INADMITIDOS_PDF_URL}?fecha_inicio=${inicio}&fecha_fin=${fin}`;
+    const url = `${window.INADMITIDOS_PDF_URL}?fecha_inicio=${inicio}&fecha_fin=${fin}`;
     window.open(url, '_blank');
 }
 

@@ -78,11 +78,10 @@
 
 {% block extra_js %}
 <script>
-    window.URL_PREFIX = '{{ request.META.SCRIPT_NAME|default:"" }}';
     window.INADMITIDOS_DATA_URL = '{% url "inadmitidos_data" %}';
     window.INADMITIDOS_PDF_URL = '{% url "generar_inadmitidos_pdf" %}';
 </script>
-<script src="{% static 'js/inadmitidos_report.js' %}?v=2"></script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=3"></script>
 {% endblock %}
 
 {% block content %}
