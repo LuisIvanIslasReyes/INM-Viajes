@@ -15,6 +15,7 @@ from .casos_especiales import (
     resolver_caso_eliminar
 )
 from .admin import batch_list, delete_batch, create_user
+from .menores import crear_menor
 
 __all__ = [
     # Upload
@@ -48,4 +49,7 @@ __all__ = [
     'batch_list',
     'delete_batch',
     'create_user',
+
+    # Menores
+    'crear_menor',
 ]

@@ -96,7 +96,14 @@
                     <path d="M32 32C32 14.3 46.3 0 64 0H320c17.7 0 32 14.3 32 32s-14.3 32-32 32H290.5l11.4 148.2c36.7 19.9 65.7 53.2 79.5 94.7l1 3c3.3 9.8 1.6 20.5-4.4 28.8s-15.7 13.3-26 13.3H32c-10.3 0-19.9-5-26-13.3s-7.7-19.1-4.4-28.8l1-3c13.8-41.5 42.8-74.8 79.5-94.7L93.5 64H64C46.3 64 32 49.7 32 32zM160 384h64v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V384z"/>
                 </svg>
             </a>
-            
+
+            <!-- Capturar Menor -->
+            <button type="button" onclick="abrirModalMenor()" class="btn btn-accent btn-circle btn-lg" title="Capturar Menor de Edad">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="currentColor" viewBox="0 0 320 512">
+                    <path d="M96 64a64 64 0 1 1 128 0A64 64 0 1 1 96 64zm48 320v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V288.9l-9.6 16c-9.1 15.1-28.8 20-43.9 10.9s-20-28.8-10.9-43.9l58.3-97c17.4-28.9 48.6-46.6 82.3-46.6h13.7c33.7 0 64.9 17.7 82.3 46.6l58.3 97c9.1 15.1 4.2 34.8-10.9 43.9s-34.8 4.2-43.9-10.9l-9.6-16V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V384H144z"/>
+                </svg>
+            </button>
+
             <!-- Subir Excel -->
             <a href="{% url 'upload_excel' %}" class="btn btn-success btn-lg gap-2">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -589,6 +596,75 @@
     <form method="dialog" class="modal-backdrop">
         <button>close</button>
     </form>
+</dialog>
+
+<!-- Modal Captura de Menor -->
+<dialog id="modalCapturaMenor" class="modal">
+    <div class="modal-box max-w-lg">
+        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-accent" fill="currentColor" viewBox="0 0 320 512">
+                <path d="M96 64a64 64 0 1 1 128 0A64 64 0 1 1 96 64zm48 320v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V288.9l-9.6 16c-9.1 15.1-28.8 20-43.9 10.9s-20-28.8-10.9-43.9l58.3-97c17.4-28.9 48.6-46.6 82.3-46.6h13.7c33.7 0 64.9 17.7 82.3 46.6l58.3 97c9.1 15.1 4.2 34.8-10.9 43.9s-34.8 4.2-43.9-10.9l-9.6-16V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V384H144z"/>
+            </svg>
+            Capturar Menor de Edad
+        </h3>
+
+        <form method="post" action="{% url 'crear_menor' %}" class="space-y-3">
+            {% csrf_token %}
+
+            <div class="form-control">
+                <label class="label"><span class="label-text font-semibold">Nombre completo *</span></label>
+                <input type="text" name="nombre" required class="input input-bordered w-full" placeholder="Ej. Juan Pérez">
+            </div>
+
+            <div class="form-control">
+                <label class="label"><span class="label-text font-semibold">Número de documento</span></label>
+                <input type="text" name="numero_documento" class="input input-bordered w-full" placeholder="Opcional">
+            </div>
+
+            <div class="form-control">
+                <label class="label"><span class="label-text font-semibold">Género *</span></label>
+                <div class="join w-full">
+                    <input type="radio" name="genero" value="Hombre" class="join-item btn flex-1" aria-label="Hombre" required>
+                    <input type="radio" name="genero" value="Mujer"  class="join-item btn flex-1" aria-label="Mujer">
+                    <input type="radio" name="genero" value="Otro"   class="join-item btn flex-1" aria-label="Otro">
+                </div>
+            </div>
+
+            <div class="form-control">
+                <label class="label">
+                    <span class="label-text font-semibold">Nacionalidad *</span>
+                    <span class="label-text-alt text-xs text-base-content/60">Escribe para buscar</span>
+                </label>
+                <input type="text" name="nacionalidad" list="paises-list" required
+                       class="input input-bordered w-full" placeholder="Ej. CHINA, MÉXICO, ESPAÑA..."
+                       autocomplete="off">
+                <datalist id="paises-list">
+                    {% for p in paises %}
+                    <option value="{{ p.nombre }}">{{ p.nacionalidad }} ({{ p.codigo }})</option>
+                    {% endfor %}
+                </datalist>
+            </div>
+
+            <div class="form-control">
+                <label class="label"><span class="label-text font-semibold">Fecha de vuelo *</span></label>
+                <input type="date" name="fecha_vuelo" id="menorFechaVuelo" required class="input input-bordered w-full">
+            </div>
+
+            <div class="form-control">
+                <label class="label"><span class="label-text font-semibold">Tipo de vuelo *</span></label>
+                <div class="join w-full">
+                    <input type="radio" name="tipo" value="Local"    class="join-item btn flex-1" aria-label="Local (PEK-TIJ)" required>
+                    <input type="radio" name="tipo" value="Transito" class="join-item btn flex-1" aria-label="Tránsito (PEK-MEX)">
+                </div>
+            </div>
+
+            <div class="modal-action">
+                <button type="button" onclick="document.getElementById('modalCapturaMenor').close()" class="btn btn-ghost">Cancelar</button>
+                <button type="submit" class="btn btn-accent">Guardar Menor</button>
+            </div>
+        </form>
+    </div>
+    <form method="dialog" class="modal-backdrop"><button>close</button></form>
 </dialog>
 {% endblock %}
 

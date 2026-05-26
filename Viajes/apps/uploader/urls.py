@@ -24,6 +24,9 @@ urlpatterns = [
     path('inadmitidos-data/', views.inadmitidos_data, name='inadmitidos_data'),
     path('inadmitidos-pdf/', views.generar_inadmitidos_pdf, name='generar_inadmitidos_pdf'),
     
+    # Menores (captura manual)
+    path('menores/crear/', views.crear_menor, name='crear_menor'),
+
     # Casos Especiales
     path('casos_especiales/', views.casos_especiales_list, name='casos_especiales_list'),
     path('casos_especiales/aceptar/<int:caso_id>/', views.resolver_caso_aceptar, name='resolver_caso_aceptar'),

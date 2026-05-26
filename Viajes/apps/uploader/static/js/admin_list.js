@@ -144,6 +144,20 @@ function closeEditModal() {
     }
 }
 
+// Abrir modal de captura de menor; precarga fecha de hoy si está vacía
+function abrirModalMenor() {
+    const modal = document.getElementById('modalCapturaMenor');
+    const fechaInput = document.getElementById('menorFechaVuelo');
+    if (fechaInput && !fechaInput.value) {
+        const hoy = new Date();
+        const yyyy = hoy.getFullYear();
+        const mm = String(hoy.getMonth() + 1).padStart(2, '0');
+        const dd = String(hoy.getDate()).padStart(2, '0');
+        fechaInput.value = `${yyyy}-${mm}-${dd}`;
+    }
+    modal.showModal();
+}
+
 // Router de modal desde botón Acciones:
 //   rechazado=true  -> modal foto+comentario
 //   en otro caso    -> modal de comentario simple

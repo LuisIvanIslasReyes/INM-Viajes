@@ -14,6 +14,7 @@ import logging
 from decouple import config
 
 from ..models import Registro, UploadBatch, Notificacion, CasoEspecial
+from ..utils.paises import get_paises
 
 MESES_ES = {
     1: 'ene', 2: 'feb', 3: 'mar', 4: 'abr', 5: 'may', 6: 'jun',
@@ -180,8 +181,9 @@ def admin_list(request):
         'casos_pendientes': casos_pendientes,
         'casos_urgentes': casos_urgentes,
         'is_production': is_production,
+        'paises': get_paises(),
     }
-    
+
     return render(request, 'uploader/admin_list.html', context)
 
 

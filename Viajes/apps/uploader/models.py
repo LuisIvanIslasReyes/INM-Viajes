@@ -12,7 +12,7 @@ class UploadBatch(models.Model):
         ('PEK-MEX', 'Pekín - México'),
     ]
     
-    archivo = models.FileField(upload_to='uploads/')
+    archivo = models.FileField(upload_to='uploads/', blank=True, null=True)
     usuario = models.ForeignKey(User, on_delete=models.CASCADE)
     fecha_carga = models.DateTimeField(auto_now_add=True)
     
@@ -69,6 +69,7 @@ class Registro(models.Model):
     rechazado = models.BooleanField(default=False, verbose_name='Rechazo (R)')
     internacion = models.BooleanField(default=False, verbose_name='Punto de Internación (PI)')
     comentario = models.TextField(blank=True, null=True, verbose_name='Comentario')
+    es_menor = models.BooleanField(default=False, verbose_name='Es Menor de Edad')
     
     # Timestamps
     fecha_creacion = models.DateTimeField(auto_now_add=True)
