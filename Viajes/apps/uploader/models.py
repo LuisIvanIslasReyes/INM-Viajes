@@ -1,3 +1,5 @@
+import os
+
 from django.db import models
 from django.contrib.auth.models import User
 from django.utils import timezone
@@ -29,6 +31,10 @@ class UploadBatch(models.Model):
     
     def __str__(self):
         return f"Carga {self.id} - {self.usuario.username} - {self.fecha_carga.strftime('%Y-%m-%d %H:%M')}"
+
+    @property
+    def nombre_archivo(self):
+        return os.path.basename(self.archivo.name) if self.archivo else ''
 
 
 class Registro(models.Model):

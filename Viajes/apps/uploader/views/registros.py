@@ -9,7 +9,7 @@ from django.db import models
 from django.db.models import Count
 from django.http import JsonResponse
 from django.urls import reverse
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, time, timezone as dt_timezone
 import logging
 from decouple import config
 
@@ -200,47 +200,23 @@ def generar_pin(request, fecha):
         messages.error(request, '❌ Fecha inválida.')
         return redirect('date_range_report')
     
-    # Obtener todos los registros de ese día (buscar por rango de fecha completo)
-    fecha_inicio = datetime.combine(fecha_obj, datetime.min.time())
-    fecha_fin = datetime.combine(fecha_obj, datetime.max.time())
-    
+    # Filtrar por rango de datetime en UTC para coincidir con cómo
+    # date_range_report agrupa los registros (usa .date() sobre datetime UTC).
+    # Evita el lookup __date que con USE_TZ=True convierte a la zona local
+    # y desplaza la fecha de los registros antiguos (naive guardados como UTC).
+    inicio_utc = datetime.combine(fecha_obj, time.min, tzinfo=dt_timezone.utc)
+    fin_utc = inicio_utc + timedelta(days=1)
     registros_del_dia = Registro.objects.filter(
-        vuelo_fecha__gte=fecha_inicio,
-        vuelo_fecha__lte=fecha_fin
+        vuelo_fecha__gte=inicio_utc,
+        vuelo_fecha__lt=fin_utc,
     )
-    
+
     if not registros_del_dia.exists():
         logger.warning(f'No se encontraron registros para la fecha: {fecha_obj}')
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'error': f'No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}'}, status=404)
         messages.error(request, f'❌ No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}')
         return redirect('date_range_report')
-    
-    # Calcular estadísticas
-    total_pasajeros = registros_del_dia.count()
-    
-    # Registros con Segunda Revisión
-    registros_sr = registros_del_dia.filter(segunda_revision=True)
-    total_sr = registros_sr.count()
-    
-    # De los SR, cuántos fueron Internación
-    registros_internacion = registros_sr.filter(internacion=True)
-    total_internaciones = registros_internacion.count()
-    
-    # De los SR, cuántos fueron Rechazo
-    registros_rechazo = registros_sr.filter(rechazado=True)
-    total_rechazos = registros_rechazo.count()
-    
-    # Calcular conexiones (pasajeros que van a MEX y NO fueron rechazados)
-    # Detectar MEX por aeropuerto_llegada
-    registros_mex = registros_del_dia.filter(
-        models.Q(aeropuerto_llegada__icontains='MEX') |
-        models.Q(aeropuerto_llegada__icontains='MEXICO') |
-        models.Q(aeropuerto_llegada__icontains='MÉXICO')
-    )
-    # Conexiones = Total PEK-MEX - Rechazados PEK-MEX
-    rechazados_mex = registros_mex.filter(rechazado=True).count()
-    total_conexiones = registros_mex.count() - rechazados_mex
 
     # Desglose por destino para el PIN Binacional.
     # Se combinan varias señales porque batch.tipo_vuelo puede estar en
@@ -262,12 +238,34 @@ def generar_pin(request, fecha):
         models.Q(aeropuerto_llegada__icontains='MÉXICO') |
         models.Q(aeropuerto_llegada__icontains='墨西哥')
     )
-    total_pekin_tijuana = registros_del_dia.filter(filtro_tij).distinct().count()
-    total_pekin_mexico = registros_del_dia.filter(filtro_mex).distinct().count()
+
+    # El PIN reporta sólo arribos (HU7925 PEK→TIJ / PEK→MEX). Si el día
+    # incluye cargas de regreso (HU7926 MEX→PEK) sus pasajeros no deben
+    # entrar a ningún conteo, porque inflan el total y no pertenecen al
+    # desglose local/tránsito.
+    registros_arribos = registros_del_dia.filter(filtro_tij | filtro_mex).distinct()
+
+    total_pasajeros = registros_arribos.count()
+
+    registros_sr = registros_arribos.filter(segunda_revision=True)
+    total_sr = registros_sr.count()
+
+    registros_internacion = registros_sr.filter(internacion=True)
+    total_internaciones = registros_internacion.count()
+
+    registros_rechazo = registros_sr.filter(rechazado=True)
+    total_rechazos = registros_rechazo.count()
+
+    # Conexiones = pasajeros PEK→MEX (tránsito) que no fueron rechazados
+    registros_mex = registros_arribos.filter(filtro_mex)
+    rechazados_mex = registros_mex.filter(rechazado=True).count()
+    total_conexiones = registros_mex.count() - rechazados_mex
+
+    total_pekin_tijuana = registros_arribos.filter(filtro_tij).count()
+    total_pekin_mexico = registros_arribos.filter(filtro_mex).count()
     
-    # Obtener número de vuelo del primer registro
-    primer_registro = registros_del_dia.first()
-    vuelo_numero = primer_registro.vuelo_numero if primer_registro else 'HU7925'
+    # El PIN siempre reporta el vuelo HU7925 (Pekín → Tijuana), independientemente del Excel.
+    vuelo_numero = 'HU7925'
     
     # Datos completos de personas rechazadas
     rechazados_detalle = []
@@ -363,14 +361,17 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         dates.append(f"{dia.day}.{MESES_ES[dia.month]}.{dia.strftime('%y')}")
 
         registros_dia = Registro.objects.filter(vuelo_fecha=dia).select_related('batch')
+        # Sólo arribos: excluir vuelos de regreso (HU7926 MEX→PEK) que pueden
+        # estar cargados el mismo día y que inflarían el total.
+        registros_arribos = registros_dia.filter(filtro_tij | filtro_mex).distinct()
 
-        inadmitidos = registros_dia.filter(segunda_revision=True, rechazado=True)
+        inadmitidos = registros_arribos.filter(segunda_revision=True, rechazado=True)
         totals_inadmitidos.append(inadmitidos.count())
-        totals_internaciones.append(registros_dia.filter(segunda_revision=True, internacion=True).count())
-        totals_sr.append(registros_dia.filter(segunda_revision=True).count())
-        local.append(registros_dia.filter(filtro_tij).distinct().count())
-        transito.append(registros_dia.filter(filtro_mex).distinct().count())
-        total_pasajeros_list.append(registros_dia.count())
+        totals_internaciones.append(registros_arribos.filter(segunda_revision=True, internacion=True).count())
+        totals_sr.append(registros_arribos.filter(segunda_revision=True).count())
+        local.append(registros_arribos.filter(filtro_tij).distinct().count())
+        transito.append(registros_arribos.filter(filtro_mex).distinct().count())
+        total_pasajeros_list.append(registros_arribos.count())
 
         nats_hoy = set()
         for item in inadmitidos.values('pais_emision').annotate(count=Count('id')):

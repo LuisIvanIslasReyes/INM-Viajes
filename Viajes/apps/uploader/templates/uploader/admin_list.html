@@ -83,6 +83,13 @@
                 {% endif %}
             </a>
             
+            <!-- Reporte de Inadmitidos -->
+            <a href="{% url 'inadmitidos_page' %}"class="btn btn-circle btn-lg text-white" style="background-color:#700606; border-color:#700606;" title="Reporte de Inadmitidos">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+            </a>
+
             <!-- Búsqueda por Fecha -->
             <a href="{% url 'date_range_report' %}" class="btn btn-info btn-circle btn-lg" title="Búsqueda por Fecha">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="currentColor" viewBox="0 0 384 512">
@@ -141,7 +148,7 @@
                         <option value="">Todos los lotes</option>
                         {% for batch in batches %}
                         <option value="{{ batch.id }}" {% if request.GET.batch == batch.id|stringformat:"s" %}selected{% endif %}>
-                            Lote #{{ batch.id }} - {{ batch.usuario.username }} ({{ batch.fecha_carga|date:"d/m/Y H:i" }})
+                            Lote #{{ batch.id }} - {{ batch.usuario.username }} ({{ batch.nombre_archivo|default:"sin archivo" }})
                         </option>
                         {% endfor %}
                     </select>
