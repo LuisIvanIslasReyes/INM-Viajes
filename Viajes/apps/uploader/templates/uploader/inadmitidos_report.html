@@ -83,18 +83,30 @@
 
     /* Total Inadmitidos */
     .inadmitidos-preview-table .row-total-inad td {
-        background-color: #700606;
-        color: #fff;
-        font-weight: bold;
-    }
-    /* Subtotales (internaciones / segundas revisiones) */
-    .inadmitidos-preview-table .row-subtotal td {
-        background-color: #FED8D8;
+        background-color: #FED9D8;
         color: #700606;
         font-weight: bold;
     }
-    .inadmitidos-preview-table .row-subtotal:hover td {
+    .inadmitidos-preview-table .row-total-inad:hover td {
         background-color: #fcc6c6 !important;
+    }
+    /* Subtotal Internaciones */
+    .inadmitidos-preview-table .row-subtotal-intern td {
+        background-color: #E2EFDA;
+        color: #375623;
+        font-weight: bold;
+    }
+    .inadmitidos-preview-table .row-subtotal-intern:hover td {
+        background-color: #d2e7c4 !important;
+    }
+    /* Subtotal Segundas Revisiones */
+    .inadmitidos-preview-table .row-subtotal-sr td {
+        background-color: #7A0101;
+        color: #fff;
+        font-weight: bold;
+    }
+    .inadmitidos-preview-table .row-subtotal-sr:hover td {
+        background-color: #5c0101 !important;
     }
     /* Filas pasajeros (local / tránsito) */
     .inadmitidos-preview-table .row-pax td {
@@ -133,7 +145,7 @@
     window.INADMITIDOS_DATA_URL = '{% url "inadmitidos_data" %}';
     window.INADMITIDOS_PDF_URL = '{% url "generar_inadmitidos_pdf" %}';
 </script>
-<script src="{% static 'js/inadmitidos_report.js' %}?v=9"></script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=10"></script>
 {% endblock %}
 
 {% block content %}

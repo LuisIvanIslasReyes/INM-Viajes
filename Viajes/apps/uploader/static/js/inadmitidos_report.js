@@ -118,12 +118,12 @@ function renderTabla(data) {
     html += `<td>${sumar(data.totals_inadmitidos)}</td></tr>`;
 
     // Total Internaciones
-    html += `<tr class="row-subtotal"><td class="col-label">Total Internaciones:</td>`;
+    html += `<tr class="row-subtotal row-subtotal-intern"><td class="col-label">Total Internaciones:</td>`;
     for (const v of data.totals_internaciones) html += `<td>${v}</td>`;
     html += `<td>${sumar(data.totals_internaciones)}</td></tr>`;
 
     // Total SR
-    html += `<tr class="row-subtotal"><td class="col-label">Total Segundas Revisiones:</td>`;
+    html += `<tr class="row-subtotal row-subtotal-sr"><td class="col-label">Total Segundas Revisiones:</td>`;
     for (const v of data.totals_sr) html += `<td>${v}</td>`;
     html += `<td>${sumar(data.totals_sr)}</td></tr>`;
 
