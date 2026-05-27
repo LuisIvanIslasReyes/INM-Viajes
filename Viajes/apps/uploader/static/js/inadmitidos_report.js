@@ -147,8 +147,8 @@ function renderTabla(data) {
     const motivosSection = document.getElementById('motivos-section');
     const motivosLista = document.getElementById('motivos-lista');
     if (data.motivos_rechazo && data.motivos_rechazo.length > 0) {
-        motivosLista.innerHTML = data.motivos_rechazo.map((m, i) =>
-            `<p class="mb-1"><strong>Rechazo ${i + 1}</strong> [${m.fecha}] ${m.nombre}: ${m.comentario}</p>`
+        motivosLista.innerHTML = data.motivos_rechazo.map((m) =>
+            `<p class="mb-1"><strong>Extranjero de ${m.nacionalidad}</strong> [${m.fecha}] ${m.nombre}, ${m.numero_documento}: ${m.comentario}</p>`
         ).join('');
         motivosSection.classList.remove('hidden');
     } else {

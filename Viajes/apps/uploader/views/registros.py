@@ -362,7 +362,12 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         raw_dates.append(dia.strftime('%Y-%m-%d'))
         dates.append(f"{dia.day}.{MESES_ES[dia.month]}.{dia.strftime('%y')}")
 
-        registros_dia = Registro.objects.filter(vuelo_fecha=dia).select_related('batch')
+        inicio_utc = datetime.combine(dia, time.min, tzinfo=dt_timezone.utc)
+        fin_utc = inicio_utc + timedelta(days=1)
+        registros_dia = Registro.objects.filter(
+            vuelo_fecha__gte=inicio_utc,
+            vuelo_fecha__lt=fin_utc,
+        ).select_related('batch')
         # Sólo arribos: excluir vuelos de regreso (HU7926 MEX→PEK) que pueden
         # estar cargados el mismo día y que inflarían el total.
         registros_arribos = registros_dia.filter(filtro_tij | filtro_mex).distinct()
@@ -376,7 +381,13 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         total_pasajeros_list.append(registros_arribos.count())
 
         nats_hoy = set()
-        for item in inadmitidos.values('pais_emision').annotate(count=Count('id')):
+        nat_counts = (
+            inadmitidos
+            .order_by()
+            .values('pais_emision')
+            .annotate(count=Count('id', distinct=True))
+        )
+        for item in nat_counts:
             nat = item['pais_emision'] or 'Sin especificar'
             nats_hoy.add(nat)
             if nat not in nationalities_by_day:
@@ -387,13 +398,17 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
             if nat not in nats_hoy:
                 nationalities_by_day[nat].append(0)
 
-        for registro in inadmitidos:
-            if registro.comentario:
-                motivos_rechazo.append({
-                    'nombre': registro.nombre_pasajero or 'Sin nombre',
-                    'fecha': dates[i],
-                    'comentario': registro.comentario,
-                })
+        if dia == fecha_fin:
+            for registro in inadmitidos:
+                comentario = (registro.comentario or '').strip()
+                if comentario and comentario.lower() != 'none':
+                    motivos_rechazo.append({
+                        'nombre': registro.nombre_pasajero or 'Sin nombre',
+                        'nacionalidad': registro.pais_emision or 'Sin especificar',
+                        'numero_documento': registro.numero_documento or 'Sin documento',
+                        'fecha': dates[i],
+                        'comentario': comentario,
+                    })
 
     return {
         'vuelo': 'HU7925',
@@ -633,12 +648,12 @@ def generar_inadmitidos_pdf(request):
         elements.append(Spacer(1, 10))
         estilo_normal = ParagraphStyle('mn', fontName='Helvetica', fontSize=8, leading=12)
         motivos_rows = []
-        for i, m in enumerate(data['motivos_rechazo']):
-            texto = f"<b>Rechazo {i+1}</b> [{m['fecha']}] {m['nombre']}: {m['comentario']}"
+        for m in data['motivos_rechazo']:
+            texto = f"<b>Extranjero de {m['nacionalidad']}</b> [{m['fecha']}] {m['nombre']}, {m['numero_documento']}: {m['comentario']}"
             motivos_rows.append([Paragraph(texto, estilo_normal)])
 
         encabezado_style = ParagraphStyle('mh', fontName='Helvetica-Bold', fontSize=8, leading=12)
-        motivos_rows.insert(0, [Paragraph('Motivos de rechazo:', encabezado_style)])
+        motivos_rows.insert(0, [Paragraph('Motivos de rechazo del día:', encabezado_style)])
 
         t_motivos = Table(motivos_rows, colWidths=[page_w])
         t_motivos.setStyle(TableStyle([
