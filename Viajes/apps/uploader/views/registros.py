@@ -360,7 +360,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
 
     for i, dia in enumerate(dias):
         raw_dates.append(dia.strftime('%Y-%m-%d'))
-        dates.append(f"{dia.day}.{MESES_ES[dia.month]}.{dia.strftime('%y')}")
+        dates.append(f"{dia.day}-{MESES_ES[dia.month]}-{dia.strftime('%y')}")
 
         inicio_utc = datetime.combine(dia, time.min, tzinfo=dt_timezone.utc)
         fin_utc = inicio_utc + timedelta(days=1)
