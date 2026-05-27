@@ -58,6 +58,8 @@ function renderTabla(data) {
     const tabla = document.getElementById('tabla-inadmitidos');
     const n = data.dates.length;
     const nats = Object.keys(data.nationalities);
+    const sumar = (arr) => arr.reduce((acc, v) => acc + (Number(v) || 0), 0);
+    const totalCols = n + 2; // etiqueta + n fechas + columna Total
 
     let html = '<tbody>';
 
@@ -66,19 +68,20 @@ function renderTabla(data) {
         <td class="col-label">Vuelo:</td>
         <td colspan="${Math.max(Math.floor(n / 2), 1)}">${data.vuelo}</td>
         <td>Origen:</td>
-        <td colspan="${Math.max(n - Math.floor(n / 2) - 1, 1)}">${data.origen}</td>
+        <td colspan="${Math.max(n - Math.floor(n / 2), 1)}">${data.origen}</td>
     </tr>`;
 
     // INADMITIDOS
-    html += `<tr class="row-title"><td colspan="${n + 1}">INADMITIDOS</td></tr>`;
+    html += `<tr class="row-title"><td colspan="${totalCols}">INADMITIDOS</td></tr>`;
 
-    // Días de la semana (vacío + nombres)
+    // Días de la semana (vacío + nombres + Total)
     const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
     html += `<tr class="row-dias"><td class="col-label"></td>`;
     for (const rd of data.raw_dates) {
         const d = new Date(rd + 'T00:00:00');
         html += `<td>${dias[d.getDay()]}</td>`;
     }
+    html += `<td>Total</td>`;
     html += '</tr>';
 
     // Nacionalidad + fechas
@@ -86,54 +89,61 @@ function renderTabla(data) {
     for (const fecha of data.dates) {
         html += `<td>${fecha}</td>`;
     }
+    html += `<td></td>`;
     html += '</tr>';
 
-    // Filas de nacionalidades (alternadas)
+    // Filas de nacionalidades (alternadas) — suma horizontal por nacionalidad
     nats.forEach((nat, idx) => {
         const altClass = idx % 2 === 1 ? ' row-alt' : '';
         html += `<tr class="row-nac${altClass}"><td class="col-label">${nat}</td>`;
-        for (let d = 0; d < n; d++) html += `<td>${data.nationalities[nat][d] ?? 0}</td>`;
+        let totalNat = 0;
+        for (let d = 0; d < n; d++) {
+            const v = data.nationalities[nat][d] ?? 0;
+            totalNat += Number(v) || 0;
+            html += `<td>${v}</td>`;
+        }
+        html += `<td><strong>${totalNat}</strong></td>`;
         html += '</tr>';
     });
 
     // 2 filas vacías (separador antes del total)
     const tdSep = `<td></td>`;
     for (let k = 0; k < 2; k++) {
-        html += `<tr class="row-sep">${tdSep.repeat(n + 1)}</tr>`;
+        html += `<tr class="row-sep">${tdSep.repeat(totalCols)}</tr>`;
     }
 
     // Total Inadmitidos
     html += `<tr class="row-total-inad"><td class="col-label">Total Inadmitidos</td>`;
     for (const v of data.totals_inadmitidos) html += `<td>${v}</td>`;
-    html += '</tr>';
+    html += `<td>${sumar(data.totals_inadmitidos)}</td></tr>`;
 
     // Total Internaciones
     html += `<tr class="row-subtotal"><td class="col-label">Total Internaciones:</td>`;
     for (const v of data.totals_internaciones) html += `<td>${v}</td>`;
-    html += '</tr>';
+    html += `<td>${sumar(data.totals_internaciones)}</td></tr>`;
 
     // Total SR
     html += `<tr class="row-subtotal"><td class="col-label">Total Segundas Revisiones:</td>`;
     for (const v of data.totals_sr) html += `<td>${v}</td>`;
-    html += '</tr>';
+    html += `<td>${sumar(data.totals_sr)}</td></tr>`;
 
     // Separador
-    html += `<tr class="row-sep">${tdSep.repeat(n + 1)}</tr>`;
+    html += `<tr class="row-sep">${tdSep.repeat(totalCols)}</tr>`;
 
     // Local
     html += `<tr class="row-pax"><td class="col-label">Local:</td>`;
     for (const v of data.local) html += `<td>${v}</td>`;
-    html += '</tr>';
+    html += `<td>${sumar(data.local)}</td></tr>`;
 
     // Tránsito
     html += `<tr class="row-pax"><td class="col-label">En tránsito:</td>`;
     for (const v of data.transito) html += `<td>${v}</td>`;
-    html += '</tr>';
+    html += `<td>${sumar(data.transito)}</td></tr>`;
 
     // Total pasajeros
     html += `<tr class="row-total-pax"><td class="col-label">Total pasajeros:</td>`;
     for (const v of data.total_pasajeros) html += `<td>${v}</td>`;
-    html += '</tr>';
+    html += `<td>${sumar(data.total_pasajeros)}</td></tr>`;
 
     html += '</tbody>';
     tabla.innerHTML = html;
@@ -163,11 +173,33 @@ function descargarPDF() {
     window.open(url, '_blank');
 }
 
-/* --- Copiar tabla como imagen al portapapeles --- */
+/* --- Captura de nodos como PNG (helper compartido) --- */
 
-async function copiarImagen() {
-    const btn = document.getElementById('btn-copiar-imagen');
-    const nodo = document.getElementById('tabla-capture');
+async function capturarNodo(nodo) {
+    return await html2canvas(nodo, {
+        backgroundColor: '#ffffff',
+        scale: 2,
+        useCORS: true,
+        ignoreElements: (el) => el.classList && el.classList.contains('no-capturar'),
+    });
+}
+
+async function copiarCanvasComoImagen(canvas, nombreDescarga, mensajeExito) {
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
+    if (!blob) throw new Error('No se pudo generar la imagen.');
+
+    if (navigator.clipboard && window.ClipboardItem) {
+        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+        mostrarToast(mensajeExito, 'success');
+    } else {
+        descargarBlob(blob, nombreDescarga);
+        mostrarToast('Tu navegador no soporta copiar imágenes. Se descargó el PNG.', 'warning');
+    }
+}
+
+async function capturarYCopiar(nodoId, btnId, nombreDescarga, mensajeExito) {
+    const btn = document.getElementById(btnId);
+    const nodo = document.getElementById(nodoId);
     if (!nodo) return;
 
     const textoOriginal = btn.innerHTML;
@@ -175,25 +207,86 @@ async function copiarImagen() {
     btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Capturando...';
 
     try {
-        const canvas = await html2canvas(nodo, {
-            backgroundColor: '#ffffff',
-            scale: 2,
-            useCORS: true,
-        });
-
-        const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/png'));
-        if (!blob) throw new Error('No se pudo generar la imagen.');
-
-        if (navigator.clipboard && window.ClipboardItem) {
-            await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-            mostrarToast('Imagen copiada. Pégala en WhatsApp con Ctrl+V.', 'success');
-        } else {
-            descargarBlob(blob, 'inadmitidos.png');
-            mostrarToast('Tu navegador no soporta copiar imágenes. Se descargó el PNG.', 'warning');
-        }
+        const canvas = await capturarNodo(nodo);
+        await copiarCanvasComoImagen(canvas, nombreDescarga, mensajeExito);
     } catch (e) {
         console.error(e);
         mostrarToast('Error al copiar la imagen: ' + (e.message || ''), 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+    }
+}
+
+/* --- Copiar tabla como imagen --- */
+
+function copiarImagen() {
+    return capturarYCopiar(
+        'tabla-capture',
+        'btn-copiar-imagen',
+        'inadmitidos.png',
+        'Tabla copiada. Pégala donde necesites.'
+    );
+}
+
+/* --- Copiar comentarios como imagen --- */
+
+function copiarComentariosImagen() {
+    if (!reporteData || !reporteData.motivos_rechazo || reporteData.motivos_rechazo.length === 0) {
+        mostrarToast('No hay comentarios para copiar.', 'warning');
+        return;
+    }
+    return capturarYCopiar(
+        'motivos-capture',
+        'btn-copiar-comentarios-img',
+        'comentarios.png',
+        'Imagen de comentarios copiada.'
+    );
+}
+
+/* --- Copiar todo: tabla (imagen) + comentarios (texto rich) en un solo Ctrl+V --- */
+
+async function copiarTodo() {
+    const btn = document.getElementById('btn-copiar-todo');
+    const nodoTabla = document.getElementById('tabla-capture');
+    if (!nodoTabla) return;
+
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Capturando...';
+
+    try {
+        const canvas = await capturarNodo(nodoTabla);
+        const imgDataUrl = canvas.toDataURL('image/png');
+
+        const tieneMotivos = reporteData && reporteData.motivos_rechazo && reporteData.motivos_rechazo.length > 0;
+
+        let html = '<div style="font-family:Arial,sans-serif;font-size:11pt;">';
+        html += `<img src="${imgDataUrl}" style="max-width:100%;" alt="Reporte de Inadmitidos"/>`;
+        if (tieneMotivos) {
+            html += '<br/><br/>';
+            const motivosHtml = formatearComentariosHTML(reporteData.motivos_rechazo);
+            html += motivosHtml.replace(/^<div[^>]*>|<\/div>$/g, '');
+        }
+        html += '</div>';
+
+        let plano = 'Reporte de Inadmitidos\n\n';
+        if (tieneMotivos) plano += formatearComentariosPlano(reporteData.motivos_rechazo);
+
+        if (navigator.clipboard && window.ClipboardItem) {
+            const htmlBlob = new Blob([html], { type: 'text/html' });
+            const planoBlob = new Blob([plano], { type: 'text/plain' });
+            await navigator.clipboard.write([new ClipboardItem({
+                'text/html': htmlBlob,
+                'text/plain': planoBlob,
+            })]);
+            mostrarToast('Reporte completo copiado. Pega en Word/Outlook/Gmail.', 'success');
+        } else {
+            mostrarToast('Tu navegador no soporta este formato combinado.', 'warning');
+        }
+    } catch (e) {
+        console.error(e);
+        mostrarToast('Error al copiar todo: ' + (e.message || ''), 'error');
     } finally {
         btn.disabled = false;
         btn.innerHTML = textoOriginal;
@@ -211,7 +304,7 @@ function descargarBlob(blob, nombre) {
     URL.revokeObjectURL(url);
 }
 
-/* --- Copiar comentarios formateados para WhatsApp --- */
+/* --- Copiar comentarios con formato enriquecido (HTML + texto plano) --- */
 
 async function copiarComentarios() {
     if (!reporteData || !reporteData.motivos_rechazo || reporteData.motivos_rechazo.length === 0) {
@@ -219,26 +312,60 @@ async function copiarComentarios() {
         return;
     }
 
-    const texto = formatearComentariosWhatsApp(reporteData.motivos_rechazo);
+    const html = formatearComentariosHTML(reporteData.motivos_rechazo);
+    const plano = formatearComentariosPlano(reporteData.motivos_rechazo);
 
     try {
-        await navigator.clipboard.writeText(texto);
-        mostrarToast('Comentarios copiados. Pégalos en WhatsApp.', 'success');
+        if (navigator.clipboard && window.ClipboardItem) {
+            const htmlBlob = new Blob([html], { type: 'text/html' });
+            const planoBlob = new Blob([plano], { type: 'text/plain' });
+            await navigator.clipboard.write([new ClipboardItem({
+                'text/html': htmlBlob,
+                'text/plain': planoBlob,
+            })]);
+            mostrarToast('Comentarios copiados con formato. Pégalos donde necesites.', 'success');
+        } else {
+            await navigator.clipboard.writeText(plano);
+            mostrarToast('Comentarios copiados (sin formato enriquecido).', 'success');
+        }
     } catch (e) {
         console.error(e);
         mostrarToast('Error al copiar: ' + (e.message || ''), 'error');
     }
 }
 
-function formatearComentariosWhatsApp(motivos) {
-    const lineas = ['*Motivos de rechazo del día*', ''];
+function formatearComentariosHTML(motivos) {
+    let html = '<div style="font-family:Arial,sans-serif;font-size:11pt;">';
+    html += '<p style="margin:0 0 8px 0;"><strong>Motivos de rechazo del día</strong></p>';
     motivos.forEach((m) => {
-        lineas.push(`*${m.nacionalidad}* - ${m.nombre} (${m.numero_documento})`);
-        lineas.push(`_Fecha:_ ${m.fecha}`);
+        html += '<p style="margin:0 0 8px 0;">';
+        html += `<strong>${escapeHTML(m.nacionalidad)}</strong> - ${escapeHTML(m.nombre)} (${escapeHTML(m.numero_documento)})<br/>`;
+        html += `<em>Fecha:</em> ${escapeHTML(m.fecha)}<br/>`;
+        html += `${escapeHTML(m.comentario)}`;
+        html += '</p>';
+    });
+    html += '</div>';
+    return html;
+}
+
+function formatearComentariosPlano(motivos) {
+    const lineas = ['Motivos de rechazo del día', ''];
+    motivos.forEach((m) => {
+        lineas.push(`${m.nacionalidad} - ${m.nombre} (${m.numero_documento})`);
+        lineas.push(`Fecha: ${m.fecha}`);
         lineas.push(m.comentario);
         lineas.push('');
     });
     return lineas.join('\n').trimEnd();
+}
+
+function escapeHTML(s) {
+    return String(s)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
 }
 
 /* --- Helpers UI --- */

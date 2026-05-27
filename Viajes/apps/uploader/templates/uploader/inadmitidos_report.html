@@ -133,7 +133,7 @@
     window.INADMITIDOS_DATA_URL = '{% url "inadmitidos_data" %}';
     window.INADMITIDOS_PDF_URL = '{% url "generar_inadmitidos_pdf" %}';
 </script>
-<script src="{% static 'js/inadmitidos_report.js' %}?v=6"></script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=9"></script>
 {% endblock %}
 
 {% block content %}
@@ -226,10 +226,16 @@
                         <i class="fas fa-eye mr-2"></i>
                         Previsualización
                     </h2>
-                    <button id="btn-copiar-imagen" onclick="copiarImagen()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
-                        <i class="fas fa-image mr-1"></i>
-                        Copiar imagen
-                    </button>
+                    <div class="flex gap-2 flex-wrap">
+                        <button id="btn-copiar-imagen" onclick="copiarImagen()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
+                            <i class="fas fa-image mr-1"></i>
+                            Copiar tabla
+                        </button>
+                        <button id="btn-copiar-todo" onclick="copiarTodo()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
+                            <i class="fas fa-copy mr-1"></i>
+                            Copiar todo
+                        </button>
+                    </div>
                 </div>
                 <div id="tabla-capture" class="inadmitidos-preview-wrapper">
                     <table class="inadmitidos-preview-table" id="tabla-inadmitidos"></table>
@@ -237,13 +243,19 @@
 
                 <!-- Motivos de rechazo -->
                 <div id="motivos-section" class="mt-6 hidden">
-                    <div class="motivos-box">
+                    <div id="motivos-capture" class="motivos-box">
                         <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
                             <h4 class="mb-0"><i class="fas fa-list mr-1"></i> Motivos de rechazo del día:</h4>
-                            <button id="btn-copiar-comentarios" onclick="copiarComentarios()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
-                                <i class="fab fa-whatsapp mr-1"></i>
-                                Copiar comentarios
-                            </button>
+                            <div class="flex gap-2 flex-wrap no-capturar">
+                                <button id="btn-copiar-comentarios" onclick="copiarComentarios()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
+                                    <i class="fas fa-font mr-1"></i>
+                                    Copiar texto
+                                </button>
+                                <button id="btn-copiar-comentarios-img" onclick="copiarComentariosImagen()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
+                                    <i class="fas fa-image mr-1"></i>
+                                    Copiar imagen
+                                </button>
+                            </div>
                         </div>
                         <div id="motivos-lista"></div>
                     </div>
