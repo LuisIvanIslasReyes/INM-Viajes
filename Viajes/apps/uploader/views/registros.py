@@ -20,6 +20,39 @@ MESES_ES = {
     1: 'ene', 2: 'feb', 3: 'mar', 4: 'abr', 5: 'may', 6: 'jun',
     7: 'jul', 8: 'ago', 9: 'sep', 10: 'oct', 11: 'nov', 12: 'dic'
 }
+
+# Mapeo aeropuerto de salida (columna 起飞机场 del Excel) -> (ciudad, país)
+# usado para autocompletar el PIN sin tener que tocar código cuando llega
+# un vuelo nuevo. Para sumar una ruta agregar una entrada aquí.
+ORIGEN_POR_AEROPUERTO = {
+    'PEK': ('Pekín', 'China'),
+    '北京': ('Pekín', 'China'),
+}
+
+
+def _detectar_vuelo_y_origen(registros):
+    """Lee el primer arribo del queryset y devuelve (vuelo, ciudad, país).
+
+    El número de vuelo se toma de UploadBatch (que ya lo extrae del Excel
+    al subir el archivo) con fallback al campo del propio registro.
+    Si el aeropuerto de salida no está en ORIGEN_POR_AEROPUERTO, se usa
+    el código del aeropuerto como ciudad/país de fallback para no romper
+    el texto del PIN.
+    """
+    primer = registros.select_related('batch').first()
+    if primer is None:
+        return '—', '—', '—'
+
+    batch_vuelo = primer.batch.vuelo_numero if primer.batch_id else None
+    vuelo = (batch_vuelo or primer.vuelo_numero or '').strip() or '—'
+
+    aeropuerto = (primer.aeropuerto_salida or '').upper()
+    for clave, (ciudad, pais) in ORIGEN_POR_AEROPUERTO.items():
+        if clave.upper() in aeropuerto:
+            return vuelo, ciudad, pais
+
+    fallback = (primer.aeropuerto_salida or '—').strip() or '—'
+    return vuelo, fallback, fallback
 @login_required
 def update_registro(request, registro_id):
     """Vista para actualizar campos (TODOS pueden editar TODO)"""
@@ -247,8 +280,8 @@ def generar_pin(request, fecha):
         models.Q(aeropuerto_llegada__icontains='墨西哥')
     )
 
-    # El PIN reporta sólo arribos (HU7925 PEK→TIJ / PEK→MEX). Si el día
-    # incluye cargas de regreso (HU7926 MEX→PEK) sus pasajeros no deben
+    # El PIN reporta sólo arribos a TIJ/MEX. Si el día incluye cargas de
+    # regreso (vuelos de salida hacia el origen) sus pasajeros no deben
     # entrar a ningún conteo, porque inflan el total y no pertenecen al
     # desglose local/tránsito.
     registros_arribos = registros_del_dia.filter(filtro_tij | filtro_mex).distinct()
@@ -272,8 +305,10 @@ def generar_pin(request, fecha):
     total_pekin_tijuana = registros_arribos.filter(filtro_tij).count()
     total_pekin_mexico = registros_arribos.filter(filtro_mex).count()
     
-    # El PIN siempre reporta el vuelo HU7925 (Pekín → Tijuana), independientemente del Excel.
-    vuelo_numero = 'HU7925'
+    # Vuelo y origen se autodetectan del primer arribo del día (lo que el
+    # parser guardó al subir el Excel). Permite soportar rutas nuevas sin
+    # tocar este código — basta con extender ORIGEN_POR_AEROPUERTO.
+    vuelo_numero, origen_ciudad, origen_pais = _detectar_vuelo_y_origen(registros_arribos)
     
     # Datos completos de personas rechazadas
     rechazados_detalle = []
@@ -299,6 +334,8 @@ def generar_pin(request, fecha):
             return JsonResponse({
                 'fecha': fecha_obj.strftime('%Y-%m-%d'),
                 'vuelo_numero': vuelo_numero,
+                'origen_ciudad': origen_ciudad,
+                'origen_pais': origen_pais,
                 'total_pasajeros': total_pasajeros,
                 'total_pekin_tijuana': total_pekin_tijuana,
                 'total_pekin_mexico': total_pekin_mexico,
@@ -316,6 +353,8 @@ def generar_pin(request, fecha):
     context = {
         'fecha': fecha_obj,
         'vuelo_numero': vuelo_numero,
+        'origen_ciudad': origen_ciudad,
+        'origen_pais': origen_pais,
         'total_pasajeros': total_pasajeros,
         'total_sr': total_sr,
         'total_internaciones': total_internaciones,
@@ -431,9 +470,18 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
                         'comentario': comentario,
                     })
 
+    # Autodetectar vuelo y origen del rango completo (primer arribo encontrado).
+    inicio_rango_utc = datetime.combine(fecha_inicio, time.min, tzinfo=dt_timezone.utc)
+    fin_rango_utc = datetime.combine(fecha_fin + timedelta(days=1), time.min, tzinfo=dt_timezone.utc)
+    arribos_rango = Registro.objects.filter(
+        vuelo_fecha__gte=inicio_rango_utc,
+        vuelo_fecha__lt=fin_rango_utc,
+    ).filter(filtro_tij | filtro_mex).distinct()
+    vuelo_detectado, _ciudad_detectada, pais_detectado = _detectar_vuelo_y_origen(arribos_rango)
+
     return {
-        'vuelo': 'HU7925',
-        'origen': 'China',
+        'vuelo': vuelo_detectado,
+        'origen': pais_detectado,
         'dates': dates,
         'raw_dates': raw_dates,
         'nationalities': nationalities_by_day,
@@ -735,7 +783,7 @@ def generar_inadmitidos_pdf(request):
         ('FONTNAME', (0, r_total_dia), (-1, r_total_dia), 'Helvetica-Bold'),
     ]
 
-    # Span "China" en encabezado si hay columnas suficientes
+    # Span del origen en el encabezado si hay columnas suficientes
     if n >= 3:
         cmd.append(('SPAN', (3, 0), (-1, 0)))
 
@@ -778,7 +826,7 @@ def generar_inadmitidos_pdf(request):
     pdf_bytes = buffer.getvalue()
     buffer.close()
 
-    nombre = f"Inadmitidos_HU7925_{fecha_inicio_str}_{fecha_fin_str}.pdf"
+    nombre = f"Inadmitidos_{data['vuelo']}_{fecha_inicio_str}_{fecha_fin_str}.pdf"
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{nombre}"'
     return response

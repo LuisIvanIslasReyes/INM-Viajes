@@ -143,7 +143,7 @@ async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalIn
 
 <strong>${fechaTexto.toUpperCase()}</strong>
 
-Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo <strong>${data.vuelo_numero}</strong> proveniente de Pekín con <strong>${data.total_pasajeros} pasajeros</strong>.
+Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo <strong>${data.vuelo_numero}</strong> proveniente de ${data.origen_ciudad} con <strong>${data.total_pasajeros} pasajeros</strong>.
 
 `;
 
@@ -262,36 +262,27 @@ async function abrirModalPinBinacional(fecha, fechaTexto) {
 
         pinBinacionalData = { fechaTexto, ...data };
 
-        let pinTexto = `<strong>INSTITUTO NACIONAL DE MIGRACIÓN</strong>
-<strong>Oficina de Representación Baja California</strong>
+        const srStr = String(data.total_sr).padStart(2, '0');
+        const rechStr = String(data.total_rechazos).padStart(2, '0');
+        const intStr = String(data.total_internaciones).padStart(2, '0');
+
+        const pinTexto = `<strong>INSTITUTO NACIONAL DE MIGRACIÓN</strong>
+Oficina de Representación Baja California
+Aeropuerto Internacional de Tijuana
 
 <strong>${fechaTexto.toUpperCase()}</strong>
 
-Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo <strong>${data.vuelo_numero}</strong> proveniente de Pekín con:
+Vuelo <strong>${data.vuelo_numero}</strong> proveniente de <strong>${data.origen_pais}</strong>:
 
-<strong>Total: Número de Pasajeros: ${data.total_pasajeros}</strong>
-Pekín – México (tránsito): <strong>${data.total_pekin_mexico}</strong> Pasajeros.
-Pekín - Tijuana (local): <strong>${data.total_pekin_tijuana}</strong> Pasajeros.
+<strong>Total pasajeros: ${data.total_pasajeros}</strong>
+${data.origen_pais} – México (tránsito): <strong>${data.total_pekin_mexico}</strong> pasajeros
+${data.origen_pais} - Tijuana (local): <strong>${data.total_pekin_tijuana}</strong> pasajeros
 
-`;
+<strong>Segundas Revisiones: ${srStr}</strong>
+Rechazos: <strong>${rechStr}</strong>
+Internaciones: <strong>${intStr}</strong>`;
 
-        pinTexto += `En dicho proceso migratorio se llevó a cabo <strong>${String(data.total_sr).padStart(2, '0')} segunda${data.total_sr != 1 ? 's' : ''} revisión${data.total_sr != 1 ? 'es' : ''}</strong>`;
-
-        if (data.total_sr > 0) {
-            pinTexto += `, las cuales, derivaron en:\n`;
-
-            if (data.total_internaciones > 0) {
-                pinTexto += `Internaci${data.total_internaciones != 1 ? 'ones' : 'ón'} ${String(data.total_internaciones).padStart(2, '0')} por entrevista.\n`;
-            }
-
-            if (data.total_rechazos > 0) {
-                pinTexto += `Rechazo${data.total_rechazos != 1 ? 's' : ''} ${String(data.total_rechazos).padStart(2, '0')} por entrevista.\n`;
-            }
-        } else {
-            pinTexto += `.`;
-        }
-
-        contenido.innerHTML = `<div style="white-space: pre-wrap;">${pinTexto.trimEnd()}</div>`;
+        contenido.innerHTML = `<div style="white-space: pre-wrap;">${pinTexto}</div>`;
 
     } catch (error) {
         console.error('Error al cargar el PIN Binacional:', error);
@@ -325,31 +316,24 @@ async function copiarPinBinacional(event) {
     }
 
     try {
-        let texto = `*INSTITUTO NACIONAL DE MIGRACIÓN*\n*Oficina de Representación Baja California*\n\n`;
-        texto += `*${pinBinacionalData.fechaTexto.toUpperCase()}*\n\n`;
+        const srStr = String(pinBinacionalData.total_sr).padStart(2, '0');
+        const rechStr = String(pinBinacionalData.total_rechazos).padStart(2, '0');
+        const intStr = String(pinBinacionalData.total_internaciones).padStart(2, '0');
 
-        texto += `Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo *${pinBinacionalData.vuelo_numero}* proveniente de Pekín con:\n\n`;
-        texto += `*Total: Número de Pasajeros: ${pinBinacionalData.total_pasajeros}*\n`;
-        texto += `Pekín – México (tránsito): *${pinBinacionalData.total_pekin_mexico}* Pasajeros.\n`;
-        texto += `Pekín - Tijuana (local): *${pinBinacionalData.total_pekin_tijuana}* Pasajeros.\n\n`;
+        const texto =
+            `*INSTITUTO NACIONAL DE MIGRACIÓN*\n` +
+            `Oficina de Representación Baja California\n` +
+            `Aeropuerto Internacional de Tijuana\n\n` +
+            `*${pinBinacionalData.fechaTexto.toUpperCase()}*\n\n` +
+            `Vuelo *${pinBinacionalData.vuelo_numero}* proveniente de *${pinBinacionalData.origen_pais}*:\n\n` +
+            `*Total pasajeros: ${pinBinacionalData.total_pasajeros}*\n` +
+            `${pinBinacionalData.origen_pais} – México (tránsito): *${pinBinacionalData.total_pekin_mexico}* pasajeros\n` +
+            `${pinBinacionalData.origen_pais} - Tijuana (local): *${pinBinacionalData.total_pekin_tijuana}* pasajeros\n\n` +
+            `*Segundas Revisiones: ${srStr}*\n` +
+            `Rechazos: *${rechStr}*\n` +
+            `Internaciones: *${intStr}*`;
 
-        texto += `En dicho proceso migratorio se llevó a cabo *${String(pinBinacionalData.total_sr).padStart(2, '0')} segunda${pinBinacionalData.total_sr != 1 ? 's' : ''} revisión${pinBinacionalData.total_sr != 1 ? 'es' : ''}*`;
-
-        if (pinBinacionalData.total_sr > 0) {
-            texto += `, las cuales, derivaron en:\n`;
-
-            if (pinBinacionalData.total_internaciones > 0) {
-                texto += `Internaci${pinBinacionalData.total_internaciones != 1 ? 'ones' : 'ón'} ${String(pinBinacionalData.total_internaciones).padStart(2, '0')} por entrevista.\n`;
-            }
-
-            if (pinBinacionalData.total_rechazos > 0) {
-                texto += `Rechazo${pinBinacionalData.total_rechazos != 1 ? 's' : ''} ${String(pinBinacionalData.total_rechazos).padStart(2, '0')} por entrevista.\n`;
-            }
-        } else {
-            texto += `.`;
-        }
-
-        await navigator.clipboard.writeText(texto.trimEnd());
+        await navigator.clipboard.writeText(texto);
         mostrarNotificacion('✅ PIN Binacional copiado', 'success');
 
     } catch (err) {
@@ -371,7 +355,7 @@ async function copiarPin(event) {
         // Generar texto con * para WhatsApp
         let texto = `*INSTITUTO NACIONAL DE MIGRACIÓN*\n*Oficina de Representación Baja California*\n\n`;
         texto += `*${pinData.fechaTexto.toUpperCase()}*\n\n`;
-        texto += `Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo *${pinData.vuelo_numero}* proveniente de Pekín con *${pinData.total_pasajeros} pasajeros*.\n\n`;
+        texto += `Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo *${pinData.vuelo_numero}* proveniente de ${pinData.origen_ciudad} con *${pinData.total_pasajeros} pasajeros*.\n\n`;
         
         // Siempre mostrar el número de segundas revisiones
         texto += `En dicho proceso migratorio se llevó a cabo *${String(pinData.total_sr).padStart(2, '0')} segunda${pinData.total_sr != 1 ? 's' : ''} revisión${pinData.total_sr != 1 ? 'es' : ''}*`;
@@ -544,7 +528,7 @@ async function generarPDF() {
         agregarTexto(pinData.fechaTexto.toUpperCase(), true);
         y += 5;
         
-        agregarTexto(`Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo ${pinData.vuelo_numero} proveniente de Pekín con ${pinData.total_pasajeros} pasajeros.`);
+        agregarTexto(`Por este medio se informa que el día de la fecha arribó al Aeropuerto Internacional de Tijuana el vuelo ${pinData.vuelo_numero} proveniente de ${pinData.origen_ciudad} con ${pinData.total_pasajeros} pasajeros.`);
         y += 3;
         
         // Siempre mostrar el número de segundas revisiones
