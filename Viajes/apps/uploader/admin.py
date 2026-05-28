@@ -2,7 +2,7 @@
 # PARA EL USO DE DJANGO-ADMIN
 
 from django.contrib import admin
-from .models import UploadBatch, Registro, CasoEspecial
+from .models import UploadBatch, Registro, CasoEspecial, TiemposAtencion
 
 
 @admin.register(UploadBatch)
@@ -113,3 +113,10 @@ class CasoEspecialAdmin(admin.ModelAdmin):
     def get_queryset(self, request):
         qs = super().get_queryset(request)
         return qs.select_related('registro', 'registro__batch', 'resuelto_por')
+
+
+@admin.register(TiemposAtencion)
+class TiemposAtencionAdmin(admin.ModelAdmin):
+    list_display = ('fecha', 'hora_inicio', 'hora_fin', 'tiempo_extranjeros', 'tiempo_mexicanos', 'tiempo_fma', 'usuario')
+    list_filter = ('fecha',)
+    readonly_fields = ('fecha_creacion', 'fecha_modificacion')

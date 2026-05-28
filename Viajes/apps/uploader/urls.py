@@ -27,6 +27,9 @@ urlpatterns = [
     # Menores (captura manual)
     path('menores/crear/', views.crear_menor, name='crear_menor'),
 
+    # Tiempos de atención (captura manual)
+    path('tiempos-atencion/capturar/', views.capturar_tiempos_atencion, name='capturar_tiempos_atencion'),
+
     # Casos Especiales
     path('casos_especiales/', views.casos_especiales_list, name='casos_especiales_list'),
     path('casos_especiales/aceptar/<int:caso_id>/', views.resolver_caso_aceptar, name='resolver_caso_aceptar'),

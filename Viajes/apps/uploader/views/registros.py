@@ -13,7 +13,7 @@ from datetime import datetime, timedelta, time, timezone as dt_timezone
 import logging
 from decouple import config
 
-from ..models import Registro, UploadBatch, Notificacion, CasoEspecial
+from ..models import Registro, UploadBatch, Notificacion, CasoEspecial, TiemposAtencion
 from ..utils.paises import get_paises
 
 MESES_ES = {
@@ -352,9 +352,15 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         dias.append(dia_actual)
         dia_actual += timedelta(days=1)
 
+    tiempos_map = {
+        t.fecha: t for t in TiemposAtencion.objects.filter(fecha__gte=fecha_inicio, fecha__lte=fecha_fin)
+    }
+
     dates, raw_dates = [], []
     totals_inadmitidos, totals_internaciones, totals_sr = [], [], []
     local, transito, total_pasajeros_list = [], [], []
+    hora_inicio_list, hora_fin_list = [], []
+    tiempo_extranjeros_list, tiempo_mexicanos_list, tiempo_fma_list = [], [], []
     nationalities_by_day = {}
     motivos_rechazo = []
 
@@ -379,6 +385,13 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         local.append(registros_arribos.filter(filtro_tij).distinct().count())
         transito.append(registros_arribos.filter(filtro_mex).distinct().count())
         total_pasajeros_list.append(registros_arribos.count())
+
+        t = tiempos_map.get(dia)
+        hora_inicio_list.append(t.hora_inicio.strftime('%H:%M') if t else '')
+        hora_fin_list.append(t.hora_fin.strftime('%H:%M') if t else '')
+        tiempo_extranjeros_list.append(t.tiempo_extranjeros if t else '')
+        tiempo_mexicanos_list.append(t.tiempo_mexicanos if t else '')
+        tiempo_fma_list.append(t.tiempo_fma if t else '')
 
         nats_hoy = set()
         nat_counts = (
@@ -422,6 +435,11 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         'local': local,
         'transito': transito,
         'total_pasajeros': total_pasajeros_list,
+        'hora_inicio': hora_inicio_list,
+        'hora_fin': hora_fin_list,
+        'tiempo_extranjeros': tiempo_extranjeros_list,
+        'tiempo_mexicanos': tiempo_mexicanos_list,
+        'tiempo_fma': tiempo_fma_list,
         'motivos_rechazo': motivos_rechazo,
     }
 
@@ -561,6 +579,49 @@ def generar_inadmitidos_pdf(request):
     r_trans = len(rows); rows.append(['En tr\xe1nsito:'] + [str(v) for v in data['transito']])
     r_total_pas = len(rows); rows.append(['Total pasajeros:'] + [str(v) for v in data['total_pasajeros']])
 
+    # Separador antes de tiempos de atención
+    r_sep3 = len(rows); rows.append([''] * (n + 1))
+
+    # Hora Inicio / Hora Fin
+    r_hora_ini = len(rows); rows.append(['Hora Inicio:'] + [str(v) for v in data.get('hora_inicio', [''] * n)])
+    r_hora_fin = len(rows); rows.append(['Hora Fin:'] + [str(v) for v in data.get('hora_fin', [''] * n)])
+
+    # Encabezado "Tiempos de atención" (span completo)
+    r_tiempos_hdr = len(rows); rows.append(['Tiempos de atención'] + [''] * n)
+
+    # Extranjeros / Mexicanos / FMA
+    ext_vals = data.get('tiempo_extranjeros', [''] * n)
+    mex_vals = data.get('tiempo_mexicanos', [''] * n)
+    fma_vals = data.get('tiempo_fma', [''] * n)
+    r_ext = len(rows); rows.append(['Extranjeros:'] + [str(v) for v in ext_vals])
+    r_mex = len(rows); rows.append(['Mexicanos:'] + [str(v) for v in mex_vals])
+    r_fma = len(rows); rows.append(['FMA:'] + [str(v) for v in fma_vals])
+
+    # Total por día (suma de los 3 rubros en min → "Xh Ym")
+    def _fmt_min(mins):
+        try:
+            n_ = int(mins)
+        except (TypeError, ValueError):
+            return '0m'
+        if n_ <= 0:
+            return '0m'
+        h, m = divmod(n_, 60)
+        if h == 0:
+            return f'{m}m'
+        if m == 0:
+            return f'{h}h'
+        return f'{h}h {m}m'
+
+    total_dia_celdas = []
+    for i in range(n):
+        e = int(ext_vals[i]) if str(ext_vals[i]).strip().isdigit() else 0
+        m_ = int(mex_vals[i]) if str(mex_vals[i]).strip().isdigit() else 0
+        f_ = int(fma_vals[i]) if str(fma_vals[i]).strip().isdigit() else 0
+        hay = str(ext_vals[i]).strip() != '' or str(mex_vals[i]).strip() != '' or str(fma_vals[i]).strip() != ''
+        total_dia_celdas.append(_fmt_min(e + m_ + f_) if hay else '')
+
+    r_total_dia = len(rows); rows.append(['Total por día:'] + total_dia_celdas)
+
     # ─── Estilos ───
     cmd = [
         ('FONTNAME', (0, 0), (-1, -1), 'Helvetica'),
@@ -625,6 +686,32 @@ def generar_inadmitidos_pdf(request):
         ('BACKGROUND', (0, blank2), (-1, blank2), BLANCO_GRIS),
         ('BACKGROUND', (0, r_sep1), (-1, r_sep1), BLANCO_GRIS),
         ('BACKGROUND', (0, r_sep2), (-1, r_sep2), BLANCO_GRIS),
+        ('BACKGROUND', (0, r_sep3), (-1, r_sep3), BLANCO_GRIS),
+
+        # Hora Inicio / Hora Fin
+        ('BACKGROUND', (0, r_hora_ini), (-1, r_hora_ini), BLANCO_GRIS),
+        ('BACKGROUND', (0, r_hora_fin), (-1, r_hora_fin), BLANCO_GRIS),
+        ('FONTNAME', (0, r_hora_ini), (0, r_hora_ini), 'Helvetica-Bold'),
+        ('FONTNAME', (0, r_hora_fin), (0, r_hora_fin), 'Helvetica-Bold'),
+
+        # Encabezado "Tiempos de atención" rojo span
+        ('SPAN', (0, r_tiempos_hdr), (-1, r_tiempos_hdr)),
+        ('BACKGROUND', (0, r_tiempos_hdr), (-1, r_tiempos_hdr), ROJO),
+        ('TEXTCOLOR', (0, r_tiempos_hdr), (-1, r_tiempos_hdr), colors.white),
+        ('FONTNAME', (0, r_tiempos_hdr), (-1, r_tiempos_hdr), 'Helvetica-Bold'),
+        ('ALIGN', (0, r_tiempos_hdr), (-1, r_tiempos_hdr), 'CENTER'),
+
+        # Extranjeros / Mexicanos / FMA
+        ('BACKGROUND', (0, r_ext), (-1, r_ext), BLANCO_GRIS),
+        ('BACKGROUND', (0, r_mex), (-1, r_mex), GRIS),
+        ('BACKGROUND', (0, r_fma), (-1, r_fma), BLANCO_GRIS),
+        ('FONTNAME', (0, r_ext), (0, r_ext), 'Helvetica-Bold'),
+        ('FONTNAME', (0, r_mex), (0, r_mex), 'Helvetica-Bold'),
+        ('FONTNAME', (0, r_fma), (0, r_fma), 'Helvetica-Bold'),
+
+        # Total por día
+        ('BACKGROUND', (0, r_total_dia), (-1, r_total_dia), GRIS),
+        ('FONTNAME', (0, r_total_dia), (-1, r_total_dia), 'Helvetica-Bold'),
     ]
 
     # Span "China" en encabezado si hay columnas suficientes

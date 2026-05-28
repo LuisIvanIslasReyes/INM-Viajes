@@ -145,6 +145,81 @@ function renderTabla(data) {
     for (const v of data.total_pasajeros) html += `<td>${v}</td>`;
     html += `<td>${sumar(data.total_pasajeros)}</td></tr>`;
 
+    // Separador antes de tiempos
+    html += `<tr class="row-sep">${tdSep.repeat(totalCols)}</tr>`;
+
+    const horaInicio = data.hora_inicio || [];
+    const horaFin = data.hora_fin || [];
+    const tExt = data.tiempo_extranjeros || [];
+    const tMex = data.tiempo_mexicanos || [];
+    const tFma = data.tiempo_fma || [];
+
+    // Hora Inicio
+    html += `<tr class="row-pax"><td class="col-label">Hora Inicio:</td>`;
+    for (let d = 0; d < n; d++) html += `<td>${horaInicio[d] ?? ''}</td>`;
+    html += `<td></td></tr>`;
+
+    // Hora Fin
+    html += `<tr class="row-pax"><td class="col-label">Hora Fin:</td>`;
+    for (let d = 0; d < n; d++) html += `<td>${horaFin[d] ?? ''}</td>`;
+    html += `<td></td></tr>`;
+
+    // Título Tiempos de atención
+    html += `<tr class="row-dias"><td colspan="${totalCols}">Tiempos de atención</td></tr>`;
+
+    // Extranjeros
+    html += `<tr class="row-pax"><td class="col-label">Extranjeros:</td>`;
+    let totalExt = 0;
+    for (let d = 0; d < n; d++) {
+        const v = tExt[d];
+        if (v !== '' && v !== null && v !== undefined) totalExt += Number(v) || 0;
+        html += `<td>${v ?? ''}</td>`;
+    }
+    html += `<td><strong>${totalExt}</strong></td></tr>`;
+
+    // Mexicanos
+    html += `<tr class="row-pax"><td class="col-label">Mexicanos:</td>`;
+    let totalMex = 0;
+    for (let d = 0; d < n; d++) {
+        const v = tMex[d];
+        if (v !== '' && v !== null && v !== undefined) totalMex += Number(v) || 0;
+        html += `<td>${v ?? ''}</td>`;
+    }
+    html += `<td><strong>${totalMex}</strong></td></tr>`;
+
+    // FMA
+    html += `<tr class="row-pax"><td class="col-label">FMA:</td>`;
+    let totalFma = 0;
+    for (let d = 0; d < n; d++) {
+        const v = tFma[d];
+        if (v !== '' && v !== null && v !== undefined) totalFma += Number(v) || 0;
+        html += `<td>${v ?? ''}</td>`;
+    }
+    html += `<td><strong>${totalFma}</strong></td></tr>`;
+
+    // Total por día (suma de los 3 rubros, en min → "Xh Ym")
+    const fmtMin = (mins) => {
+        const num = Number(mins);
+        if (!Number.isFinite(num) || num <= 0) return '0m';
+        const h = Math.floor(num / 60);
+        const m = num % 60;
+        if (h === 0) return `${m}m`;
+        if (m === 0) return `${h}h`;
+        return `${h}h ${m}m`;
+    };
+    html += `<tr class="row-total-pax"><td class="col-label">Total por día:</td>`;
+    let totalGlobal = 0;
+    for (let d = 0; d < n; d++) {
+        const ext = Number(tExt[d]) || 0;
+        const mex = Number(tMex[d]) || 0;
+        const fma = Number(tFma[d]) || 0;
+        const hayDatos = tExt[d] !== '' || tMex[d] !== '' || tFma[d] !== '';
+        const sumaDia = ext + mex + fma;
+        totalGlobal += sumaDia;
+        html += `<td><strong>${hayDatos ? fmtMin(sumaDia) : ''}</strong></td>`;
+    }
+    html += `<td><strong>${fmtMin(totalGlobal)}</strong></td></tr>`;
+
     html += '</tbody>';
     tabla.innerHTML = html;
 

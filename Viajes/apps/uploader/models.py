@@ -198,6 +198,34 @@ class CasoEspecial(models.Model):
         return self.estado in ['aceptado', 'editado', 'inadmitido', 'eliminado']
 
 
+class TiemposAtencion(models.Model):
+    """Captura manual de los tiempos de atención del día.
+
+    Una entrada por fecha (se sobrescribe si se vuelve a capturar). Se muestra
+    como filas adicionales en el reporte de inadmitidos.
+    """
+    fecha = models.DateField(unique=True, verbose_name='Fecha')
+    hora_inicio = models.TimeField(verbose_name='Hora Inicio')
+    hora_fin = models.TimeField(verbose_name='Hora Fin')
+
+    tiempo_extranjeros = models.PositiveIntegerField(default=0, verbose_name='Tiempo Extranjeros (min)')
+    tiempo_mexicanos = models.PositiveIntegerField(default=0, verbose_name='Tiempo Mexicanos (min)')
+    tiempo_fma = models.PositiveIntegerField(default=0, verbose_name='Tiempo FMA (min)')
+
+    usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='tiempos_atencion')
+    fecha_creacion = models.DateTimeField(auto_now_add=True)
+    fecha_modificacion = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        verbose_name = 'Tiempos de Atención'
+        verbose_name_plural = 'Tiempos de Atención'
+        ordering = ['-fecha']
+        indexes = [models.Index(fields=['fecha'])]
+
+    def __str__(self):
+        return f"Tiempos {self.fecha} ({self.hora_inicio:%H:%M}-{self.hora_fin:%H:%M})"
+
+
 class Notificacion(models.Model):
     """Notificaciones del sistema para mantener seguimiento de eventos"""
     
