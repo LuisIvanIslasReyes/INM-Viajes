@@ -13,6 +13,7 @@ from datetime import date, datetime
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.http import JsonResponse
 from django.shortcuts import redirect
 
 from ..models import TiemposAtencion
@@ -84,3 +85,29 @@ def capturar_tiempos_atencion(request):
     accion = 'capturados' if creado else 'actualizados'
     messages.success(request, f'✅ Tiempos {accion} para {fecha.strftime("%d/%m/%Y")}.')
     return redirect('admin_list')
+
+
+@login_required
+def obtener_tiempos_atencion(request, fecha):
+    """Devuelve en JSON los tiempos guardados para una fecha, para precargar el modal."""
+    try:
+        f = datetime.strptime(fecha, '%Y-%m-%d').date()
+    except ValueError:
+        return JsonResponse({'existe': False, 'error': 'fecha_invalida'}, status=400)
+
+    try:
+        t = TiemposAtencion.objects.select_related('usuario').get(fecha=f)
+    except TiemposAtencion.DoesNotExist:
+        return JsonResponse({'existe': False})
+
+    return JsonResponse({
+        'existe': True,
+        'hora_inicio': t.hora_inicio.strftime('%H:%M'),
+        'hora_fin': t.hora_fin.strftime('%H:%M'),
+        'fma': t.tiempo_fma,
+        'mexicanos': t.tiempo_mexicanos,
+        'extranjeros': t.tiempo_extranjeros,
+        'revisiones_secundarias': t.tiempo_revisiones_secundarias,
+        'usuario': t.usuario.username if t.usuario else '',
+        'fecha_modificacion': t.fecha_modificacion.strftime('%d/%m/%Y %H:%M'),
+    })

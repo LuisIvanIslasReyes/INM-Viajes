@@ -54,7 +54,6 @@
                         <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                             <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                         </svg>
-                        I
                     </span>
                     <span class="text-gray-600 font-bold">Internación</span>
                 </div>
@@ -98,7 +97,7 @@
             </a>
 
             <!-- Capturar Tiempos de Atención -->
-            <button type="button" onclick="document.getElementById('modalTiemposAtencion').showModal()" class="btn btn-circle btn-lg text-white" style="background-color:#0f766e; border-color:#0f766e;" title="Capturar Tiempos de Atención">
+            <button type="button" onclick="abrirModalTiempos()" class="btn btn-circle btn-lg text-white" style="background-color:#0f766e; border-color:#0f766e;" title="Capturar Tiempos de Atención">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
                 </svg>
@@ -697,6 +696,8 @@
                 <input type="date" name="fecha" id="tiemposFecha" required min="2026-05-20" class="input input-bordered w-full">
             </div>
 
+            <div id="tiemposEstado" class="alert py-2 text-sm hidden" role="status"></div>
+
             <div class="grid grid-cols-2 gap-3">
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Hora Inicio *</span></label>
@@ -745,10 +746,20 @@
 
 <script>
     (function () {
-        const input = document.getElementById('tiemposFecha');
-        if (input && !input.value) {
+        const modal = document.getElementById('modalTiemposAtencion');
+        const fechaInput = document.getElementById('tiemposFecha');
+        const estado = document.getElementById('tiemposEstado');
+        const horaInicioInput = modal.querySelector('input[name="hora_inicio"]');
+        const horaFinInput = modal.querySelector('input[name="hora_fin"]');
+        const URL_PREFIX = {{ is_production|yesno:"'/viajes',''"|safe }};
+
+        function hoyISO() {
             const d = new Date();
-            input.value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+            return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+        }
+
+        if (fechaInput && !fechaInput.value) {
+            fechaInput.value = hoyISO();
         }
 
         function formatearMinutos(total) {
@@ -761,7 +772,9 @@
             return `= ${h}h ${m}m`;
         }
 
+        const rubros = {};
         document.querySelectorAll('#modalTiemposAtencion [data-rubro]').forEach((rubro) => {
+            const key = rubro.getAttribute('data-rubro');
             const minInput = rubro.querySelector('[data-minutos]');
             const horaInput = rubro.querySelector('[data-horas]');
             const horaSuffix = rubro.querySelector('[data-h-suffix]');
@@ -781,15 +794,21 @@
                 hint.textContent = texto || ' ';
                 hint.style.color = texto ? '#0f766e' : '';
             };
+            const mostrarHoras = (mostrar) => {
+                if (!horaInput || !horaSuffix) return;
+                horaInput.classList.toggle('hidden', !mostrar);
+                horaSuffix.classList.toggle('hidden', !mostrar);
+                minInput.placeholder = mostrar ? 'min' : 'minutos';
+                if (toggleLabel) toggleLabel.textContent = mostrar ? '− h' : '+ h';
+                if (toggleBtn) toggleBtn.title = mostrar ? 'Quitar horas' : 'Agregar horas';
+            };
             minInput.addEventListener('input', actualizar);
             if (horaInput) horaInput.addEventListener('input', actualizar);
 
             if (toggleBtn) {
                 toggleBtn.addEventListener('click', () => {
                     const oculto = horaInput.classList.contains('hidden');
-                    horaInput.classList.toggle('hidden', !oculto);
-                    horaSuffix.classList.toggle('hidden', !oculto);
-                    minInput.placeholder = oculto ? 'min' : 'minutos';
+                    mostrarHoras(oculto);
                     if (!oculto) horaInput.value = 0;
                     toggleLabel.textContent = oculto ? '− h' : '+ h';
                     toggleBtn.title = oculto ? 'Quitar horas' : 'Agregar horas';
@@ -797,8 +816,81 @@
                 });
             }
 
+            rubros[key] = { minInput, horaInput, mostrarHoras, actualizar };
             actualizar();
         });
+
+        function setRubro(key, totalMin) {
+            const r = rubros[key];
+            if (!r) return;
+            const total = Number(totalMin) || 0;
+            if (total >= 60) {
+                const h = Math.floor(total / 60);
+                const m = total % 60;
+                r.mostrarHoras(true);
+                if (r.horaInput) r.horaInput.value = h;
+                r.minInput.value = m;
+            } else {
+                r.mostrarHoras(false);
+                if (r.horaInput) r.horaInput.value = 0;
+                r.minInput.value = total;
+            }
+            r.actualizar();
+        }
+
+        function resetForm() {
+            horaInicioInput.value = '';
+            horaFinInput.value = '';
+            Object.keys(rubros).forEach((k) => setRubro(k, 0));
+        }
+
+        function setEstado(tipo, html) {
+            if (!estado) return;
+            estado.classList.remove('hidden', 'alert-info', 'alert-success', 'alert-warning', 'alert-error');
+            if (tipo === 'nuevo') estado.classList.add('alert-info');
+            else if (tipo === 'existe') estado.classList.add('alert-warning');
+            else if (tipo === 'error') estado.classList.add('alert-error');
+            estado.innerHTML = html;
+        }
+
+        async function cargarTiemposFecha(fecha) {
+            if (!fecha) return;
+            setEstado('nuevo', 'Cargando...');
+            try {
+                const resp = await fetch(`${URL_PREFIX}/tiempos-atencion/obtener/${fecha}/`, {
+                    headers: { 'X-Requested-With': 'XMLHttpRequest' },
+                });
+                if (!resp.ok) throw new Error('Respuesta no valida');
+                const data = await resp.json();
+                if (data.existe) {
+                    horaInicioInput.value = data.hora_inicio || '';
+                    horaFinInput.value = data.hora_fin || '';
+                    setRubro('fma', data.fma);
+                    setRubro('mexicanos', data.mexicanos);
+                    setRubro('extranjeros', data.extranjeros);
+                    setRubro('revisiones_secundarias', data.revisiones_secundarias);
+                    const meta = data.usuario
+                        ? ` (guardado por <b>${data.usuario}</b> el ${data.fecha_modificacion})`
+                        : ` (ultima modificacion: ${data.fecha_modificacion})`;
+                    setEstado('existe', `Editando captura existente${meta}. Al guardar se sobrescribira.`);
+                } else {
+                    resetForm();
+                    setEstado('nuevo', 'Nueva captura para esta fecha.');
+                }
+            } catch (e) {
+                setEstado('error', 'No se pudieron cargar los datos guardados.');
+            }
+        }
+
+        if (fechaInput) {
+            fechaInput.addEventListener('change', () => cargarTiemposFecha(fechaInput.value));
+        }
+
+        window.abrirModalTiempos = function () {
+            if (fechaInput && !fechaInput.value) fechaInput.value = hoyISO();
+            modal.showModal();
+            cargarTiemposFecha(fechaInput.value);
+        };
     })();
 </script>
 {% endblock %}

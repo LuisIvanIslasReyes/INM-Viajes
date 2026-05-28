@@ -29,6 +29,7 @@ urlpatterns = [
 
     # Tiempos de atención (captura manual)
     path('tiempos-atencion/capturar/', views.capturar_tiempos_atencion, name='capturar_tiempos_atencion'),
+    path('tiempos-atencion/obtener/<str:fecha>/', views.obtener_tiempos_atencion, name='obtener_tiempos_atencion'),
 
     # Casos Especiales
     path('casos_especiales/', views.casos_especiales_list, name='casos_especiales_list'),

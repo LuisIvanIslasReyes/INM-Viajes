@@ -16,7 +16,7 @@ from .casos_especiales import (
 )
 from .admin import batch_list, delete_batch, create_user
 from .menores import crear_menor
-from .tiempos import capturar_tiempos_atencion
+from .tiempos import capturar_tiempos_atencion, obtener_tiempos_atencion
 
 __all__ = [
     # Upload
@@ -56,4 +56,5 @@ __all__ = [
 
     # Tiempos de atención
     'capturar_tiempos_atencion',
+    'obtener_tiempos_atencion',
 ]
