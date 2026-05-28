@@ -710,38 +710,25 @@
 
             <div class="divider text-sm font-semibold" style="color:#0f766e;">Tiempos de atención</div>
 
-            <div class="form-control">
+            {% for rubro in tiempos_rubros %}
+            <div class="form-control" data-rubro="{{ rubro.key }}">
                 <label class="label">
-                    <span class="label-text font-semibold">Extranjeros</span>
-                    <span class="label-text-alt text-xs" data-hint="extranjeros_min">&nbsp;</span>
+                    <span class="label-text font-semibold flex items-center gap-2">
+                        {{ rubro.label }}
+                        <button type="button" class="btn btn-xs btn-ghost" data-toggle-hora title="Agregar horas">
+                            <span data-toggle-label>+ h</span>
+                        </button>
+                    </span>
+                    <span class="label-text-alt text-xs" data-hint="{{ rubro.key }}">&nbsp;</span>
                 </label>
                 <div class="join w-full">
-                    <input type="number" name="extranjeros_min" min="0" value="0" class="input input-bordered join-item w-full" placeholder="minutos" data-minutos>
+                    <input type="number" name="{{ rubro.key }}_h" min="0" value="0" class="input input-bordered join-item w-full hidden" placeholder="horas" data-horas>
+                    <span class="join-item btn btn-disabled no-animation hidden" data-h-suffix>h</span>
+                    <input type="number" name="{{ rubro.key }}_min" min="0" value="0" class="input input-bordered join-item w-full" placeholder="minutos" data-minutos>
                     <span class="join-item btn btn-disabled no-animation">min</span>
                 </div>
             </div>
-
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text font-semibold">Mexicanos</span>
-                    <span class="label-text-alt text-xs" data-hint="mexicanos_min">&nbsp;</span>
-                </label>
-                <div class="join w-full">
-                    <input type="number" name="mexicanos_min" min="0" value="0" class="input input-bordered join-item w-full" placeholder="minutos" data-minutos>
-                    <span class="join-item btn btn-disabled no-animation">min</span>
-                </div>
-            </div>
-
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text font-semibold">FMA</span>
-                    <span class="label-text-alt text-xs" data-hint="fma_min">&nbsp;</span>
-                </label>
-                <div class="join w-full">
-                    <input type="number" name="fma_min" min="0" value="0" class="input input-bordered join-item w-full" placeholder="minutos" data-minutos>
-                    <span class="join-item btn btn-disabled no-animation">min</span>
-                </div>
-            </div>
+            {% endfor %}
 
             <p class="text-xs text-base-content/60">
                 Si ya existe una captura para esa fecha, se sobrescribirá.
@@ -774,15 +761,42 @@
             return `= ${h}h ${m}m`;
         }
 
-        document.querySelectorAll('#modalTiemposAtencion [data-minutos]').forEach((input) => {
-            const hint = document.querySelector(`#modalTiemposAtencion [data-hint="${input.name}"]`);
-            if (!hint) return;
+        document.querySelectorAll('#modalTiemposAtencion [data-rubro]').forEach((rubro) => {
+            const minInput = rubro.querySelector('[data-minutos]');
+            const horaInput = rubro.querySelector('[data-horas]');
+            const horaSuffix = rubro.querySelector('[data-h-suffix]');
+            const toggleBtn = rubro.querySelector('[data-toggle-hora]');
+            const toggleLabel = rubro.querySelector('[data-toggle-label]');
+            const hint = rubro.querySelector('[data-hint]');
+            if (!minInput || !hint) return;
+
+            const totalMinutos = () => {
+                const horaVisible = horaInput && !horaInput.classList.contains('hidden');
+                const h = horaVisible ? (Number(horaInput.value) || 0) : 0;
+                const m = Number(minInput.value) || 0;
+                return h * 60 + m;
+            };
             const actualizar = () => {
-                const texto = formatearMinutos(input.value);
+                const texto = formatearMinutos(totalMinutos());
                 hint.textContent = texto || ' ';
                 hint.style.color = texto ? '#0f766e' : '';
             };
-            input.addEventListener('input', actualizar);
+            minInput.addEventListener('input', actualizar);
+            if (horaInput) horaInput.addEventListener('input', actualizar);
+
+            if (toggleBtn) {
+                toggleBtn.addEventListener('click', () => {
+                    const oculto = horaInput.classList.contains('hidden');
+                    horaInput.classList.toggle('hidden', !oculto);
+                    horaSuffix.classList.toggle('hidden', !oculto);
+                    minInput.placeholder = oculto ? 'min' : 'minutos';
+                    if (!oculto) horaInput.value = 0;
+                    toggleLabel.textContent = oculto ? '− h' : '+ h';
+                    toggleBtn.title = oculto ? 'Quitar horas' : 'Agregar horas';
+                    actualizar();
+                });
+            }
+
             actualizar();
         });
     })();

@@ -3,7 +3,11 @@ Captura de tiempos de atención por fecha.
 
 Se guarda un único registro por fecha (update_or_create). El reporte de
 inadmitidos consume estos datos para mostrar las filas de Hora Inicio,
-Hora Fin y Tiempos de atención (Extranjeros, Mexicanos, FMA).
+Hora Fin y Tiempos de atención (FMA, Mexicanos, Extranjeros, Revisiones
+Secundarias).
+
+Cada rubro acepta un input opcional de horas (`<rubro>_h`) sumado al de
+minutos (`<rubro>_min`); el almacenamiento es siempre minutos totales.
 """
 from datetime import date, datetime
 
@@ -15,15 +19,24 @@ from ..models import TiemposAtencion
 
 FECHA_MINIMA = date(2026, 5, 20)
 
+RUBROS = [
+    ('fma', 'tiempo_fma'),
+    ('mexicanos', 'tiempo_mexicanos'),
+    ('extranjeros', 'tiempo_extranjeros'),
+    ('revisiones_secundarias', 'tiempo_revisiones_secundarias'),
+]
 
-def _minutos(valor):
+
+def _minutos_rubro(post, prefijo):
+    """Lee `<prefijo>_h` (opcional) y `<prefijo>_min` y devuelve minutos totales."""
     try:
-        m = int(valor or 0)
+        h = int(post.get(f'{prefijo}_h') or 0)
+        m = int(post.get(f'{prefijo}_min') or 0)
     except ValueError:
         return None
-    if m < 0:
+    if h < 0 or m < 0:
         return None
-    return m
+    return h * 60 + m
 
 
 @login_required
@@ -50,23 +63,21 @@ def capturar_tiempos_atencion(request):
         )
         return redirect('admin_list')
 
-    extranjeros = _minutos(request.POST.get('extranjeros_min'))
-    mexicanos = _minutos(request.POST.get('mexicanos_min'))
-    fma = _minutos(request.POST.get('fma_min'))
+    valores = {}
+    for prefijo, campo in RUBROS:
+        v = _minutos_rubro(request.POST, prefijo)
+        if v is None:
+            messages.error(request, '❌ Tiempos inválidos. Ingresa números no negativos.')
+            return redirect('admin_list')
+        valores[campo] = v
 
-    if extranjeros is None or mexicanos is None or fma is None:
-        messages.error(request, '❌ Tiempos inválidos. Ingresa un número de minutos no negativo.')
-        return redirect('admin_list')
-
-    obj, creado = TiemposAtencion.objects.update_or_create(
+    _, creado = TiemposAtencion.objects.update_or_create(
         fecha=fecha,
         defaults={
             'hora_inicio': hora_inicio,
             'hora_fin': hora_fin,
-            'tiempo_extranjeros': extranjeros,
-            'tiempo_mexicanos': mexicanos,
-            'tiempo_fma': fma,
             'usuario': request.user,
+            **valores,
         },
     )
 

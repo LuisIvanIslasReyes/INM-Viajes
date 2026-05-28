@@ -182,6 +182,12 @@ def admin_list(request):
         'casos_urgentes': casos_urgentes,
         'is_production': is_production,
         'paises': get_paises(),
+        'tiempos_rubros': [
+            {'key': 'fma', 'label': 'FMA'},
+            {'key': 'mexicanos', 'label': 'Mexicanos'},
+            {'key': 'extranjeros', 'label': 'Extranjeros'},
+            {'key': 'revisiones_secundarias', 'label': 'Revisiones Secundarias'},
+        ],
     }
 
     return render(request, 'uploader/admin_list.html', context)
@@ -361,6 +367,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
     local, transito, total_pasajeros_list = [], [], []
     hora_inicio_list, hora_fin_list = [], []
     tiempo_extranjeros_list, tiempo_mexicanos_list, tiempo_fma_list = [], [], []
+    tiempo_revisiones_secundarias_list = []
     nationalities_by_day = {}
     motivos_rechazo = []
 
@@ -392,6 +399,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         tiempo_extranjeros_list.append(t.tiempo_extranjeros if t else '')
         tiempo_mexicanos_list.append(t.tiempo_mexicanos if t else '')
         tiempo_fma_list.append(t.tiempo_fma if t else '')
+        tiempo_revisiones_secundarias_list.append(t.tiempo_revisiones_secundarias if t else '')
 
         nats_hoy = set()
         nat_counts = (
@@ -440,6 +448,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         'tiempo_extranjeros': tiempo_extranjeros_list,
         'tiempo_mexicanos': tiempo_mexicanos_list,
         'tiempo_fma': tiempo_fma_list,
+        'tiempo_revisiones_secundarias': tiempo_revisiones_secundarias_list,
         'motivos_rechazo': motivos_rechazo,
     }
 
@@ -589,15 +598,17 @@ def generar_inadmitidos_pdf(request):
     # Encabezado "Tiempos de atención" (span completo)
     r_tiempos_hdr = len(rows); rows.append(['Tiempos de atención'] + [''] * n)
 
-    # Extranjeros / Mexicanos / FMA
-    ext_vals = data.get('tiempo_extranjeros', [''] * n)
-    mex_vals = data.get('tiempo_mexicanos', [''] * n)
+    # FMA / Mexicanos / Extranjeros / Revisiones Secundarias
     fma_vals = data.get('tiempo_fma', [''] * n)
-    r_ext = len(rows); rows.append(['Extranjeros:'] + [str(v) for v in ext_vals])
-    r_mex = len(rows); rows.append(['Mexicanos:'] + [str(v) for v in mex_vals])
+    mex_vals = data.get('tiempo_mexicanos', [''] * n)
+    ext_vals = data.get('tiempo_extranjeros', [''] * n)
+    rs_vals = data.get('tiempo_revisiones_secundarias', [''] * n)
     r_fma = len(rows); rows.append(['FMA:'] + [str(v) for v in fma_vals])
+    r_mex = len(rows); rows.append(['Mexicanos:'] + [str(v) for v in mex_vals])
+    r_ext = len(rows); rows.append(['Extranjeros:'] + [str(v) for v in ext_vals])
+    r_rs = len(rows); rows.append(['Revisiones Secundarias:'] + [str(v) for v in rs_vals])
 
-    # Total por día (suma de los 3 rubros en min → "Xh Ym")
+    # Total por día (suma de los 4 rubros en min → "Xh Ym")
     def _fmt_min(mins):
         try:
             n_ = int(mins)
@@ -612,13 +623,20 @@ def generar_inadmitidos_pdf(request):
             return f'{h}h'
         return f'{h}h {m}m'
 
+    def _val(x):
+        s = str(x).strip()
+        return int(s) if s.isdigit() else 0
+
     total_dia_celdas = []
     for i in range(n):
-        e = int(ext_vals[i]) if str(ext_vals[i]).strip().isdigit() else 0
-        m_ = int(mex_vals[i]) if str(mex_vals[i]).strip().isdigit() else 0
-        f_ = int(fma_vals[i]) if str(fma_vals[i]).strip().isdigit() else 0
-        hay = str(ext_vals[i]).strip() != '' or str(mex_vals[i]).strip() != '' or str(fma_vals[i]).strip() != ''
-        total_dia_celdas.append(_fmt_min(e + m_ + f_) if hay else '')
+        hay = (
+            str(fma_vals[i]).strip() != ''
+            or str(mex_vals[i]).strip() != ''
+            or str(ext_vals[i]).strip() != ''
+            or str(rs_vals[i]).strip() != ''
+        )
+        suma = _val(fma_vals[i]) + _val(mex_vals[i]) + _val(ext_vals[i]) + _val(rs_vals[i])
+        total_dia_celdas.append(_fmt_min(suma) if hay else '')
 
     r_total_dia = len(rows); rows.append(['Total por día:'] + total_dia_celdas)
 
@@ -701,16 +719,19 @@ def generar_inadmitidos_pdf(request):
         ('FONTNAME', (0, r_tiempos_hdr), (-1, r_tiempos_hdr), 'Helvetica-Bold'),
         ('ALIGN', (0, r_tiempos_hdr), (-1, r_tiempos_hdr), 'CENTER'),
 
-        # Extranjeros / Mexicanos / FMA
-        ('BACKGROUND', (0, r_ext), (-1, r_ext), BLANCO_GRIS),
-        ('BACKGROUND', (0, r_mex), (-1, r_mex), GRIS),
+        # FMA / Mexicanos / Extranjeros / Revisiones Secundarias
         ('BACKGROUND', (0, r_fma), (-1, r_fma), BLANCO_GRIS),
-        ('FONTNAME', (0, r_ext), (0, r_ext), 'Helvetica-Bold'),
-        ('FONTNAME', (0, r_mex), (0, r_mex), 'Helvetica-Bold'),
+        ('BACKGROUND', (0, r_mex), (-1, r_mex), GRIS),
+        ('BACKGROUND', (0, r_ext), (-1, r_ext), BLANCO_GRIS),
+        ('BACKGROUND', (0, r_rs), (-1, r_rs), GRIS),
         ('FONTNAME', (0, r_fma), (0, r_fma), 'Helvetica-Bold'),
+        ('FONTNAME', (0, r_mex), (0, r_mex), 'Helvetica-Bold'),
+        ('FONTNAME', (0, r_ext), (0, r_ext), 'Helvetica-Bold'),
+        ('FONTNAME', (0, r_rs), (0, r_rs), 'Helvetica-Bold'),
 
         # Total por día
-        ('BACKGROUND', (0, r_total_dia), (-1, r_total_dia), GRIS),
+        ('BACKGROUND', (0, r_total_dia), (-1, r_total_dia), ROSA),
+        ('TEXTCOLOR', (0, r_total_dia), (-1, r_total_dia), ROJO),
         ('FONTNAME', (0, r_total_dia), (-1, r_total_dia), 'Helvetica-Bold'),
     ]
 

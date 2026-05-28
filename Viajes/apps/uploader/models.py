@@ -211,6 +211,7 @@ class TiemposAtencion(models.Model):
     tiempo_extranjeros = models.PositiveIntegerField(default=0, verbose_name='Tiempo Extranjeros (min)')
     tiempo_mexicanos = models.PositiveIntegerField(default=0, verbose_name='Tiempo Mexicanos (min)')
     tiempo_fma = models.PositiveIntegerField(default=0, verbose_name='Tiempo FMA (min)')
+    tiempo_revisiones_secundarias = models.PositiveIntegerField(default=0, verbose_name='Tiempo Revisiones Secundarias (min)')
 
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='tiempos_atencion')
     fecha_creacion = models.DateTimeField(auto_now_add=True)

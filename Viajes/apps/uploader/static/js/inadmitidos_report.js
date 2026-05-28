@@ -18,6 +18,16 @@ function hoy() {
 document.addEventListener('DOMContentLoaded', () => {
     const finInput = document.getElementById('fecha_fin');
     if (!finInput.value) finInput.value = hoy();
+
+    const inicioInput = document.getElementById('fecha_inicio');
+    [inicioInput, finInput].forEach(input => {
+        input.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                generarReporte();
+            }
+        });
+    });
 });
 
 /* --- Generar reporte (tabla HTML preview) --- */
@@ -131,12 +141,12 @@ function renderTabla(data) {
     html += `<tr class="row-sep">${tdSep.repeat(totalCols)}</tr>`;
 
     // Local
-    html += `<tr class="row-pax"><td class="col-label">Local:</td>`;
+    html += `<tr class="row-pax"><td class="col-label">Pasajeros Locales:</td>`;
     for (const v of data.local) html += `<td>${v}</td>`;
     html += `<td>${sumar(data.local)}</td></tr>`;
 
     // Tránsito
-    html += `<tr class="row-pax"><td class="col-label">En tránsito:</td>`;
+    html += `<tr class="row-pax"><td class="col-label">Pasajeros en tránsito:</td>`;
     for (const v of data.transito) html += `<td>${v}</td>`;
     html += `<td>${sumar(data.transito)}</td></tr>`;
 
@@ -150,9 +160,13 @@ function renderTabla(data) {
 
     const horaInicio = data.hora_inicio || [];
     const horaFin = data.hora_fin || [];
-    const tExt = data.tiempo_extranjeros || [];
-    const tMex = data.tiempo_mexicanos || [];
     const tFma = data.tiempo_fma || [];
+    const tMex = data.tiempo_mexicanos || [];
+    const tExt = data.tiempo_extranjeros || [];
+    const tRS = data.tiempo_revisiones_secundarias || [];
+
+    // Título Tiempos de atención
+    html += `<tr class="row-dias"><td colspan="${totalCols}">Tiempos de atención</td></tr>`;
 
     // Hora Inicio
     html += `<tr class="row-pax"><td class="col-label">Hora Inicio:</td>`;
@@ -164,40 +178,6 @@ function renderTabla(data) {
     for (let d = 0; d < n; d++) html += `<td>${horaFin[d] ?? ''}</td>`;
     html += `<td></td></tr>`;
 
-    // Título Tiempos de atención
-    html += `<tr class="row-dias"><td colspan="${totalCols}">Tiempos de atención</td></tr>`;
-
-    // Extranjeros
-    html += `<tr class="row-pax"><td class="col-label">Extranjeros:</td>`;
-    let totalExt = 0;
-    for (let d = 0; d < n; d++) {
-        const v = tExt[d];
-        if (v !== '' && v !== null && v !== undefined) totalExt += Number(v) || 0;
-        html += `<td>${v ?? ''}</td>`;
-    }
-    html += `<td><strong>${totalExt}</strong></td></tr>`;
-
-    // Mexicanos
-    html += `<tr class="row-pax"><td class="col-label">Mexicanos:</td>`;
-    let totalMex = 0;
-    for (let d = 0; d < n; d++) {
-        const v = tMex[d];
-        if (v !== '' && v !== null && v !== undefined) totalMex += Number(v) || 0;
-        html += `<td>${v ?? ''}</td>`;
-    }
-    html += `<td><strong>${totalMex}</strong></td></tr>`;
-
-    // FMA
-    html += `<tr class="row-pax"><td class="col-label">FMA:</td>`;
-    let totalFma = 0;
-    for (let d = 0; d < n; d++) {
-        const v = tFma[d];
-        if (v !== '' && v !== null && v !== undefined) totalFma += Number(v) || 0;
-        html += `<td>${v ?? ''}</td>`;
-    }
-    html += `<td><strong>${totalFma}</strong></td></tr>`;
-
-    // Total por día (suma de los 3 rubros, en min → "Xh Ym")
     const fmtMin = (mins) => {
         const num = Number(mins);
         if (!Number.isFinite(num) || num <= 0) return '0m';
@@ -207,14 +187,33 @@ function renderTabla(data) {
         if (m === 0) return `${h}h`;
         return `${h}h ${m}m`;
     };
+
+    const renderRubro = (label, arr) => {
+        html += `<tr class="row-pax"><td class="col-label">${label}:</td>`;
+        let totalRub = 0;
+        for (let d = 0; d < n; d++) {
+            const v = arr[d];
+            if (v !== '' && v !== null && v !== undefined) totalRub += Number(v) || 0;
+            html += `<td>${v ?? ''}</td>`;
+        }
+        html += `<td><strong>${totalRub}</strong></td></tr>`;
+    };
+
+    renderRubro('FMA', tFma);
+    renderRubro('Mexicanos', tMex);
+    renderRubro('Extranjeros', tExt);
+    renderRubro('Revisiones Secundarias', tRS);
+
+    // Total por día (suma de los 4 rubros, en min → "Xh Ym")
     html += `<tr class="row-total-pax"><td class="col-label">Total por día:</td>`;
     let totalGlobal = 0;
     for (let d = 0; d < n; d++) {
-        const ext = Number(tExt[d]) || 0;
-        const mex = Number(tMex[d]) || 0;
         const fma = Number(tFma[d]) || 0;
-        const hayDatos = tExt[d] !== '' || tMex[d] !== '' || tFma[d] !== '';
-        const sumaDia = ext + mex + fma;
+        const mex = Number(tMex[d]) || 0;
+        const ext = Number(tExt[d]) || 0;
+        const rs = Number(tRS[d]) || 0;
+        const hayDatos = tFma[d] !== '' || tMex[d] !== '' || tExt[d] !== '' || tRS[d] !== '';
+        const sumaDia = fma + mex + ext + rs;
         totalGlobal += sumaDia;
         html += `<td><strong>${hayDatos ? fmtMin(sumaDia) : ''}</strong></td>`;
     }
