@@ -613,9 +613,12 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
         fechaInput.addEventListener('change', () => cargarTiemposFecha(fechaInput.value));
     }
 
-    window.abrirModalTiempos = function () {
+    function abrirModal() {
         if (fechaInput && !fechaInput.value) fechaInput.value = hoyISO();
         modal.showModal();
         cargarTiemposFecha(fechaInput.value);
-    };
+    }
+
+    const btnAbrir = document.getElementById('btnAbrirTiempos');
+    if (btnAbrir) btnAbrir.addEventListener('click', abrirModal);
 })();
