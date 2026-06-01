@@ -131,12 +131,12 @@ class MaintenanceHandler(SimpleHTTPRequestHandler):
 
 if __name__ == '__main__':
     PORT = 8002
-    print(f"🔧 Servidor de mantenimiento iniciado en http://localhost:{PORT}")
-    print("⏹️  Presiona Ctrl+C para detener")
+    print(f" Servidor de mantenimiento iniciado en http://localhost:{PORT}")
+    print("  Presiona Ctrl+C para detener")
     
     server = HTTPServer(('0.0.0.0', PORT), MaintenanceHandler)
     try:
         server.serve_forever()
     except KeyboardInterrupt:
-        print("\n✅ Servidor de mantenimiento detenido")
+        print("\n Servidor de mantenimiento detenido")
         server.shutdown()

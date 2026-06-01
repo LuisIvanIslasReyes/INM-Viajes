@@ -116,13 +116,13 @@ def delete_batch(request, batch_id):
 
             messages.success(
                 request,
-                f'✅ Carga "{archivo_nombre}" eliminada correctamente. '
+                f' Carga "{archivo_nombre}" eliminada correctamente. '
                 f'Se eliminaron {registros_count} registro(s).'
             )
         except UploadBatch.DoesNotExist:
-            messages.error(request, '❌ La carga no existe.')
+            messages.error(request, 'La carga no existe.')
         except Exception as e:
-            messages.error(request, f'❌ Error al eliminar la carga: {str(e)}')
+            messages.error(request, f'Error al eliminar la carga: {str(e)}')
     
     return redirect('batch_list')
 
@@ -138,12 +138,12 @@ def create_user(request):
             user.is_superuser = False
             user.is_staff = False
             user.save()
-            messages.success(request, f'✅ Usuario {user.username} creado exitosamente.')
+            messages.success(request, f' Usuario {user.username} creado exitosamente.')
             return redirect('create_user')
         else:
             for field, errors in form.errors.items():
                 for error in errors:
-                    messages.error(request, f'❌ {error}')
+                    messages.error(request, f' {error}')
     else:
         form = CreateUserForm()
 

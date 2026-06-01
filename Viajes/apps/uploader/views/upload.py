@@ -4,10 +4,10 @@ Vistas relacionadas con la subida de archivos Excel
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import render, redirect
 from django.contrib import messages
+from datetime import datetime, time
+from django.utils import timezone
 from django.urls import reverse
 from django.db import models
-from django.utils import timezone
-from datetime import datetime, time
 import pandas as pd
 
 from ..forms import ExcelUploadForm
@@ -25,11 +25,11 @@ def upload_excel(request):
         # Validar que se hayan seleccionado archivos
         archivos = request.FILES.getlist('archivo')
         if not archivos:
-            messages.error(request, '📁 Por favor, selecciona al menos un archivo Excel antes de subir.')
+            messages.error(request, ' Por favor, selecciona al menos un archivo Excel antes de subir.')
             return redirect('upload_excel')
 
         if len(archivos) > 2:
-            messages.error(request, '❌ Solo puedes subir máximo 2 archivos a la vez.')
+            messages.error(request, ' Solo puedes subir máximo 2 archivos a la vez.')
             return redirect('upload_excel')
 
         # Fecha del vuelo elegida por el usuario en el modal previo al submit.
@@ -62,7 +62,7 @@ def upload_excel(request):
                 df = pd.read_excel(archivo)
 
                 if df.empty:
-                    messages.warning(request, f'📋 El archivo "{archivo.name}" está vacío o no contiene datos válidos.')
+                    messages.warning(request, f' El archivo "{archivo.name}" está vacío o no contiene datos válidos.')
                     continue
                 
                 # Extraer información del vuelo del primer registro
@@ -237,7 +237,7 @@ def upload_excel(request):
                         fila_excel = index + 2  # +2 porque Excel empieza en 1 y tiene encabezado
                         nombre_error = row.get('旅客姓名', 'N/A')
                         doc_error = row.get('证件号', 'N/A')
-                        print(f"❌ ERROR en fila {fila_excel}: {nombre_error} (Doc: {doc_error}) - {str(e)}")
+                        print(f" ERROR en fila {fila_excel}: {nombre_error} (Doc: {doc_error}) - {str(e)}")
                         registros_error += 1
                         continue
                 
@@ -249,7 +249,7 @@ def upload_excel(request):
                 archivos_procesados += 1
                 
             except Exception as e:
-                messages.error(request, f'❌ Error al procesar "{archivo.name}": {str(e)}')
+                messages.error(request, f' Error al procesar "{archivo.name}": {str(e)}')
                 if 'batch' in locals():
                     batch.delete()
                 continue
@@ -257,7 +257,7 @@ def upload_excel(request):
         # Mensajes finales consolidados
         if archivos_procesados > 0:
             if total_registros_creados > 0:
-                messages.success(request, f'✅ ¡{archivos_procesados} archivo(s) procesado(s) exitosamente! Se agregaron {total_registros_creados} registro(s) en total.')
+                messages.success(request, f' ¡{archivos_procesados} archivo(s) procesado(s) exitosamente! Se agregaron {total_registros_creados} registro(s) en total.')
                 
                 # Crear notificación de carga exitosa
                 Notificacion.objects.create(
@@ -302,12 +302,12 @@ def upload_excel(request):
                     usuario=request.user,
                     tipo='importante',
                     categoria='error_registro',
-                    titulo=f'❌ {total_registros_error} registros con errores',
+                    titulo=f' {total_registros_error} registros con errores',
                     mensaje=f'Algunos registros no pudieron procesarse debido a errores de formato o datos inválidos. Revisa los archivos Excel.',
                     enlace=reverse('upload_excel')
                 )
         else:
-            messages.error(request, '❌ No se pudo procesar ningún archivo.')
+            messages.error(request, ' No se pudo procesar ningún archivo.')
         
         return redirect('admin_list')
     else:

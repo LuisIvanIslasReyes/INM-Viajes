@@ -225,7 +225,7 @@ function manejarPegadoImagen(event) {
             // Validar formato de imagen
             const formatosPermitidos = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
             if (!formatosPermitidos.includes(blob.type)) {
-                alert('❌ Formato no permitido. Solo JPG, JPEG, PNG o WEBP.');
+                alert('Formato no permitido. Solo JPG, JPEG, PNG o WEBP.');
                 return;
             }
             

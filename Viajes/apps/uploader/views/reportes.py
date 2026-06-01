@@ -72,7 +72,7 @@ def download_batch_file(request, batch_id):
     
     # Verificar que el archivo existe
     if not batch.archivo or not os.path.exists(batch.archivo.path):
-        messages.error(request, '❌ El archivo no existe en el servidor.')
+        messages.error(request, ' El archivo no existe en el servidor.')
         return redirect('batch_list')
     
     try:
@@ -84,5 +84,5 @@ def download_batch_file(request, batch_id):
         )
         return response
     except Exception as e:
-        messages.error(request, f'❌ Error al descargar el archivo: {str(e)}')
+        messages.error(request, f' Error al descargar el archivo: {str(e)}')
         return redirect('batch_list')

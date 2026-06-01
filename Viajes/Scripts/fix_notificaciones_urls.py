@@ -25,4 +25,4 @@ for notif in notificaciones:
     notif.save()
     print(f"✓ Actualizado: {old_enlace} -> {notif.enlace}")
 
-print(f"\n✅ {notificaciones.count()} notificaciones actualizadas correctamente")
+print(f"\n {notificaciones.count()} notificaciones actualizadas correctamente")

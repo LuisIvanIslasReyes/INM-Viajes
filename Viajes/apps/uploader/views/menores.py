@@ -47,17 +47,17 @@ def crear_menor(request):
     tipo_label = request.POST.get('tipo', '').strip()
 
     if not all([nombre, genero_label, nacionalidad, fecha_str, tipo_label]):
-        messages.error(request, '❌ Faltan campos requeridos para registrar al menor.')
+        messages.error(request, ' Faltan campos requeridos para registrar al menor.')
         return redirect('admin_list')
 
     if genero_label not in GENERO_MAP or tipo_label not in TIPO_VUELO_MAP:
-        messages.error(request, '❌ Género o tipo de vuelo inválido.')
+        messages.error(request, ' Género o tipo de vuelo inválido.')
         return redirect('admin_list')
 
     try:
         fecha_vuelo = datetime.strptime(fecha_str, '%Y-%m-%d').date()
     except ValueError:
-        messages.error(request, '❌ Fecha de vuelo inválida.')
+        messages.error(request, ' Fecha de vuelo inválida.')
         return redirect('admin_list')
 
     genero = GENERO_MAP[genero_label]
@@ -104,6 +104,6 @@ def crear_menor(request):
 
     messages.success(
         request,
-        f'✅ Menor "{nombre}" capturado en vuelo {tipo_vuelo} del {fecha_vuelo.strftime("%d/%m/%Y")}.'
+        f' Menor "{nombre}" capturado en vuelo {tipo_vuelo} del {fecha_vuelo.strftime("%d/%m/%Y")}.'
     )
     return redirect('admin_list')

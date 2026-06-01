@@ -32,7 +32,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
 /* --- Generar reporte (tabla HTML preview) --- */
 
-async function generarReporte() {
+async function generarReporte(mostrarTotal = true) {
     const inicio = document.getElementById('fecha_inicio').value;
     const fin = document.getElementById('fecha_fin').value;
 
@@ -53,7 +53,7 @@ async function generarReporte() {
             throw new Error(d.error || `Error ${resp.status}`);
         }
         reporteData = await resp.json();
-        renderTabla(reporteData);
+        renderTabla(reporteData, mostrarTotal);
         document.getElementById('btn-pdf').classList.remove('hidden');
     } catch (e) {
         mostrarError(e.message || 'Error al obtener los datos.');
@@ -62,36 +62,48 @@ async function generarReporte() {
     }
 }
 
+/* --- Generar reporte del día actual (sin columna Total) --- */
+
+function generarReporteDelDia() {
+    const fechaHoy = hoy();
+    document.getElementById('fecha_inicio').value = fechaHoy;
+    document.getElementById('fecha_fin').value = fechaHoy;
+    generarReporte(false);
+}
+
 /* --- Renderizar tabla de previsualización --- */
 
-function renderTabla(data) {
+function renderTabla(data, mostrarTotal = true) {
     const tabla = document.getElementById('tabla-inadmitidos');
     const n = data.dates.length;
     const nats = Object.keys(data.nationalities);
     const sumar = (arr) => arr.reduce((acc, v) => acc + (Number(v) || 0), 0);
-    const totalCols = n + 2; // etiqueta + n fechas + columna Total
+    const totalCols = mostrarTotal ? n + 2 : n + 1; // etiqueta + n fechas [+ columna Total]
 
     let html = '<tbody>';
 
     // Fila Vuelo/Origen — proporciones tipo Img1: label / valor / label / valor
+    const anchoVal = totalCols - 2; // ancho disponible para los dos valores
+    const valIzq = Math.max(Math.floor(anchoVal / 2), 1);
+    const valDer = Math.max(anchoVal - Math.floor(anchoVal / 2), 1);
     html += `<tr class="row-vuelo">
         <td class="col-label">Vuelo:</td>
-        <td colspan="${Math.max(Math.floor(n / 2), 1)}">${data.vuelo}</td>
+        <td colspan="${valIzq}">${data.vuelo}</td>
         <td>Origen:</td>
-        <td colspan="${Math.max(n - Math.floor(n / 2), 1)}">${data.origen}</td>
+        <td colspan="${valDer}">${data.origen}</td>
     </tr>`;
 
     // INADMITIDOS
     html += `<tr class="row-title"><td colspan="${totalCols}">INADMITIDOS</td></tr>`;
 
-    // Días de la semana (vacío + nombres + Total)
+    // Días de la semana (vacío + nombres [+ Total])
     const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
     html += `<tr class="row-dias"><td class="col-label"></td>`;
     for (const rd of data.raw_dates) {
         const d = new Date(rd + 'T00:00:00');
         html += `<td>${dias[d.getDay()]}</td>`;
     }
-    html += `<td>Total</td>`;
+    if (mostrarTotal) html += `<td>Total</td>`;
     html += '</tr>';
 
     // Nacionalidad + fechas
@@ -99,7 +111,7 @@ function renderTabla(data) {
     for (const fecha of data.dates) {
         html += `<td>${fecha}</td>`;
     }
-    html += `<td></td>`;
+    if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
 
     // Filas de nacionalidades (alternadas) — suma horizontal por nacionalidad
@@ -112,7 +124,7 @@ function renderTabla(data) {
             totalNat += Number(v) || 0;
             html += `<td>${v}</td>`;
         }
-        html += `<td><strong>${totalNat}</strong></td>`;
+        if (mostrarTotal) html += `<td><strong>${totalNat}</strong></td>`;
         html += '</tr>';
     });
 
@@ -125,17 +137,20 @@ function renderTabla(data) {
     // Total Inadmitidos
     html += `<tr class="row-total-inad"><td class="col-label">Total Inadmitidos</td>`;
     for (const v of data.totals_inadmitidos) html += `<td>${v}</td>`;
-    html += `<td>${sumar(data.totals_inadmitidos)}</td></tr>`;
+    if (mostrarTotal) html += `<td>${sumar(data.totals_inadmitidos)}</td>`;
+    html += '</tr>';
 
     // Total Internaciones
     html += `<tr class="row-subtotal row-subtotal-intern"><td class="col-label">Total Internaciones:</td>`;
     for (const v of data.totals_internaciones) html += `<td>${v}</td>`;
-    html += `<td>${sumar(data.totals_internaciones)}</td></tr>`;
+    if (mostrarTotal) html += `<td>${sumar(data.totals_internaciones)}</td>`;
+    html += '</tr>';
 
     // Total SR
     html += `<tr class="row-subtotal row-subtotal-sr"><td class="col-label">Total Segundas Revisiones:</td>`;
     for (const v of data.totals_sr) html += `<td>${v}</td>`;
-    html += `<td>${sumar(data.totals_sr)}</td></tr>`;
+    if (mostrarTotal) html += `<td>${sumar(data.totals_sr)}</td>`;
+    html += '</tr>';
 
     // Separador
     html += `<tr class="row-sep">${tdSep.repeat(totalCols)}</tr>`;
@@ -143,17 +158,20 @@ function renderTabla(data) {
     // Local
     html += `<tr class="row-pax"><td class="col-label">Pasajeros Locales:</td>`;
     for (const v of data.local) html += `<td>${v}</td>`;
-    html += `<td>${sumar(data.local)}</td></tr>`;
+    if (mostrarTotal) html += `<td>${sumar(data.local)}</td>`;
+    html += '</tr>';
 
     // Tránsito
     html += `<tr class="row-pax"><td class="col-label">Pasajeros en tránsito:</td>`;
     for (const v of data.transito) html += `<td>${v}</td>`;
-    html += `<td>${sumar(data.transito)}</td></tr>`;
+    if (mostrarTotal) html += `<td>${sumar(data.transito)}</td>`;
+    html += '</tr>';
 
     // Total pasajeros
     html += `<tr class="row-total-pax"><td class="col-label">Total pasajeros:</td>`;
     for (const v of data.total_pasajeros) html += `<td>${v}</td>`;
-    html += `<td>${sumar(data.total_pasajeros)}</td></tr>`;
+    if (mostrarTotal) html += `<td>${sumar(data.total_pasajeros)}</td>`;
+    html += '</tr>';
 
     // Separador antes de tiempos
     html += `<tr class="row-sep">${tdSep.repeat(totalCols)}</tr>`;
@@ -171,12 +189,14 @@ function renderTabla(data) {
     // Hora Inicio
     html += `<tr class="row-pax"><td class="col-label">Hora Inicio:</td>`;
     for (let d = 0; d < n; d++) html += `<td>${horaInicio[d] ?? ''}</td>`;
-    html += `<td></td></tr>`;
+    if (mostrarTotal) html += `<td></td>`;
+    html += '</tr>';
 
     // Hora Fin
     html += `<tr class="row-pax"><td class="col-label">Hora Fin:</td>`;
     for (let d = 0; d < n; d++) html += `<td>${horaFin[d] ?? ''}</td>`;
-    html += `<td></td></tr>`;
+    if (mostrarTotal) html += `<td></td>`;
+    html += '</tr>';
 
     const fmtMin = (mins) => {
         const num = Number(mins);
@@ -196,7 +216,8 @@ function renderTabla(data) {
             if (v !== '' && v !== null && v !== undefined) totalRub += Number(v) || 0;
             html += `<td>${v ?? ''}</td>`;
         }
-        html += `<td><strong>${totalRub}</strong></td></tr>`;
+        if (mostrarTotal) html += `<td><strong>${totalRub}</strong></td>`;
+        html += '</tr>';
     };
 
     renderRubro('FMA', tFma);
@@ -217,7 +238,8 @@ function renderTabla(data) {
         totalGlobal += sumaDia;
         html += `<td><strong>${hayDatos ? fmtMin(sumaDia) : ''}</strong></td>`;
     }
-    html += `<td><strong>${fmtMin(totalGlobal)}</strong></td></tr>`;
+    if (mostrarTotal) html += `<td><strong>${fmtMin(totalGlobal)}</strong></td>`;
+    html += '</tr>';
 
     html += '</tbody>';
     tabla.innerHTML = html;

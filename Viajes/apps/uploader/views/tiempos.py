@@ -54,13 +54,13 @@ def capturar_tiempos_atencion(request):
         hora_inicio = datetime.strptime(hora_inicio_str, '%H:%M').time()
         hora_fin = datetime.strptime(hora_fin_str, '%H:%M').time()
     except ValueError:
-        messages.error(request, '❌ Fecha u hora inválida.')
+        messages.error(request, ' Fecha u hora inválida.')
         return redirect('admin_list')
 
     if fecha < FECHA_MINIMA:
         messages.error(
             request,
-            f'❌ La fecha debe ser desde {FECHA_MINIMA.strftime("%d/%m/%Y")} en adelante.'
+            f' La fecha debe ser desde {FECHA_MINIMA.strftime("%d/%m/%Y")} en adelante.'
         )
         return redirect('admin_list')
 
@@ -68,7 +68,7 @@ def capturar_tiempos_atencion(request):
     for prefijo, campo in RUBROS:
         v = _minutos_rubro(request.POST, prefijo)
         if v is None:
-            messages.error(request, '❌ Tiempos inválidos. Ingresa números no negativos.')
+            messages.error(request, ' Tiempos inválidos. Ingresa números no negativos.')
             return redirect('admin_list')
         valores[campo] = v
 
@@ -83,7 +83,7 @@ def capturar_tiempos_atencion(request):
     )
 
     accion = 'capturados' if creado else 'actualizados'
-    messages.success(request, f'✅ Tiempos {accion} para {fecha.strftime("%d/%m/%Y")}.')
+    messages.success(request, f' Tiempos {accion} para {fecha.strftime("%d/%m/%Y")}.')
     return redirect('admin_list')
 
 

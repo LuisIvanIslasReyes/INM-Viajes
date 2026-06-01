@@ -311,7 +311,7 @@ async function copiarPinBinacional(event) {
     event.preventDefault();
 
     if (!pinBinacionalData) {
-        alert('❌ No hay datos del PIN Binacional disponibles');
+        alert('No hay datos del PIN Binacional disponibles');
         return;
     }
 
@@ -334,11 +334,11 @@ async function copiarPinBinacional(event) {
             `Internaciones: *${intStr}*`;
 
         await navigator.clipboard.writeText(texto);
-        mostrarNotificacion('✅ PIN Binacional copiado', 'success');
+        mostrarNotificacion(' PIN Binacional copiado', 'success');
 
     } catch (err) {
         console.error('Error al copiar PIN Binacional:', err);
-        mostrarNotificacion('❌ Error al copiar', 'error');
+        mostrarNotificacion('Error al copiar', 'error');
     }
 }
 
@@ -347,7 +347,7 @@ async function copiarPin(event) {
     event.preventDefault();
     
     if (!pinData) {
-        alert('❌ No hay datos del PIN disponibles');
+        alert('No hay datos del PIN disponibles');
         return;
     }
     
@@ -395,11 +395,11 @@ async function copiarPin(event) {
         await navigator.clipboard.writeText(texto);
         
         // Mostrar notificación toast
-        mostrarNotificacion('✅ Texto copiado', 'success');
+        mostrarNotificacion(' Texto copiado', 'success');
         
     } catch (err) {
         console.error('Error al copiar:', err);
-        mostrarNotificacion('❌ Error al copiar', 'error');
+        mostrarNotificacion('Error al copiar', 'error');
     }
 }
 
@@ -494,7 +494,7 @@ function mostrarModalCopiaManual(texto) {
 // Función para generar PDF con PIN e imágenes
 async function generarPDF() {
     if (!pinData) {
-        alert('❌ No hay datos del PIN disponibles');
+        alert('No hay datos del PIN disponibles');
         return;
     }
     
@@ -635,10 +635,10 @@ async function generarPDF() {
         const nombreArchivo = `PIN_${pinData.fechaTexto.replace(/\s+/g, '_').replace(/,/g, '')}.pdf`;
         doc.save(nombreArchivo);
         
-        alert('✅ PDF generado correctamente');
+        alert('PDF generado correctamente');
         
     } catch (error) {
         console.error('Error al generar PDF:', error);
-        alert('❌ Error al generar el PDF: ' + error.message);
+        alert('Error al generar el PDF: ' + error.message);
     }
 }

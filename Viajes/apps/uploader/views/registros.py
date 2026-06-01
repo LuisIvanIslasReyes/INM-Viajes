@@ -133,7 +133,7 @@ def update_registro(request, registro_id):
                     'internacion': registro.internacion,
                 })
 
-            messages.success(request, '✅ Registro actualizado exitosamente.')
+            messages.success(request, ' Registro actualizado exitosamente.')
 
             # Mantener TODOS los parámetros GET que venían en la URL
             params = request.GET.copy()
@@ -146,9 +146,9 @@ def update_registro(request, registro_id):
             return redirect(redirect_url)
             
         except Registro.DoesNotExist:
-            messages.error(request, '❌ Registro no encontrado.')
+            messages.error(request, ' Registro no encontrado.')
         except Exception as e:
-            messages.error(request, f'❌ Error al actualizar: {str(e)}')
+            messages.error(request, f' Error al actualizar: {str(e)}')
     
     return redirect('admin_list')
 
@@ -238,7 +238,7 @@ def generar_pin(request, fecha):
         logger.error(f'Fecha inválida recibida: {fecha} - Error: {str(e)}')
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'error': 'Fecha inválida'}, status=400)
-        messages.error(request, '❌ Fecha inválida.')
+        messages.error(request, ' Fecha inválida.')
         return redirect('date_range_report')
     
     # Filtrar por rango de datetime en UTC para coincidir con cómo
@@ -256,7 +256,7 @@ def generar_pin(request, fecha):
         logger.warning(f'No se encontraron registros para la fecha: {fecha_obj}')
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
             return JsonResponse({'error': f'No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}'}, status=404)
-        messages.error(request, f'❌ No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}')
+        messages.error(request, f' No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}')
         return redirect('date_range_report')
 
     # Desglose por destino para el PIN Binacional.

@@ -145,7 +145,7 @@
     window.INADMITIDOS_DATA_URL = '{% url "inadmitidos_data" %}';
     window.INADMITIDOS_PDF_URL = '{% url "generar_inadmitidos_pdf" %}';
 </script>
-<script src="{% static 'js/inadmitidos_report.js' %}?v=14"></script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=16"></script>
 {% endblock %}
 
 {% block content %}
@@ -206,6 +206,10 @@
             </div>
 
             <div class="card-actions justify-end mt-4 gap-3">
+                <button id="btn-reporte-dia" onclick="generarReporteDelDia()" class="btn text-white" style="background-color:#1F8A4C; border-color:#1F8A4C;">
+                    <i class="fas fa-calendar-day mr-1"></i>
+                    Reporte del día
+                </button>
                 <button id="btn-generar" onclick="generarReporte()" class="btn text-white" style="background-color:#700606; border-color:#700606;">
                     <i class="fas fa-table mr-1"></i>
                     Generar Reporte

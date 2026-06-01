@@ -26,7 +26,7 @@ class Command(BaseCommand):
                 self.stdout.write(f'Procesados: {i}/{total}')
         
         self.stdout.write(
-            self.style.SUCCESS(f'\n✅ Proceso completado:')
+            self.style.SUCCESS(f'\n Proceso completado:')
         )
         self.stdout.write(f'   Total registros: {total}')
         self.stdout.write(f'   Actualizados: {actualizados}')

@@ -163,7 +163,7 @@
                                 {% if duplicado.registros.0.vuelo_fecha == duplicado.registros.1.vuelo_fecha and duplicado.registros.0.vuelo_numero == duplicado.registros.1.vuelo_numero %}
                                     - <span class="text-error font-bold">⚠️ POSIBLE DUPLICADO REAL</span> (mismo vuelo y fecha)
                                 {% else %}
-                                    - ✅ Probablemente son <strong>vuelos diferentes</strong>
+                                    -  Probablemente son <strong>vuelos diferentes</strong>
                                 {% endif %}
                             {% else %}
                                 Este pasajero tiene {{ duplicado.registros|length }} registros. Revisa si corresponden a vuelos diferentes.
@@ -202,7 +202,7 @@
             <div class="text-sm">
                 Esta página muestra personas que aparecen múltiples veces. <strong>No todos son duplicados reales</strong>:
                 <ul class="list-disc list-inside mt-2">
-                    <li>✅ <strong>Normal:</strong> Misma persona en diferentes vuelos o fechas</li>
+                    <li> <strong>Normal:</strong> Misma persona en diferentes vuelos o fechas</li>
                     <li>⚠️ <strong>Duplicado:</strong> Mismo vuelo, misma fecha, mismo documento = Error de carga</li>
                 </ul>
             </div>

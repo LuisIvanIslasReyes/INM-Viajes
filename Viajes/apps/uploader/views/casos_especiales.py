@@ -62,7 +62,7 @@ def resolver_caso_aceptar(request, caso_id):
             reg_conf.segunda_revision = True
             reg_conf.save()
         
-        messages.success(request, f'✅ Caso #{caso.id} aceptado. Todos los registros se confirmaron como válidos.')
+        messages.success(request, f' Caso #{caso.id} aceptado. Todos los registros se confirmaron como válidos.')
         return redirect('casos_especiales_list')
     
     return redirect('casos_especiales_list')
@@ -78,7 +78,7 @@ def resolver_caso_editar(request, caso_id, registro_id):
         nuevo_documento = request.POST.get('nuevo_documento', '').strip()
         
         if not nuevo_documento:
-            messages.error(request, '❌ Debe proporcionar un número de documento nuevo.')
+            messages.error(request, ' Debe proporcionar un número de documento nuevo.')
             return redirect('casos_especiales_list')
         
         # Verificar que el nuevo documento no exista
@@ -89,7 +89,7 @@ def resolver_caso_editar(request, caso_id, registro_id):
         ).exists()
         
         if duplicado:
-            messages.error(request, f'❌ El documento {nuevo_documento} ya existe para este vuelo y fecha.')
+            messages.error(request, f' El documento {nuevo_documento} ya existe para este vuelo y fecha.')
             return redirect('casos_especiales_list')
         
         # Actualizar documento
@@ -105,7 +105,7 @@ def resolver_caso_editar(request, caso_id, registro_id):
         caso.notas_admin = f'Documento cambiado de {documento_anterior} a {nuevo_documento}'
         caso.save()
         
-        messages.success(request, f'✅ Caso #{caso.id} resuelto. Documento actualizado a {nuevo_documento}.')
+        messages.success(request, f' Caso #{caso.id} resuelto. Documento actualizado a {nuevo_documento}.')
         return redirect('casos_especiales_list')
     
     return redirect('casos_especiales_list')
@@ -132,7 +132,7 @@ def resolver_caso_inadmitir(request, caso_id, registro_id):
         caso.notas_admin = f'Registro {registro.nombre_pasajero} marcado como rechazado (SR + R activados automáticamente)'
         caso.save()
         
-        messages.success(request, f'✅ Caso #{caso.id} resuelto. Registro marcado como INADMITIDO (SR + R).')
+        messages.success(request, f' Caso #{caso.id} resuelto. Registro marcado como INADMITIDO (SR + R).')
         return redirect('casos_especiales_list')
     
     return redirect('casos_especiales_list')
@@ -157,7 +157,7 @@ def resolver_caso_eliminar(request, caso_id, registro_id):
         caso.notas_admin = f'Registro de {nombre_eliminado} eliminado del sistema'
         caso.save()
         
-        messages.success(request, f'✅ Caso #{caso.id} resuelto. Registro eliminado.')
+        messages.success(request, f' Caso #{caso.id} resuelto. Registro eliminado.')
         return redirect('casos_especiales_list')
     
     return redirect('casos_especiales_list')
