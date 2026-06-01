@@ -491,84 +491,66 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
         fechaInput.value = hoyISO();
     }
 
-    function formatearMinutos(total) {
-        const n = Number(total);
-        if (!Number.isFinite(n) || n <= 0) return '';
-        const h = Math.floor(n / 60);
-        const m = n % 60;
+    // 'HH:MM' -> minutos desde medianoche (o null si vacío/inválido)
+    function aMinutos(hhmm) {
+        const m = /^(\d{1,2}):(\d{2})$/.exec((hhmm || '').trim());
+        if (!m) return null;
+        return Number(m[1]) * 60 + Number(m[2]);
+    }
+
+    function formatearDuracion(mins) {
+        if (mins == null || mins < 0) return '';
+        const h = Math.floor(mins / 60);
+        const m = mins % 60;
         if (h === 0) return `= ${m}m`;
         if (m === 0) return `= ${h}h`;
         return `= ${h}h ${m}m`;
     }
 
-    const rubros = {};
-    modal.querySelectorAll('[data-rubro]').forEach((rubro) => {
-        const key = rubro.getAttribute('data-rubro');
-        const minInput = rubro.querySelector('[data-minutos]');
-        const horaInput = rubro.querySelector('[data-horas]');
-        const horaSuffix = rubro.querySelector('[data-h-suffix]');
-        const toggleBtn = rubro.querySelector('[data-toggle-hora]');
-        const toggleLabel = rubro.querySelector('[data-toggle-label]');
-        const hint = rubro.querySelector('[data-hint]');
-        if (!minInput || !hint) return;
-
-        const totalMinutos = () => {
-            const horaVisible = horaInput && !horaInput.classList.contains('hidden');
-            const h = horaVisible ? (Number(horaInput.value) || 0) : 0;
-            const m = Number(minInput.value) || 0;
-            return h * 60 + m;
-        };
-        const actualizar = () => {
-            const texto = formatearMinutos(totalMinutos());
-            hint.textContent = texto || ' ';
-            hint.style.color = texto ? '#0f766e' : '';
-        };
-        const mostrarHoras = (mostrar) => {
-            if (!horaInput || !horaSuffix) return;
-            horaInput.classList.toggle('hidden', !mostrar);
-            horaSuffix.classList.toggle('hidden', !mostrar);
-            minInput.placeholder = mostrar ? 'min' : 'minutos';
-            if (toggleLabel) toggleLabel.textContent = mostrar ? '− h' : '+ h';
-            if (toggleBtn) toggleBtn.title = mostrar ? 'Quitar horas' : 'Agregar horas';
-        };
-
-        minInput.addEventListener('input', actualizar);
-        if (horaInput) horaInput.addEventListener('input', actualizar);
-        if (toggleBtn) {
-            toggleBtn.addEventListener('click', () => {
-                const oculto = horaInput.classList.contains('hidden');
-                mostrarHoras(oculto);
-                if (!oculto) horaInput.value = 0;
-                actualizar();
-            });
-        }
-
-        rubros[key] = { minInput, horaInput, mostrarHoras, actualizar };
-        actualizar();
+    // Rubros en orden cronológico (el orden del DOM = orden de tiempos_rubros)
+    const rubros = [];
+    modal.querySelectorAll('[data-rubro]').forEach((cont) => {
+        const key = cont.getAttribute('data-rubro');
+        const input = cont.querySelector('[data-hora]');
+        const hint = cont.querySelector('[data-hint]');
+        if (!input) return;
+        input.addEventListener('input', actualizarDuraciones);
+        rubros.push({ key, input, hint });
     });
 
-    function setRubro(key, totalMin) {
-        const r = rubros[key];
-        if (!r) return;
-        const total = Number(totalMin) || 0;
-        if (total >= 60) {
-            const h = Math.floor(total / 60);
-            const m = total % 60;
-            r.mostrarHoras(true);
-            if (r.horaInput) r.horaInput.value = h;
-            r.minInput.value = m;
-        } else {
-            r.mostrarHoras(false);
-            if (r.horaInput) r.horaInput.value = 0;
-            r.minInput.value = total;
-        }
-        r.actualizar();
+    // Duración derivada de cada rubro = su hora − el hito anterior, encadenando
+    // desde Hora Inicio. La Hora Fin no participa en la derivación.
+    function actualizarDuraciones() {
+        let baseline = aMinutos(horaInicioInput.value);
+        rubros.forEach(({ input, hint }) => {
+            if (!hint) return;
+            const val = aMinutos(input.value);
+            if (val == null || baseline == null) {
+                hint.textContent = ' ';
+                hint.style.color = '';
+                return;
+            }
+            let dur = val - baseline;
+            if (dur < 0) dur += 1440; // cruce de medianoche
+            const texto = formatearDuracion(dur);
+            hint.textContent = texto || ' ';
+            hint.style.color = texto ? '#0f766e' : '';
+            baseline = val;
+        });
+    }
+
+    horaInicioInput.addEventListener('input', actualizarDuraciones);
+
+    function setRubro(key, hhmm) {
+        const r = rubros.find((x) => x.key === key);
+        if (r) r.input.value = hhmm || '';
     }
 
     function resetForm() {
         horaInicioInput.value = '';
         horaFinInput.value = '';
-        Object.keys(rubros).forEach((k) => setRubro(k, 0));
+        rubros.forEach((r) => { r.input.value = ''; });
+        actualizarDuraciones();
     }
 
     function setEstado(tipo, html) {
@@ -596,6 +578,7 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
                 setRubro('mexicanos', data.mexicanos);
                 setRubro('extranjeros', data.extranjeros);
                 setRubro('revisiones_secundarias', data.revisiones_secundarias);
+                actualizarDuraciones();
                 const meta = data.usuario
                     ? ` (guardado por <b>${data.usuario}</b> el ${data.fecha_modificacion})`
                     : ` (ultima modificacion: ${data.fecha_modificacion})`;

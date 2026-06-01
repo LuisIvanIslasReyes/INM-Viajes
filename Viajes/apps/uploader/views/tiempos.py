@@ -6,8 +6,9 @@ inadmitidos consume estos datos para mostrar las filas de Hora Inicio,
 Hora Fin y Tiempos de atención (FMA, Mexicanos, Extranjeros, Revisiones
 Secundarias).
 
-Cada rubro acepta un input opcional de horas (`<rubro>_h`) sumado al de
-minutos (`<rubro>_min`); el almacenamiento es siempre minutos totales.
+Cada rubro guarda la HORA DE TÉRMINO de su conteo (input `<rubro>` en formato
+'HH:MM', opcional). La duración por rubro se deriva en el reporte; aquí sólo se
+almacena la hora.
 """
 from datetime import date, datetime
 
@@ -28,16 +29,22 @@ RUBROS = [
 ]
 
 
-def _minutos_rubro(post, prefijo):
-    """Lee `<prefijo>_h` (opcional) y `<prefijo>_min` y devuelve minutos totales."""
+_HORA_INVALIDA = object()
+
+
+def _hora_rubro(post, prefijo):
+    """Lee `<prefijo>` como 'HH:MM'.
+
+    Devuelve un `time`, `None` si viene vacío (rubro sin capturar) o
+    `_HORA_INVALIDA` si el formato no es válido.
+    """
+    raw = (post.get(prefijo) or '').strip()
+    if not raw:
+        return None
     try:
-        h = int(post.get(f'{prefijo}_h') or 0)
-        m = int(post.get(f'{prefijo}_min') or 0)
+        return datetime.strptime(raw, '%H:%M').time()
     except ValueError:
-        return None
-    if h < 0 or m < 0:
-        return None
-    return h * 60 + m
+        return _HORA_INVALIDA
 
 
 @login_required
@@ -66,9 +73,9 @@ def capturar_tiempos_atencion(request):
 
     valores = {}
     for prefijo, campo in RUBROS:
-        v = _minutos_rubro(request.POST, prefijo)
-        if v is None:
-            messages.error(request, ' Tiempos inválidos. Ingresa números no negativos.')
+        v = _hora_rubro(request.POST, prefijo)
+        if v is _HORA_INVALIDA:
+            messages.error(request, ' Hora de rubro inválida. Usa el formato HH:MM.')
             return redirect('admin_list')
         valores[campo] = v
 
@@ -100,14 +107,17 @@ def obtener_tiempos_atencion(request, fecha):
     except TiemposAtencion.DoesNotExist:
         return JsonResponse({'existe': False})
 
+    def _hhmm(valor):
+        return valor.strftime('%H:%M') if valor else ''
+
     return JsonResponse({
         'existe': True,
         'hora_inicio': t.hora_inicio.strftime('%H:%M'),
         'hora_fin': t.hora_fin.strftime('%H:%M'),
-        'fma': t.tiempo_fma,
-        'mexicanos': t.tiempo_mexicanos,
-        'extranjeros': t.tiempo_extranjeros,
-        'revisiones_secundarias': t.tiempo_revisiones_secundarias,
+        'fma': _hhmm(t.tiempo_fma),
+        'mexicanos': _hhmm(t.tiempo_mexicanos),
+        'extranjeros': _hhmm(t.tiempo_extranjeros),
+        'revisiones_secundarias': _hhmm(t.tiempo_revisiones_secundarias),
         'usuario': t.usuario.username if t.usuario else '',
         'fecha_modificacion': t.fecha_modificacion.strftime('%d/%m/%Y %H:%M'),
     })

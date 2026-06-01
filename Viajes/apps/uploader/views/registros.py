@@ -407,8 +407,14 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
     hora_inicio_list, hora_fin_list = [], []
     tiempo_extranjeros_list, tiempo_mexicanos_list, tiempo_fma_list = [], [], []
     tiempo_revisiones_secundarias_list = []
+    dur_fma_list, dur_mexicanos_list, dur_extranjeros_list = [], [], []
+    dur_revisiones_secundarias_list = []
     nationalities_by_day = {}
     motivos_rechazo = []
+
+    def _min_de(t_obj):
+        """Minutos desde medianoche de un `time`, o None si no hay valor."""
+        return t_obj.hour * 60 + t_obj.minute if t_obj else None
 
     for i, dia in enumerate(dias):
         raw_dates.append(dia.strftime('%Y-%m-%d'))
@@ -435,10 +441,36 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         t = tiempos_map.get(dia)
         hora_inicio_list.append(t.hora_inicio.strftime('%H:%M') if t else '')
         hora_fin_list.append(t.hora_fin.strftime('%H:%M') if t else '')
-        tiempo_extranjeros_list.append(t.tiempo_extranjeros if t else '')
-        tiempo_mexicanos_list.append(t.tiempo_mexicanos if t else '')
-        tiempo_fma_list.append(t.tiempo_fma if t else '')
-        tiempo_revisiones_secundarias_list.append(t.tiempo_revisiones_secundarias if t else '')
+
+        # Hora de término por rubro (en orden cronológico) y duración derivada.
+        rubros_dia = (
+            ('fma', t.tiempo_fma if t else None),
+            ('mexicanos', t.tiempo_mexicanos if t else None),
+            ('extranjeros', t.tiempo_extranjeros if t else None),
+            ('revisiones_secundarias', t.tiempo_revisiones_secundarias if t else None),
+        )
+        horas_rubro, durs_rubro = {}, {}
+        baseline = _min_de(t.hora_inicio) if t else None
+        for nombre, obj in rubros_dia:
+            horas_rubro[nombre] = obj.strftime('%H:%M') if obj else ''
+            val = _min_de(obj)
+            if val is None or baseline is None:
+                durs_rubro[nombre] = ''
+            else:
+                d = val - baseline
+                if d < 0:
+                    d += 1440  # cruce de medianoche
+                durs_rubro[nombre] = d
+                baseline = val  # la baseline sólo avanza con rubros capturados
+
+        tiempo_fma_list.append(horas_rubro['fma'])
+        tiempo_mexicanos_list.append(horas_rubro['mexicanos'])
+        tiempo_extranjeros_list.append(horas_rubro['extranjeros'])
+        tiempo_revisiones_secundarias_list.append(horas_rubro['revisiones_secundarias'])
+        dur_fma_list.append(durs_rubro['fma'])
+        dur_mexicanos_list.append(durs_rubro['mexicanos'])
+        dur_extranjeros_list.append(durs_rubro['extranjeros'])
+        dur_revisiones_secundarias_list.append(durs_rubro['revisiones_secundarias'])
 
         nats_hoy = set()
         nat_counts = (
@@ -497,6 +529,10 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         'tiempo_mexicanos': tiempo_mexicanos_list,
         'tiempo_fma': tiempo_fma_list,
         'tiempo_revisiones_secundarias': tiempo_revisiones_secundarias_list,
+        'dur_fma': dur_fma_list,
+        'dur_mexicanos': dur_mexicanos_list,
+        'dur_extranjeros': dur_extranjeros_list,
+        'dur_revisiones_secundarias': dur_revisiones_secundarias_list,
         'motivos_rechazo': motivos_rechazo,
     }
 
@@ -639,24 +675,7 @@ def generar_inadmitidos_pdf(request):
     # Separador antes de tiempos de atención
     r_sep3 = len(rows); rows.append([''] * (n + 1))
 
-    # Hora Inicio / Hora Fin
-    r_hora_ini = len(rows); rows.append(['Hora Inicio:'] + [str(v) for v in data.get('hora_inicio', [''] * n)])
-    r_hora_fin = len(rows); rows.append(['Hora Fin:'] + [str(v) for v in data.get('hora_fin', [''] * n)])
-
-    # Encabezado "Tiempos de atención" (span completo)
-    r_tiempos_hdr = len(rows); rows.append(['Tiempos de atención'] + [''] * n)
-
-    # FMA / Mexicanos / Extranjeros / Revisiones Secundarias
-    fma_vals = data.get('tiempo_fma', [''] * n)
-    mex_vals = data.get('tiempo_mexicanos', [''] * n)
-    ext_vals = data.get('tiempo_extranjeros', [''] * n)
-    rs_vals = data.get('tiempo_revisiones_secundarias', [''] * n)
-    r_fma = len(rows); rows.append(['FMA:'] + [str(v) for v in fma_vals])
-    r_mex = len(rows); rows.append(['Mexicanos:'] + [str(v) for v in mex_vals])
-    r_ext = len(rows); rows.append(['Extranjeros:'] + [str(v) for v in ext_vals])
-    r_rs = len(rows); rows.append(['Revisiones Secundarias:'] + [str(v) for v in rs_vals])
-
-    # Total por día (suma de los 4 rubros en min → "Xh Ym")
+    # Helper para formatear la duración derivada (minutos → "Xh Ym").
     def _fmt_min(mins):
         try:
             n_ = int(mins)
@@ -675,18 +694,36 @@ def generar_inadmitidos_pdf(request):
         s = str(x).strip()
         return int(s) if s.isdigit() else 0
 
-    total_dia_celdas = []
-    for i in range(n):
-        hay = (
-            str(fma_vals[i]).strip() != ''
-            or str(mex_vals[i]).strip() != ''
-            or str(ext_vals[i]).strip() != ''
-            or str(rs_vals[i]).strip() != ''
-        )
-        suma = _val(fma_vals[i]) + _val(mex_vals[i]) + _val(ext_vals[i]) + _val(rs_vals[i])
-        total_dia_celdas.append(_fmt_min(suma) if hay else '')
+    fma_vals = data.get('tiempo_fma', [''] * n)
+    mex_vals = data.get('tiempo_mexicanos', [''] * n)
+    ext_vals = data.get('tiempo_extranjeros', [''] * n)
+    rs_vals = data.get('tiempo_revisiones_secundarias', [''] * n)
+    dur_fma = data.get('dur_fma', [''] * n)
+    dur_mex = data.get('dur_mexicanos', [''] * n)
+    dur_ext = data.get('dur_extranjeros', [''] * n)
+    dur_rs = data.get('dur_revisiones_secundarias', [''] * n)
 
-    r_total_dia = len(rows); rows.append(['Total por día:'] + total_dia_celdas)
+    def _celda_rubro(hora, dur):
+        """'HH:MM (Xh Ym)' con la duración derivada, o sólo la hora si no hay duración."""
+        h = str(hora).strip()
+        if not h:
+            return ''
+        return f'{h} ({_fmt_min(dur)})' if _val(dur) > 0 else h
+
+    # Encabezado "Tiempos de atención" (span completo)
+    r_tiempos_hdr = len(rows); rows.append(['Tiempos de atención'] + [''] * n)
+
+    # Hora Inicio
+    r_hora_ini = len(rows); rows.append(['Hora Inicio:'] + [str(v) for v in data.get('hora_inicio', [''] * n)])
+
+    # FMA / Mexicanos / Extranjeros / Revisiones Secundarias (hora de término + duración)
+    r_fma = len(rows); rows.append(['FMA:'] + [_celda_rubro(fma_vals[i], dur_fma[i]) for i in range(n)])
+    r_mex = len(rows); rows.append(['Mexicanos:'] + [_celda_rubro(mex_vals[i], dur_mex[i]) for i in range(n)])
+    r_ext = len(rows); rows.append(['Extranjeros:'] + [_celda_rubro(ext_vals[i], dur_ext[i]) for i in range(n)])
+    r_rs = len(rows); rows.append(['Revisiones Secundarias:'] + [_celda_rubro(rs_vals[i], dur_rs[i]) for i in range(n)])
+
+    # Hora Fin (capturada aparte; se muestra después de los rubros)
+    r_hora_fin = len(rows); rows.append(['Hora Fin:'] + [str(v) for v in data.get('hora_fin', [''] * n)])
 
     # ─── Estilos ───
     cmd = [
@@ -776,11 +813,6 @@ def generar_inadmitidos_pdf(request):
         ('FONTNAME', (0, r_mex), (0, r_mex), 'Helvetica-Bold'),
         ('FONTNAME', (0, r_ext), (0, r_ext), 'Helvetica-Bold'),
         ('FONTNAME', (0, r_rs), (0, r_rs), 'Helvetica-Bold'),
-
-        # Total por día
-        ('BACKGROUND', (0, r_total_dia), (-1, r_total_dia), ROSA),
-        ('TEXTCOLOR', (0, r_total_dia), (-1, r_total_dia), ROJO),
-        ('FONTNAME', (0, r_total_dia), (-1, r_total_dia), 'Helvetica-Bold'),
     ]
 
     # Span del origen en el encabezado si hay columnas suficientes

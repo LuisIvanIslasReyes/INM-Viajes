@@ -1,11 +1,13 @@
-Perfecto ahora quiero modificar un poco los comentarios.
+Necesito cambiar un poco la forma de como capturar los tiempos de Atención.
 
-Quiero que alado en los motivos de rechazo diga.
-Motivos de rechazo del dia: y ponga la misma lógica del fecha fin en el buscador para los comentarios.
-En vez de que diga rechazado diga Extranjero de "nacionalidad del extranjero rechazado."
-Y asi con todos.
-Después anidado a eso. Quiero que justamente despues del nombre lleve una coma y el número de documento del rechazado.
+Se me presenta la idea de implementar mejor de capturar tiempos horas, min.
 
-Ejemplo real. con todo lo anterior pedido.
+Sea mejor que capturen la hora a la que termino su conteo.
+Osea.
+Que la función de quien utilice la página sea que al terminar una fila. Vea su reloj y diga son las 19 hrs. Ese será su captura. Ellos anotan a que hora fue. Y vienen y lo plasman en la página.
 
-Extranjero de India [25.may.26] PATEL/MEETKUMARRASHMIKANTMR, W3255202: Exhibe una carta de invitación en idioma inglés, en la cual especifica quien la emite, siendo la empresa denominada altamarina sa de cv, ubicada en ciudad del Carmen, se marcó al teléfono 962 4628844, no fue posible corroborar la carta se dijo que este teléfono no existe, aunado a que se duda que su libreta de mar sea genuina por la razón que el portador de esta es de la misma nacionalidad del su país, ya que es de la república de Palau, la referida libreta de mar número p 280125 al abrir y revisar esta nuevo no contiene ningún sello lineal, aunado a que no exhibe ninguna documento relacionado con las vacunas y diversos que los marinos portan al momento de su llegada, por todo lo anterior y al no poder comprobar su dicho con alguna persona la referida empresa, se le da rechazo.
+Ya que. Dado los minutos. Veo el rubro de los mismos y no me dan los cálculos de los mismos. Horas desfasadas.
+
+Por lo que presente esta solución. En vez de medir su tiempo con min. Mejor inserten la hora exacta a la que termino.
+
+Img1. Mejor quitar la última fila de horas por día. O cambiarlo por algo más atrativo estetico y que me diga información necesaria.

@@ -182,6 +182,10 @@ function renderTabla(data, mostrarTotal = true) {
     const tMex = data.tiempo_mexicanos || [];
     const tExt = data.tiempo_extranjeros || [];
     const tRS = data.tiempo_revisiones_secundarias || [];
+    const dFma = data.dur_fma || [];
+    const dMex = data.dur_mexicanos || [];
+    const dExt = data.dur_extranjeros || [];
+    const dRS = data.dur_revisiones_secundarias || [];
 
     // Título Tiempos de atención
     html += `<tr class="row-dias"><td colspan="${totalCols}">Tiempos de atención</td></tr>`;
@@ -189,12 +193,6 @@ function renderTabla(data, mostrarTotal = true) {
     // Hora Inicio
     html += `<tr class="row-pax"><td class="col-label">Hora Inicio:</td>`;
     for (let d = 0; d < n; d++) html += `<td>${horaInicio[d] ?? ''}</td>`;
-    if (mostrarTotal) html += `<td></td>`;
-    html += '</tr>';
-
-    // Hora Fin
-    html += `<tr class="row-pax"><td class="col-label">Hora Fin:</td>`;
-    for (let d = 0; d < n; d++) html += `<td>${horaFin[d] ?? ''}</td>`;
     if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
 
@@ -208,37 +206,32 @@ function renderTabla(data, mostrarTotal = true) {
         return `${h}h ${m}m`;
     };
 
-    const renderRubro = (label, arr) => {
+    // Cada rubro muestra la hora de término capturada y, entre paréntesis, la
+    // duración derivada (hora − hito anterior, calculada en el backend).
+    const renderRubro = (label, horaArr, durArr) => {
         html += `<tr class="row-pax"><td class="col-label">${label}:</td>`;
-        let totalRub = 0;
+        let totalDur = 0;
         for (let d = 0; d < n; d++) {
-            const v = arr[d];
-            if (v !== '' && v !== null && v !== undefined) totalRub += Number(v) || 0;
-            html += `<td>${v ?? ''}</td>`;
+            const hora = horaArr[d] ?? '';
+            const dur = durArr[d];
+            const tieneDur = dur !== '' && dur !== null && dur !== undefined && Number(dur) > 0;
+            if (tieneDur) totalDur += Number(dur);
+            const durTxt = (hora && tieneDur) ? ` <span style="opacity:.65">(${fmtMin(dur)})</span>` : '';
+            html += `<td>${hora}${durTxt}</td>`;
         }
-        if (mostrarTotal) html += `<td><strong>${totalRub}</strong></td>`;
+        if (mostrarTotal) html += `<td><strong>${totalDur > 0 ? fmtMin(totalDur) : ''}</strong></td>`;
         html += '</tr>';
     };
 
-    renderRubro('FMA', tFma);
-    renderRubro('Mexicanos', tMex);
-    renderRubro('Extranjeros', tExt);
-    renderRubro('Revisiones Secundarias', tRS);
+    renderRubro('FMA', tFma, dFma);
+    renderRubro('Mexicanos', tMex, dMex);
+    renderRubro('Extranjeros', tExt, dExt);
+    renderRubro('Revisiones Secundarias', tRS, dRS);
 
-    // Total por día (suma de los 4 rubros, en min → "Xh Ym")
-    html += `<tr class="row-total-pax"><td class="col-label">Total por día:</td>`;
-    let totalGlobal = 0;
-    for (let d = 0; d < n; d++) {
-        const fma = Number(tFma[d]) || 0;
-        const mex = Number(tMex[d]) || 0;
-        const ext = Number(tExt[d]) || 0;
-        const rs = Number(tRS[d]) || 0;
-        const hayDatos = tFma[d] !== '' || tMex[d] !== '' || tExt[d] !== '' || tRS[d] !== '';
-        const sumaDia = fma + mex + ext + rs;
-        totalGlobal += sumaDia;
-        html += `<td><strong>${hayDatos ? fmtMin(sumaDia) : ''}</strong></td>`;
-    }
-    if (mostrarTotal) html += `<td><strong>${fmtMin(totalGlobal)}</strong></td>`;
+    // Hora Fin (se captura aparte; se muestra después de los rubros)
+    html += `<tr class="row-pax"><td class="col-label">Hora Fin:</td>`;
+    for (let d = 0; d < n; d++) html += `<td>${horaFin[d] ?? ''}</td>`;
+    if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
 
     html += '</tbody>';

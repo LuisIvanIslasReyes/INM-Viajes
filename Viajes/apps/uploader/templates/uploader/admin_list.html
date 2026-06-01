@@ -711,23 +711,17 @@
 
             <div class="divider text-sm font-semibold" style="color:#0f766e;">Tiempos de atención</div>
 
+            <p class="text-xs text-base-content/60 -mt-2">
+                Anota la <b>hora exacta de término</b> de cada rubro: al terminar la fila, mira el reloj y captura esa hora.
+            </p>
+
             {% for rubro in tiempos_rubros %}
             <div class="form-control" data-rubro="{{ rubro.key }}">
                 <label class="label">
-                    <span class="label-text font-semibold flex items-center gap-2">
-                        {{ rubro.label }}
-                        <button type="button" class="btn btn-xs btn-ghost" data-toggle-hora title="Agregar horas">
-                            <span data-toggle-label>+ h</span>
-                        </button>
-                    </span>
+                    <span class="label-text font-semibold">{{ rubro.label }}</span>
                     <span class="label-text-alt text-xs" data-hint="{{ rubro.key }}">&nbsp;</span>
                 </label>
-                <div class="join w-full">
-                    <input type="number" name="{{ rubro.key }}_h" min="0" value="0" class="input input-bordered join-item w-full hidden" placeholder="horas" data-horas>
-                    <span class="join-item btn btn-disabled no-animation hidden" data-h-suffix>h</span>
-                    <input type="number" name="{{ rubro.key }}_min" min="0" value="0" class="input input-bordered join-item w-full" placeholder="minutos" data-minutos>
-                    <span class="join-item btn btn-disabled no-animation">min</span>
-                </div>
+                <input type="time" name="{{ rubro.key }}" class="input input-bordered w-full" data-hora>
             </div>
             {% endfor %}
 

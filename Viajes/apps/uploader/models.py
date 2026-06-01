@@ -203,15 +203,28 @@ class TiemposAtencion(models.Model):
 
     Una entrada por fecha (se sobrescribe si se vuelve a capturar). Se muestra
     como filas adicionales en el reporte de inadmitidos.
+
+    Cada rubro guarda la HORA DE TÉRMINO de su conteo (el operador mira el reloj
+    al terminar la fila y anota la hora). La duración de cada rubro se deriva
+    como la diferencia con el hito anterior (Hora Inicio → FMA → Mexicanos →
+    Extranjeros → Revisiones Secundarias). La Hora Fin se captura aparte y es
+    independiente de los rubros.
     """
     fecha = models.DateField(unique=True, verbose_name='Fecha')
     hora_inicio = models.TimeField(verbose_name='Hora Inicio')
     hora_fin = models.TimeField(verbose_name='Hora Fin')
 
-    tiempo_extranjeros = models.PositiveIntegerField(default=0, verbose_name='Tiempo Extranjeros (min)')
-    tiempo_mexicanos = models.PositiveIntegerField(default=0, verbose_name='Tiempo Mexicanos (min)')
-    tiempo_fma = models.PositiveIntegerField(default=0, verbose_name='Tiempo FMA (min)')
-    tiempo_revisiones_secundarias = models.PositiveIntegerField(default=0, verbose_name='Tiempo Revisiones Secundarias (min)')
+    tiempo_extranjeros = models.TimeField(null=True, blank=True, verbose_name='Hora término Extranjeros')
+    tiempo_mexicanos = models.TimeField(null=True, blank=True, verbose_name='Hora término Mexicanos')
+    tiempo_fma = models.TimeField(null=True, blank=True, verbose_name='Hora término FMA')
+    tiempo_revisiones_secundarias = models.TimeField(null=True, blank=True, verbose_name='Hora término Revisiones Secundarias')
+
+    # Respaldo del sistema anterior (minutos). Se conservan para no perder el
+    # histórico; el flujo nuevo ya no las escribe (ver migración 0013).
+    tiempo_fma_min_legacy = models.PositiveIntegerField(default=0, verbose_name='Tiempo FMA (min)')
+    tiempo_mexicanos_min_legacy = models.PositiveIntegerField(default=0, verbose_name='Tiempo Mexicanos (min)')
+    tiempo_extranjeros_min_legacy = models.PositiveIntegerField(default=0, verbose_name='Tiempo Extranjeros (min)')
+    tiempo_revisiones_secundarias_min_legacy = models.PositiveIntegerField(default=0, verbose_name='Tiempo Revisiones Secundarias (min)')
 
     usuario = models.ForeignKey(User, on_delete=models.SET_NULL, null=True, blank=True, related_name='tiempos_atencion')
     fecha_creacion = models.DateTimeField(auto_now_add=True)
