@@ -11,7 +11,7 @@
     window.INADMITIDOS_DATA_URL = '{% url "inadmitidos_data" %}';
     window.INADMITIDOS_PDF_URL = '{% url "generar_inadmitidos_pdf" %}';
 </script>
-<script src="{% static 'js/inadmitidos_report.js' %}?v=19"></script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=20"></script>
 {% endblock %}
 
 {% block content %}
@@ -76,9 +76,9 @@
                     <i class="fas fa-calendar-day mr-1"></i>
                     Reporte del día
                 </button>
-                <button id="btn-reporte-ayer-hoy" onclick="generarReporteAyerHoy()" class="btn text-white" style="background-color:#0F6BB3; border-color:#0F6BB3;">
+                <button id="btn-reporte-ayer" onclick="generarReporteAyer()" class="btn text-white" style="background-color:#0F6BB3; border-color:#0F6BB3;">
                     <i class="fas fa-calendar-week mr-1"></i>
-                    Reporte de ayer a hoy
+                    Reporte de ayer
                 </button>
                 <button id="btn-generar" onclick="generarReporte()" class="btn text-white" style="background-color:#700606; border-color:#700606;">
                     <i class="fas fa-table mr-1"></i>

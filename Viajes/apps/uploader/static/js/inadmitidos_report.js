@@ -80,12 +80,13 @@ function generarReporteDelDia() {
     generarReporte(false);
 }
 
-/* --- Generar reporte del día de ayer al día actual --- */
+/* --- Generar reporte del día de ayer (sin columna Total) --- */
 
-function generarReporteAyerHoy() {
-    document.getElementById('fecha_inicio').value = ayer();
-    document.getElementById('fecha_fin').value = hoy();
-    generarReporte();
+function generarReporteAyer() {
+    const fechaAyer = ayer();
+    document.getElementById('fecha_inicio').value = fechaAyer;
+    document.getElementById('fecha_fin').value = fechaAyer;
+    generarReporte(false);
 }
 
 /* --- Renderizar tabla de previsualización --- */
