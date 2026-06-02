@@ -214,10 +214,20 @@ class TiemposAtencion(models.Model):
     hora_inicio = models.TimeField(verbose_name='Hora Inicio')
     hora_fin = models.TimeField(verbose_name='Hora Fin')
 
+    # FMA / Mexicanos / Extranjeros guardan la HORA DE TÉRMINO de su conteo. La
+    # duración de cada uno se deriva SIEMPRE desde Hora Inicio (no en cascada).
     tiempo_extranjeros = models.TimeField(null=True, blank=True, verbose_name='Hora término Extranjeros')
     tiempo_mexicanos = models.TimeField(null=True, blank=True, verbose_name='Hora término Mexicanos')
     tiempo_fma = models.TimeField(null=True, blank=True, verbose_name='Hora término FMA')
-    tiempo_revisiones_secundarias = models.TimeField(null=True, blank=True, verbose_name='Hora término Revisiones Secundarias')
+
+    # Revisiones Secundarias tiene su propia ventana: Hora Inicio y Hora Fin
+    # independientes. Su duración = rs_hora_fin − rs_hora_inicio.
+    rs_hora_inicio = models.TimeField(null=True, blank=True, verbose_name='RS Hora Inicio')
+    rs_hora_fin = models.TimeField(null=True, blank=True, verbose_name='RS Hora Fin')
+
+    # Campo anterior (hora término única de RS). Ya no se escribe en el flujo
+    # nuevo; se conserva por compatibilidad histórica.
+    tiempo_revisiones_secundarias = models.TimeField(null=True, blank=True, verbose_name='Hora término Revisiones Secundarias (legacy)')
 
     # Respaldo del sistema anterior (minutos). Se conservan para no perder el
     # histórico; el flujo nuevo ya no las escribe (ver migración 0013).

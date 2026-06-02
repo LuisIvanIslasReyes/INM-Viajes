@@ -6,9 +6,10 @@ inadmitidos consume estos datos para mostrar las filas de Hora Inicio,
 Hora Fin y Tiempos de atención (FMA, Mexicanos, Extranjeros, Revisiones
 Secundarias).
 
-Cada rubro guarda la HORA DE TÉRMINO de su conteo (input `<rubro>` en formato
-'HH:MM', opcional). La duración por rubro se deriva en el reporte; aquí sólo se
-almacena la hora.
+FMA / Mexicanos / Extranjeros guardan la HORA DE TÉRMINO de su conteo (input
+`<rubro>` en formato 'HH:MM', opcional); su duración se deriva en el reporte
+SIEMPRE desde Hora Inicio. Revisiones Secundarias se captura aparte con su
+propia ventana (`rs_hora_inicio` / `rs_hora_fin`).
 """
 from datetime import date, datetime
 
@@ -21,11 +22,12 @@ from ..models import TiemposAtencion
 
 FECHA_MINIMA = date(2026, 5, 20)
 
+# Rubros que se capturan como una sola hora de término (FMA, Mexicanos,
+# Extranjeros). Revisiones Secundarias ya no está aquí: tiene su propia ventana.
 RUBROS = [
     ('fma', 'tiempo_fma'),
     ('mexicanos', 'tiempo_mexicanos'),
     ('extranjeros', 'tiempo_extranjeros'),
-    ('revisiones_secundarias', 'tiempo_revisiones_secundarias'),
 ]
 
 
@@ -79,6 +81,14 @@ def capturar_tiempos_atencion(request):
             return redirect('admin_list')
         valores[campo] = v
 
+    # Ventana propia de Revisiones Secundarias (Hora Inicio / Hora Fin).
+    for prefijo, campo in (('rs_hora_inicio', 'rs_hora_inicio'), ('rs_hora_fin', 'rs_hora_fin')):
+        v = _hora_rubro(request.POST, prefijo)
+        if v is _HORA_INVALIDA:
+            messages.error(request, ' Hora de Revisiones Secundarias inválida. Usa el formato HH:MM.')
+            return redirect('admin_list')
+        valores[campo] = v
+
     _, creado = TiemposAtencion.objects.update_or_create(
         fecha=fecha,
         defaults={
@@ -117,7 +127,8 @@ def obtener_tiempos_atencion(request, fecha):
         'fma': _hhmm(t.tiempo_fma),
         'mexicanos': _hhmm(t.tiempo_mexicanos),
         'extranjeros': _hhmm(t.tiempo_extranjeros),
-        'revisiones_secundarias': _hhmm(t.tiempo_revisiones_secundarias),
+        'rs_hora_inicio': _hhmm(t.rs_hora_inicio),
+        'rs_hora_fin': _hhmm(t.rs_hora_fin),
         'usuario': t.usuario.username if t.usuario else '',
         'fecha_modificacion': t.fecha_modificacion.strftime('%d/%m/%Y %H:%M'),
     })

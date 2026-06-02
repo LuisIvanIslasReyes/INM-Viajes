@@ -10,9 +10,18 @@ const COLORES = {
 
 let reporteData = null;
 
-function hoy() {
-    const d = new Date();
+function fechaISO(d) {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}
+
+function hoy() {
+    return fechaISO(new Date());
+}
+
+function ayer() {
+    const d = new Date();
+    d.setDate(d.getDate() - 1);
+    return fechaISO(d);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -69,6 +78,14 @@ function generarReporteDelDia() {
     document.getElementById('fecha_inicio').value = fechaHoy;
     document.getElementById('fecha_fin').value = fechaHoy;
     generarReporte(false);
+}
+
+/* --- Generar reporte del día de ayer al día actual --- */
+
+function generarReporteAyerHoy() {
+    document.getElementById('fecha_inicio').value = ayer();
+    document.getElementById('fecha_fin').value = hoy();
+    generarReporte();
 }
 
 /* --- Renderizar tabla de previsualización --- */
@@ -181,7 +198,8 @@ function renderTabla(data, mostrarTotal = true) {
     const tFma = data.tiempo_fma || [];
     const tMex = data.tiempo_mexicanos || [];
     const tExt = data.tiempo_extranjeros || [];
-    const tRS = data.tiempo_revisiones_secundarias || [];
+    const rsIni = data.rs_hora_inicio || [];
+    const rsFin = data.rs_hora_fin || [];
     const dFma = data.dur_fma || [];
     const dMex = data.dur_mexicanos || [];
     const dExt = data.dur_extranjeros || [];
@@ -193,6 +211,12 @@ function renderTabla(data, mostrarTotal = true) {
     // Hora Inicio
     html += `<tr class="row-pax"><td class="col-label">Hora Inicio:</td>`;
     for (let d = 0; d < n; d++) html += `<td>${horaInicio[d] ?? ''}</td>`;
+    if (mostrarTotal) html += `<td></td>`;
+    html += '</tr>';
+
+    // Hora Fin (se captura aparte; se muestra después de los rubros)
+    html += `<tr class="row-pax"><td class="col-label">Hora Fin:</td>`;
+    for (let d = 0; d < n; d++) html += `<td>${horaFin[d] ?? ''}</td>`;
     if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
 
@@ -226,12 +250,27 @@ function renderTabla(data, mostrarTotal = true) {
     renderRubro('FMA', tFma, dFma);
     renderRubro('Mexicanos', tMex, dMex);
     renderRubro('Extranjeros', tExt, dExt);
-    renderRubro('Revisiones Secundarias', tRS, dRS);
 
-    // Hora Fin (se captura aparte; se muestra después de los rubros)
-    html += `<tr class="row-pax"><td class="col-label">Hora Fin:</td>`;
-    for (let d = 0; d < n; d++) html += `<td>${horaFin[d] ?? ''}</td>`;
-    if (mostrarTotal) html += `<td></td>`;
+    // Revisiones Secundarias: ventana propia en filas separadas
+    // (Hora Inicio / Hora Fin / Duración derivada = fin − inicio).
+    const renderHorasRS = (label, horaArr) => {
+        html += `<tr class="row-pax"><td class="col-label">${label}:</td>`;
+        for (let d = 0; d < n; d++) html += `<td>${horaArr[d] ?? ''}</td>`;
+        if (mostrarTotal) html += `<td></td>`;
+        html += '</tr>';
+    };
+    renderHorasRS('RS Hora Inicio', rsIni);
+    renderHorasRS('RS Hora Fin', rsFin);
+
+    html += `<tr class="row-pax"><td class="col-label">RS Duración:</td>`;
+    let totalRS = 0;
+    for (let d = 0; d < n; d++) {
+        const dur = dRS[d];
+        const tieneDur = dur !== '' && dur !== null && dur !== undefined && Number(dur) > 0;
+        if (tieneDur) totalRS += Number(dur);
+        html += `<td>${tieneDur ? fmtMin(dur) : ''}</td>`;
+    }
+    if (mostrarTotal) html += `<td><strong>${totalRS > 0 ? fmtMin(totalRS) : ''}</strong></td>`;
     html += '</tr>';
 
     html += '</tbody>';

@@ -1,0 +1,133 @@
+    /* Contenedor: centra la tabla cuando no llena el ancho */
+    .inadmitidos-preview-wrapper {
+        overflow-x: auto;
+        display: flex;
+        justify-content: center;
+        padding: 4px;
+    }
+
+    /* Tabla de previsualización con los colores de la paleta */
+    .inadmitidos-preview-table {
+        border-collapse: collapse;
+        width: auto;
+        font-size: 0.85rem;
+        box-shadow: 0 2px 10px rgba(112, 6, 6, 0.08);
+        border-radius: 8px;
+        overflow: hidden;
+    }
+    .inadmitidos-preview-table th,
+    .inadmitidos-preview-table td {
+        border: 1px solid #e6d6d6;
+        padding: 8px 14px;
+        text-align: center;
+        min-width: 105px;
+        transition: background-color 0.18s ease, color 0.18s ease;
+    }
+    /* Primera columna de etiquetas */
+    .inadmitidos-preview-table td.col-label {
+        text-align: left;
+        min-width: 200px;
+        font-weight: 600;
+    }
+
+    /* Fila Vuelo / Origen */
+    .inadmitidos-preview-table .row-vuelo td {
+        background-color: #700606;
+        color: #fff;
+        font-weight: bold;
+    }
+    /* Título INADMITIDOS */
+    .inadmitidos-preview-table .row-title td {
+        background-color: #FED8D8;
+        color: #700606;
+        font-weight: bold;
+        letter-spacing: 1px;
+    }
+    /* Días de la semana */
+    .inadmitidos-preview-table .row-dias td {
+        background-color: #700606;
+        color: #fff;
+        font-weight: bold;
+    }
+    /* Encabezado Nacionalidad / fechas */
+    .inadmitidos-preview-table .row-header-nac td {
+        background-color: #FED8D8;
+        color: #700606;
+        font-weight: bold;
+    }
+
+    /* Filas de nacionalidades */
+    .inadmitidos-preview-table .row-nac td {
+        background-color: #F3F3F2;
+    }
+    .inadmitidos-preview-table .row-nac.row-alt td {
+        background-color: #DDDDDD;
+    }
+    .inadmitidos-preview-table .row-nac:hover td {
+        background-color: #fbe4e4 !important;
+        color: #700606;
+    }
+
+    /* Separador */
+    .inadmitidos-preview-table .row-sep td {
+        background-color: #fff;
+        padding: 4px;
+        border-left: 0;
+        border-right: 0;
+    }
+
+    /* Total Inadmitidos */
+    .inadmitidos-preview-table .row-total-inad td {
+        background-color: #FED9D8;
+        color: #700606;
+        font-weight: bold;
+    }
+    .inadmitidos-preview-table .row-total-inad:hover td {
+        background-color: #fcc6c6 !important;
+    }
+    /* Subtotal Internaciones */
+    .inadmitidos-preview-table .row-subtotal-intern td {
+        background-color: #E2EFDA;
+        color: #375623;
+        font-weight: bold;
+    }
+    .inadmitidos-preview-table .row-subtotal-intern:hover td {
+        background-color: #d2e7c4 !important;
+    }
+    /* Subtotal Segundas Revisiones */
+    .inadmitidos-preview-table .row-subtotal-sr td {
+        background-color: #7A0101;
+        color: #fff;
+        font-weight: bold;
+    }
+    .inadmitidos-preview-table .row-subtotal-sr:hover td {
+        background-color: #5c0101 !important;
+    }
+    /* Filas pasajeros (local / tránsito) */
+    .inadmitidos-preview-table .row-pax td {
+        background-color: #F3F3F2;
+    }
+    .inadmitidos-preview-table .row-pax:hover td {
+        background-color: #ece9e3 !important;
+    }
+    /* Total pasajeros */
+    .inadmitidos-preview-table .row-total-pax td {
+        background-color: #DDDDDD;
+        font-weight: bold;
+    }
+    .inadmitidos-preview-table .row-total-pax:hover td {
+        background-color: #cfcfcf !important;
+    }
+
+    .motivos-box {
+        border: 1px solid #e6d6d6;
+        border-radius: 8px;
+        padding: 14px 18px;
+        background-color: #F3F3F2;
+        box-shadow: 0 1px 4px rgba(112, 6, 6, 0.05);
+    }
+    .motivos-box h4 {
+        font-weight: bold;
+        margin-bottom: 8px;
+        color: #700606;
+    }

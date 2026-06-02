@@ -518,28 +518,89 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
         rubros.push({ key, input, hint });
     });
 
-    // Duración derivada de cada rubro = su hora − el hito anterior, encadenando
-    // desde Hora Inicio. La Hora Fin no participa en la derivación.
+    // Revisiones Secundarias tiene su propia ventana Inicio/Fin.
+    const rsInicioInput = modal.querySelector('#rsHoraInicio');
+    const rsFinInput = modal.querySelector('#rsHoraFin');
+    const rsHint = modal.querySelector('#rsHint');
+
+    function pintarHint(hint, mins) {
+        if (!hint) return;
+        const texto = (mins == null || mins < 0) ? '' : formatearDuracion(mins);
+        hint.textContent = texto || ' ';
+        hint.style.color = texto ? '#0f766e' : '';
+    }
+
+    // Duración de cada rubro = su hora − Hora Inicio (SIEMPRE desde el inicio,
+    // no en cascada). La Hora Fin general no participa en la derivación.
     function actualizarDuraciones() {
-        let baseline = aMinutos(horaInicioInput.value);
+        const baseline = aMinutos(horaInicioInput.value);
         rubros.forEach(({ input, hint }) => {
-            if (!hint) return;
             const val = aMinutos(input.value);
             if (val == null || baseline == null) {
-                hint.textContent = ' ';
-                hint.style.color = '';
+                pintarHint(hint, null);
                 return;
             }
             let dur = val - baseline;
             if (dur < 0) dur += 1440; // cruce de medianoche
-            const texto = formatearDuracion(dur);
-            hint.textContent = texto || ' ';
-            hint.style.color = texto ? '#0f766e' : '';
-            baseline = val;
+            pintarHint(hint, dur);
         });
+
+        // Duración de Revisiones Secundarias = RS Fin − RS Inicio.
+        const rsIni = aMinutos(rsInicioInput && rsInicioInput.value);
+        const rsFin = aMinutos(rsFinInput && rsFinInput.value);
+        if (rsIni == null || rsFin == null) {
+            pintarHint(rsHint, null);
+        } else {
+            let dur = rsFin - rsIni;
+            if (dur < 0) dur += 1440;
+            pintarHint(rsHint, dur);
+        }
     }
 
     horaInicioInput.addEventListener('input', actualizarDuraciones);
+    if (rsInicioInput) rsInicioInput.addEventListener('input', actualizarDuraciones);
+    if (rsFinInput) rsFinInput.addEventListener('input', actualizarDuraciones);
+
+    // --- Captura en formato 24 h --------------------------------------------
+    // El navegador muestra los <input type="time"> en 12 h (AM/PM) según el
+    // locale del SO, pero su .value SIEMPRE es "HH:MM" en 24 h. Interceptamos
+    // las teclas para que al teclear "22" el campo quede en 22:00 (10 PM).
+    function habilitar24h(input) {
+        if (!input) return;
+        let buffer = '';
+        const aplicar = () => {
+            if (!buffer) {
+                input.value = '';
+            } else {
+                let h, m;
+                if (buffer.length <= 2) { h = parseInt(buffer, 10); m = 0; }
+                else { h = parseInt(buffer.slice(0, -2), 10); m = parseInt(buffer.slice(-2), 10); }
+                if (h > 23) h = 23;
+                if (m > 59) m = 59;
+                input.value = String(h).padStart(2, '0') + ':' + String(m).padStart(2, '0');
+            }
+            input.dispatchEvent(new Event('input', { bubbles: true }));
+        };
+        input.addEventListener('focus', () => { buffer = ''; });
+        input.addEventListener('keydown', (e) => {
+            if (e.key >= '0' && e.key <= '9') {
+                e.preventDefault();
+                if (buffer.length >= 4) buffer = buffer.slice(1); // desliza al teclear de más
+                buffer += e.key;
+                aplicar();
+            } else if (e.key === 'Backspace' || e.key === 'Delete') {
+                e.preventDefault();
+                buffer = buffer.slice(0, -1);
+                aplicar();
+            }
+        });
+    }
+
+    habilitar24h(horaInicioInput);
+    habilitar24h(horaFinInput);
+    habilitar24h(rsInicioInput);
+    habilitar24h(rsFinInput);
+    rubros.forEach(({ input }) => habilitar24h(input));
 
     function setRubro(key, hhmm) {
         const r = rubros.find((x) => x.key === key);
@@ -550,6 +611,8 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
         horaInicioInput.value = '';
         horaFinInput.value = '';
         rubros.forEach((r) => { r.input.value = ''; });
+        if (rsInicioInput) rsInicioInput.value = '';
+        if (rsFinInput) rsFinInput.value = '';
         actualizarDuraciones();
     }
 
@@ -577,7 +640,8 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
                 setRubro('fma', data.fma);
                 setRubro('mexicanos', data.mexicanos);
                 setRubro('extranjeros', data.extranjeros);
-                setRubro('revisiones_secundarias', data.revisiones_secundarias);
+                if (rsInicioInput) rsInicioInput.value = data.rs_hora_inicio || '';
+                if (rsFinInput) rsFinInput.value = data.rs_hora_fin || '';
                 actualizarDuraciones();
                 const meta = data.usuario
                     ? ` (guardado por <b>${data.usuario}</b> el ${data.fecha_modificacion})`

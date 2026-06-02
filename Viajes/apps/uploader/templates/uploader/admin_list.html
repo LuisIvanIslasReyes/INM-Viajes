@@ -713,6 +713,7 @@
 
             <p class="text-xs text-base-content/60 -mt-2">
                 Anota la <b>hora exacta de término</b> de cada rubro: al terminar la fila, mira el reloj y captura esa hora.
+                La duración se mide <b>siempre desde Hora Inicio</b>.
             </p>
 
             {% for rubro in tiempos_rubros %}
@@ -724,6 +725,26 @@
                 <input type="time" name="{{ rubro.key }}" class="input input-bordered w-full" data-hora>
             </div>
             {% endfor %}
+
+            <div class="divider text-sm font-semibold" style="color:#0f766e;">Revisiones Secundarias</div>
+
+            <p class="text-xs text-base-content/60 -mt-2">
+                Captura la <b>Hora Inicio</b> y la <b>Hora Fin</b> de las revisiones secundarias. Su duración es la diferencia entre ambas.
+            </p>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">RS Hora Inicio</span></label>
+                    <input type="time" name="rs_hora_inicio" id="rsHoraInicio" class="input input-bordered w-full">
+                </div>
+                <div class="form-control">
+                    <label class="label">
+                        <span class="label-text font-semibold">RS Hora Fin</span>
+                        <span class="label-text-alt text-xs" id="rsHint">&nbsp;</span>
+                    </label>
+                    <input type="time" name="rs_hora_fin" id="rsHoraFin" class="input input-bordered w-full">
+                </div>
+            </div>
 
             <p class="text-xs text-base-content/60">
                 Si ya existe una captura para esa fecha, se sobrescribirá.
