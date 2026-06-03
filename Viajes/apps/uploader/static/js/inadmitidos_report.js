@@ -215,13 +215,13 @@ function renderTabla(data, mostrarTotal = true) {
     html += `<tr class="row-section"><td colspan="${totalCols}">Tiempos de atención</td></tr>`;
 
     // Hora Inicio
-    html += `<tr class="row-data"><td class="col-label">Hora Inicio:</td>`;
+    html += `<tr class="row-data"><td class="col-label">Hora Inicio en fila:</td>`;
     for (let d = 0; d < n; d++) html += `<td>${horaInicio[d] ?? ''}</td>`;
     if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
 
     // Hora Fin (se captura aparte; se muestra después de los rubros)
-    html += `<tr class="row-data"><td class="col-label">Hora Fin:</td>`;
+    html += `<tr class="row-data"><td class="col-label">Hora Fin en fila:</td>`;
     for (let d = 0; d < n; d++) html += `<td>${horaFin[d] ?? ''}</td>`;
     if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
@@ -234,6 +234,25 @@ function renderTabla(data, mostrarTotal = true) {
         if (h === 0) return `${m}m`;
         if (m === 0) return `${h}h`;
         return `${h}h ${m}m`;
+    };
+
+    // Convierte 'HH:MM' a minutos desde medianoche (null si vacío/inválido).
+    const minDeHora = (str) => {
+        if (!str) return null;
+        const [h, m] = String(str).split(':').map(Number);
+        if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+        return h * 60 + m;
+    };
+
+    // Jornada completa: desde Hora Inicio en fila hasta SR Hora Fin
+    // (el cierre real del día), con cruce de medianoche.
+    const durDia = (inicioStr, finStr) => {
+        const ini = minDeHora(inicioStr);
+        const fin = minDeHora(finStr);
+        if (ini === null || fin === null) return '';
+        let d = fin - ini;
+        if (d < 0) d += 1440;
+        return d;
     };
 
     // Cada rubro muestra la hora de término capturada y, entre paréntesis, la
@@ -253,9 +272,9 @@ function renderTabla(data, mostrarTotal = true) {
         html += '</tr>';
     };
 
-    renderRubro('FMA', tFma, dFma);
-    renderRubro('Mexicanos', tMex, dMex);
-    renderRubro('Extranjeros', tExt, dExt);
+    renderRubro('Fila FMA', tFma, dFma);
+    renderRubro('Fila Mexicanos', tMex, dMex);
+    renderRubro('Fila Extranjeros', tExt, dExt);
 
     // Revisiones Secundarias: ventana propia en filas separadas
     // (Hora Inicio / Hora Fin / Duración derivada = fin − inicio).
@@ -265,10 +284,10 @@ function renderTabla(data, mostrarTotal = true) {
         if (mostrarTotal) html += `<td></td>`;
         html += '</tr>';
     };
-    renderHorasRS('RS Hora Inicio', rsIni);
-    renderHorasRS('RS Hora Fin', rsFin);
+    renderHorasRS('SR Hora Inicio', rsIni);
+    renderHorasRS('SR Hora Fin', rsFin);
 
-    html += `<tr class="row-data"><td class="col-label">RS Duración:</td>`;
+    html += `<tr class="row-data"><td class="col-label">SR Duración:</td>`;
     let totalRS = 0;
     for (let d = 0; d < n; d++) {
         const dur = dRS[d];
@@ -277,6 +296,18 @@ function renderTabla(data, mostrarTotal = true) {
         html += `<td>${tieneDur ? fmtMin(dur) : ''}</td>`;
     }
     if (mostrarTotal) html += `<td class="col-total">${totalRS > 0 ? fmtMin(totalRS) : ''}</td>`;
+    html += '</tr>';
+
+    // Total por día: Hora Inicio en fila → SR Hora Fin (jornada completa).
+    html += `<tr class="row-total-dia"><td class="col-label">Total por día:</td>`;
+    let totalDiaAcum = 0;
+    for (let d = 0; d < n; d++) {
+        const dur = durDia(horaInicio[d], rsFin[d]);
+        const tieneDur = dur !== '' && Number(dur) > 0;
+        if (tieneDur) totalDiaAcum += Number(dur);
+        html += `<td>${tieneDur ? fmtMin(dur) : ''}</td>`;
+    }
+    if (mostrarTotal) html += `<td class="col-total">${totalDiaAcum > 0 ? fmtMin(totalDiaAcum) : ''}</td>`;
     html += '</tr>';
 
     html += '</tbody>';

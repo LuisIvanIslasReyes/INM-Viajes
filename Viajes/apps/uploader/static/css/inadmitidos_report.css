@@ -61,6 +61,7 @@
 .inadmitidos-preview-table .row-total-intern td,
 .inadmitidos-preview-table .row-intern-nac td,
 .inadmitidos-preview-table .row-total-sr td,
+.inadmitidos-preview-table .row-total-dia td,
 .inadmitidos-preview-table .row-total-pax td {
     font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 13px;
@@ -71,6 +72,7 @@
 .inadmitidos-preview-table .row-total-intern .col-label,
 .inadmitidos-preview-table .row-intern-nac .col-label,
 .inadmitidos-preview-table .row-total-sr .col-label,
+.inadmitidos-preview-table .row-total-dia .col-label,
 .inadmitidos-preview-table .row-total-pax .col-label {
     font-family: 'Hanken Grotesk', system-ui, sans-serif;
     font-size: 14px;
@@ -201,6 +203,17 @@
     border-color: rgba(226, 226, 229, 0.25);
 }
 .inadmitidos-preview-table .row-total-sr .col-label {
+    text-align: left;
+}
+
+/* ── Total por día: jornada completa (Hora Inicio → SR Hora Fin) ── */
+.inadmitidos-preview-table .row-total-dia td {
+    background-color: #4d060a;
+    color: #ffffff;
+    font-weight: 700;
+    border-color: rgba(226, 226, 229, 0.25);
+}
+.inadmitidos-preview-table .row-total-dia .col-label {
     text-align: left;
 }
 
