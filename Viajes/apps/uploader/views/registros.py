@@ -409,6 +409,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
     dur_fma_list, dur_mexicanos_list, dur_extranjeros_list = [], [], []
     dur_revisiones_secundarias_list = []
     nationalities_by_day = {}
+    internaciones_by_day = {}
     motivos_rechazo = []
 
     def _min_de(t_obj):
@@ -430,8 +431,9 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         registros_arribos = registros_dia.filter(filtro_tij | filtro_mex).distinct()
 
         inadmitidos = registros_arribos.filter(segunda_revision=True, rechazado=True)
+        internados = registros_arribos.filter(segunda_revision=True, internacion=True)
         totals_inadmitidos.append(inadmitidos.count())
-        totals_internaciones.append(registros_arribos.filter(segunda_revision=True, internacion=True).count())
+        totals_internaciones.append(internados.count())
         totals_sr.append(registros_arribos.filter(segunda_revision=True).count())
         local.append(registros_arribos.filter(filtro_tij).distinct().count())
         transito.append(registros_arribos.filter(filtro_mex).distinct().count())
@@ -496,6 +498,25 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
             if nat not in nats_hoy:
                 nationalities_by_day[nat].append(0)
 
+        # Desglose por nacionalidad de las internaciones (mismo patrón que arriba).
+        nats_int_hoy = set()
+        nat_int_counts = (
+            internados
+            .order_by()
+            .values('pais_emision')
+            .annotate(count=Count('id', distinct=True))
+        )
+        for item in nat_int_counts:
+            nat = item['pais_emision'] or 'Sin especificar'
+            nats_int_hoy.add(nat)
+            if nat not in internaciones_by_day:
+                internaciones_by_day[nat] = [0] * i
+            internaciones_by_day[nat].append(item['count'])
+
+        for nat in list(internaciones_by_day.keys()):
+            if nat not in nats_int_hoy:
+                internaciones_by_day[nat].append(0)
+
         if dia == fecha_fin:
             for registro in inadmitidos:
                 comentario = (registro.comentario or '').strip()
@@ -525,6 +546,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         'nationalities': nationalities_by_day,
         'totals_inadmitidos': totals_inadmitidos,
         'totals_internaciones': totals_internaciones,
+        'internaciones_nationalities': internaciones_by_day,
         'totals_sr': totals_sr,
         'local': local,
         'transito': transito,
@@ -610,6 +632,8 @@ def generar_inadmitidos_pdf(request):
     ROSA = HexColor('#FED8D8')
     GRIS = HexColor('#DDDDDD')
     BLANCO_GRIS = HexColor('#F3F3F2')
+    VERDE_INT = HexColor('#E2EFDA')
+    VERDE_INT_TXT = HexColor('#375623')
 
     # Orientación según cantidad de días
     pagesize = landscape(letter) if n > 5 else letter
@@ -665,9 +689,18 @@ def generar_inadmitidos_pdf(request):
     # Separador
     r_sep1 = len(rows); rows.append([''] * (n + 1))
 
-    # Total Internaciones / Total SR
+    # Total Internaciones
     r_total_int = len(rows)
     rows.append(['Total Internaciones:'] + [str(v) for v in data['totals_internaciones']])
+
+    # Desglose por nacionalidad de las internaciones
+    intern_nats = list(data.get('internaciones_nationalities', {}).keys())
+    r_intern_start = len(rows)
+    for nat in intern_nats:
+        rows.append([nat] + [str(v) for v in data['internaciones_nationalities'][nat]])
+    intern_count = len(intern_nats)
+
+    # Total SR
     r_total_sr = len(rows)
     rows.append(['Total Segundas Revisiones:'] + [str(v) for v in data['totals_sr']])
 
@@ -847,6 +880,14 @@ def generar_inadmitidos_pdf(request):
         bg = BLANCO_GRIS if i % 2 == 0 else GRIS
         cmd.append(('BACKGROUND', (0, row_idx), (-1, row_idx), bg))
         cmd.append(('FONTNAME', (0, row_idx), (0, row_idx), 'Helvetica-Bold'))
+
+    # Desglose de internaciones por nacionalidad (verde claro, etiqueta indentada)
+    for i in range(intern_count):
+        row_idx = r_intern_start + i
+        cmd.append(('BACKGROUND', (0, row_idx), (-1, row_idx), VERDE_INT))
+        cmd.append(('TEXTCOLOR', (0, row_idx), (-1, row_idx), VERDE_INT_TXT))
+        cmd.append(('FONTNAME', (0, row_idx), (0, row_idx), 'Helvetica-Bold'))
+        cmd.append(('LEFTPADDING', (0, row_idx), (0, row_idx), 18))
 
     tabla = Table(rows, colWidths=col_widths)
     tabla.setStyle(TableStyle(cmd))

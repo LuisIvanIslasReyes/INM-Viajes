@@ -2,7 +2,10 @@
 {% load static %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/inadmitidos_report.css' %}">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="{% static 'css/inadmitidos_report.css' %}?v=2">
 {% endblock %}
 
 {% block extra_js %}
@@ -11,7 +14,7 @@
     window.INADMITIDOS_DATA_URL = '{% url "inadmitidos_data" %}';
     window.INADMITIDOS_PDF_URL = '{% url "generar_inadmitidos_pdf" %}';
 </script>
-<script src="{% static 'js/inadmitidos_report.js' %}?v=20"></script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=22"></script>
 {% endblock %}
 
 {% block content %}
@@ -124,7 +127,9 @@
                     </div>
                 </div>
                 <div id="tabla-capture" class="inadmitidos-preview-wrapper">
-                    <table class="inadmitidos-preview-table" id="tabla-inadmitidos"></table>
+                    <div class="inadmitidos-table-card">
+                        <table class="inadmitidos-preview-table" id="tabla-inadmitidos"></table>
+                    </div>
                 </div>
 
                 <!-- Motivos de rechazo -->

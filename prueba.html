@@ -1,0 +1,284 @@
+<!DOCTYPE html>
+
+<html class="light" lang="es" style=""><head>
+<meta charset="utf-8"/>
+<meta content="width=device-width, initial-scale=1.0" name="viewport"/>
+<title>Reporte de Inadmitidos - AeroReport</title>
+<script src="https://cdn.tailwindcss.com?plugins=forms,container-queries"></script>
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&amp;family=JetBrains+Mono:wght@500&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Material+Symbols+Outlined:wght,FILL@100..700,0..1&amp;display=swap" rel="stylesheet"/>
+<script id="tailwind-config">
+        tailwind.config = {
+            darkMode: "class",
+            theme: {
+                extend: {
+                    "colors": {
+                        "surface-container-lowest": "#ffffff",
+                        "inverse-on-surface": "#f0f0f3",
+                        "on-background": "#1a1c1e",
+                        "on-secondary-container": "#6c6262",
+                        "on-primary-fixed": "#410005",
+                        "surface-variant": "#e2e2e5",
+                        "error-container": "#ffdad6",
+                        "on-primary": "#ffffff",
+                        "secondary": "#665c5c",
+                        "on-surface-variant": "#554241",
+                        "on-secondary": "#ffffff",
+                        "on-tertiary-fixed": "#151d1a",
+                        "surface": "#f9f9fc",
+                        "on-secondary-fixed-variant": "#4e4445",
+                        "on-error": "#ffffff",
+                        "primary-fixed": "#ffdad7",
+                        "tertiary-container": "#323b37",
+                        "tertiary": "#1c2522",
+                        "secondary-fixed": "#eedfdf",
+                        "surface-container-low": "#f3f3f6",
+                        "surface-dim": "#dadadc",
+                        "background": "#f9f9fc",
+                        "primary": "#4d060a",
+                        "on-error-container": "#93000a",
+                        "inverse-primary": "#ffb3ae",
+                        "on-surface": "#1a1c1e",
+                        "secondary-container": "#eedfdf",
+                        "on-tertiary": "#ffffff",
+                        "on-secondary-fixed": "#211a1a",
+                        "on-primary-fixed-variant": "#7d2b29",
+                        "secondary-fixed-dim": "#d1c3c3",
+                        "surface-tint": "#9c413f",
+                        "on-primary-container": "#f1837e",
+                        "tertiary-fixed": "#dbe5df",
+                        "outline": "#887270",
+                        "error": "#ba1a1a",
+                        "surface-bright": "#f9f9fc",
+                        "surface-container-high": "#e8e8ea",
+                        "tertiary-fixed-dim": "#bfc9c3",
+                        "primary-container": "#6b1d1d",
+                        "surface-container": "#eeeef0",
+                        "on-tertiary-container": "#9ba5a0",
+                        "primary-fixed-dim": "#ffb3ae",
+                        "outline-variant": "#dbc0be",
+                        "inverse-surface": "#2f3133",
+                        "on-tertiary-fixed-variant": "#3f4945",
+                        "surface-container-highest": "#e2e2e5"
+                    },
+                    "borderRadius": {
+                        "DEFAULT": "0.125rem",
+                        "lg": "0.25rem",
+                        "xl": "0.5rem",
+                        "full": "0.75rem"
+                    },
+                    "spacing": {
+                        "margin-desktop": "48px",
+                        "container-max": "1280px",
+                        "unit": "4px",
+                        "margin-mobile": "16px",
+                        "gutter": "24px"
+                    },
+                    "fontFamily": {
+                        "headline-sm": ["Hanken Grotesk"],
+                        "headline-md": ["Hanken Grotesk"],
+                        "body-md": ["Hanken Grotesk"],
+                        "data-mono": ["JetBrains Mono"],
+                        "headline-lg": ["Hanken Grotesk"],
+                        "label-md": ["Hanken Grotesk"],
+                        "body-lg": ["Hanken Grotesk"]
+                    },
+                    "fontSize": {
+                        "headline-sm": ["18px", { "lineHeight": "24px", "fontWeight": "600" }],
+                        "headline-md": ["24px", { "lineHeight": "32px", "letterSpacing": "-0.01em", "fontWeight": "600" }],
+                        "body-md": ["14px", { "lineHeight": "20px", "fontWeight": "400" }],
+                        "data-mono": ["13px", { "lineHeight": "16px", "fontWeight": "500" }],
+                        "headline-lg": ["32px", { "lineHeight": "40px", "letterSpacing": "-0.02em", "fontWeight": "700" }],
+                        "label-md": ["12px", { "lineHeight": "16px", "letterSpacing": "0.05em", "fontWeight": "600" }],
+                        "body-lg": ["16px", { "lineHeight": "24px", "fontWeight": "400" }]
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-background text-on-background min-h-screen flex flex-col font-body-md text-body-md antialiased selection:bg-primary selection:text-on-primary">
+<!-- TopAppBar Shared Component -->
+<div class="flex flex-1 w-full mx-auto relative overflow-hidden">
+<!-- SideNavBar Shared Component (Desktop only) -->
+<!-- Main Content Canvas -->
+<main class="flex-1 w-full p-margin-mobile md:p-margin-desktop overflow-y-auto max-w-5xl mx-auto">
+<div class="max-w-4xl mx-auto md:max-w-none">
+<!-- Action Bar -->
+<div class="flex justify-between items-center mb-6">
+<div class="flex items-center gap-2 text-primary font-headline-md">
+<span class="material-symbols-outlined">visibility</span>
+<h1 class="text-xl font-bold">Previsualización</h1>
+</div>
+<div class="flex gap-3">
+<button class="bg-primary-container text-on-primary py-2 px-4 rounded font-label-md flex items-center gap-2 hover:bg-primary transition-colors">
+<span class="material-symbols-outlined text-sm">content_copy</span>
+                        Copiar tabla
+                    </button>
+<button class="bg-primary-container text-on-primary py-2 px-4 rounded font-label-md flex items-center gap-2 hover:bg-primary transition-colors">
+<span class="material-symbols-outlined text-sm">file_copy</span>
+                        Copiar todo
+                    </button>
+</div>
+</div>
+<!-- The Professional Data Table -->
+<div class="bg-surface-container-lowest rounded-xl shadow-sm border border-surface-variant overflow-hidden">
+<table class="w-full text-left border-collapse font-body-md">
+<!-- Main Header -->
+<thead class="bg-primary-container text-on-primary font-label-md"><tr><th class="py-2 px-3 border-b border-r border-surface-variant/30" colspan="2">Vuelo:</th><th class="py-2 px-3 border-b border-r border-surface-variant/30 font-data-mono font-bold text-center" colspan="4">HU7925</th><th class="py-2 px-3 border-b border-r border-surface-variant/30" colspan="2">Origen:</th><th class="py-2 px-3 border-b border-surface-variant/30 font-bold text-center" colspan="4">China</th></tr></thead>
+<tbody><!-- INADMITIDOS Header Row -->
+<tr class="bg-error-container/40 text-on-surface font-label-md text-center">
+<td class="py-2 border-b border-surface-variant/50 text-primary-container font-bold uppercase tracking-wider" colspan="12">INADMITIDOS</td>
+</tr>
+<!-- Days Header -->
+<tr class="bg-primary-container text-on-primary font-label-md text-center">
+<td class="py-2 border-b border-r border-surface-variant/30 px-2" rowspan="2">Nacionalidad</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Miércoles</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Jueves</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Viernes</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Sábado</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Domingo</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Lunes</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Martes</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Miércoles</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Jueves</td>
+<td class="py-2 border-b border-r border-surface-variant/30">Viernes</td>
+<td class="py-2 border-b font-bold">Total</td>
+</tr>
+<tr class="bg-error-container/20 text-on-surface font-label-md text-center">
+<td class="py-1 border-b border-r border-surface-variant/50">20-may-26</td>
+<td class="py-1 border-b border-r border-surface-variant/50">21-may-26</td>
+<td class="py-1 border-b border-r border-surface-variant/50">22-may-26</td>
+<td class="py-1 border-b border-r border-surface-variant/50">23-may-26</td>
+<td class="py-1 border-b border-r border-surface-variant/50">24-may-26</td>
+<td class="py-1 border-b border-r border-surface-variant/50">25-may-26</td>
+<td class="py-1 border-b border-r border-surface-variant/50">26-may-26</td>
+<td class="py-1 border-b border-r border-surface-variant/50">27-may-26</td>
+<td class="py-1 border-b border-r border-surface-variant/50">28-may-26</td>
+<td class="py-1 border-b border-r border-surface-variant/50">29-may-26</td>
+<td class="py-1 border-b"></td>
+</tr>
+<!-- Inadmitidos Data Rows -->
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">China</td>
+<td class="border-b border-r border-surface-variant/50">7</td><td class="border-b border-r border-surface-variant/50">24</td><td class="border-b border-r border-surface-variant/50">9</td><td class="border-b border-r border-surface-variant/50">2</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">2</td><td class="border-b border-r border-surface-variant/50">1</td><td class="border-b border-r border-surface-variant/50">3</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">2</td>
+<td class="border-b font-bold bg-surface-container-high">50</td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">India</td>
+<td class="border-b border-r border-surface-variant/50">4</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">1</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">2</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td>
+<td class="border-b font-bold bg-surface-container-high">7</td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Vietnam</td>
+<td class="border-b border-r border-surface-variant/50">8</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td>
+<td class="border-b font-bold bg-surface-container-high">8</td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Etiopía</td>
+<td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">2</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td>
+<td class="border-b font-bold bg-surface-container-high">2</td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Rusia</td>
+<td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">1</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td>
+<td class="border-b font-bold bg-surface-container-high">1</td>
+</tr>
+<!-- Total Inadmitidos Row -->
+<tr class="bg-error-container/30 text-primary-container font-bold text-center">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left">Total Inadmitidos</td>
+<td class="border-b border-r border-surface-variant/50 font-data-mono">19</td><td class="border-b border-r border-surface-variant/50 font-data-mono">27</td><td class="border-b border-r border-surface-variant/50 font-data-mono">9</td><td class="border-b border-r border-surface-variant/50 font-data-mono">2</td><td class="border-b border-r border-surface-variant/50 font-data-mono">0</td><td class="border-b border-r border-surface-variant/50 font-data-mono">3</td><td class="border-b border-r border-surface-variant/50 font-data-mono">1</td><td class="border-b border-r border-surface-variant/50 font-data-mono">5</td><td class="border-b border-r border-surface-variant/50 font-data-mono">0</td><td class="border-b border-r border-surface-variant/50 font-data-mono">2</td>
+<td class="border-b bg-primary-container text-on-primary font-data-mono">68</td>
+</tr>
+<!-- Total Internaciones Row -->
+<tr class="bg-tertiary-fixed/60 text-tertiary font-bold text-center">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left">Total Internaciones:</td>
+<td class="border-b border-r border-surface-variant/50 font-data-mono">21</td><td class="border-b border-r border-surface-variant/50 font-data-mono">21</td><td class="border-b border-r border-surface-variant/50 font-data-mono">34</td><td class="border-b border-r border-surface-variant/50 font-data-mono">32</td><td class="border-b border-r border-surface-variant/50 font-data-mono">9</td><td class="border-b border-r border-surface-variant/50 font-data-mono">6</td><td class="border-b border-r border-surface-variant/50 font-data-mono">5</td><td class="border-b border-r border-surface-variant/50 font-data-mono">3</td><td class="border-b border-r border-surface-variant/50 font-data-mono">7</td><td class="border-b border-r border-surface-variant/50 font-data-mono">3</td>
+<td class="border-b bg-tertiary-container text-on-tertiary-container font-data-mono">141</td>
+</tr>
+<!-- Internaciones Breakdown -->
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-1.5 px-3 border-b border-r border-surface-variant/50 text-left font-body-md pl-6">China</td>
+<td class="border-b border-r border-surface-variant/50">21</td><td class="border-b border-r border-surface-variant/50">21</td><td class="border-b border-r border-surface-variant/50">33</td><td class="border-b border-r border-surface-variant/50">31</td><td class="border-b border-r border-surface-variant/50">9</td><td class="border-b border-r border-surface-variant/50">6</td><td class="border-b border-r border-surface-variant/50">5</td><td class="border-b border-r border-surface-variant/50">3</td><td class="border-b border-r border-surface-variant/50">5</td><td class="border-b border-r border-surface-variant/50">3</td>
+<td class="border-b font-bold bg-surface-container-high">137</td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-1.5 px-3 border-b border-r border-surface-variant/50 text-left font-body-md pl-6">Rusia</td>
+<td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">1</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">1</td><td class="border-b border-r border-surface-variant/50">0</td>
+<td class="border-b font-bold bg-surface-container-high">2</td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-1.5 px-3 border-b border-r border-surface-variant/50 text-left font-body-md pl-6">Filipinas</td>
+<td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">1</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td>
+<td class="border-b font-bold bg-surface-container-high">1</td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-1.5 px-3 border-b border-r border-surface-variant/50 text-left font-body-md pl-6">MAC</td>
+<td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">0</td><td class="border-b border-r border-surface-variant/50">1</td><td class="border-b border-r border-surface-variant/50">0</td>
+<td class="border-b font-bold bg-surface-container-high">1</td>
+</tr>
+<!-- Segundas Revisiones -->
+<tr class="bg-primary text-on-primary font-bold text-center">
+<td class="py-2 px-3 border-b border-r border-surface-variant/30 text-left font-body-md">Total Segundas Revisiones:</td>
+<td class="border-b border-r border-surface-variant/30 font-data-mono">40</td><td class="border-b border-r border-surface-variant/30 font-data-mono">48</td><td class="border-b border-r border-surface-variant/30 font-data-mono">43</td><td class="border-b border-r border-surface-variant/30 font-data-mono">34</td><td class="border-b border-r border-surface-variant/30 font-data-mono">9</td><td class="border-b border-r border-surface-variant/30 font-data-mono">9</td><td class="border-b border-r border-surface-variant/30 font-data-mono">6</td><td class="border-b border-r border-surface-variant/30 font-data-mono">8</td><td class="border-b border-r border-surface-variant/30 font-data-mono">7</td><td class="border-b border-r border-surface-variant/30 font-data-mono">5</td>
+<td class="border-b font-data-mono">209</td>
+</tr>
+<!-- Passengers Summary -->
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Pasajeros Locales:</td>
+<td class="border-b border-r border-surface-variant/50">73</td><td class="border-b border-r border-surface-variant/50">74</td><td class="border-b border-r border-surface-variant/50">46</td><td class="border-b border-r border-surface-variant/50">23</td><td class="border-b border-r border-surface-variant/50">16</td><td class="border-b border-r border-surface-variant/50">48</td><td class="border-b border-r border-surface-variant/50">18</td><td class="border-b border-r border-surface-variant/50">23</td><td class="border-b border-r border-surface-variant/50">25</td><td class="border-b border-r border-surface-variant/50">41</td>
+<td class="border-b font-bold bg-surface-container-high">387</td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Pasajeros en tránsito:</td>
+<td class="border-b border-r border-surface-variant/50">146</td><td class="border-b border-r border-surface-variant/50">150</td><td class="border-b border-r border-surface-variant/50">158</td><td class="border-b border-r border-surface-variant/50">238</td><td class="border-b border-r border-surface-variant/50">193</td><td class="border-b border-r border-surface-variant/50">172</td><td class="border-b border-r border-surface-variant/50">152</td><td class="border-b border-r border-surface-variant/50">121</td><td class="border-b border-r border-surface-variant/50">149</td><td class="border-b border-r border-surface-variant/50">165</td>
+<td class="border-b font-bold bg-surface-container-high">1644</td>
+</tr>
+<tr class="bg-surface-container-highest font-bold text-on-surface hover:bg-surface-variant transition-colors text-center font-data-mono">
+<td class="py-3 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Total pasajeros:</td>
+<td class="border-b border-r border-surface-variant/50">219</td><td class="border-b border-r border-surface-variant/50">224</td><td class="border-b border-r border-surface-variant/50">204</td><td class="border-b border-r border-surface-variant/50">261</td><td class="border-b border-r border-surface-variant/50">209</td><td class="border-b border-r border-surface-variant/50">220</td><td class="border-b border-r border-surface-variant/50">170</td><td class="border-b border-r border-surface-variant/50">144</td><td class="border-b border-r border-surface-variant/50">174</td><td class="border-b border-r border-surface-variant/50">206</td>
+<td class="border-b bg-inverse-surface text-inverse-on-surface">2031</td>
+</tr>
+<!-- Tiempos de atención Section -->
+<tr class="bg-primary text-on-primary font-label-md text-center">
+<td class="py-2 border-b border-surface-variant/30 tracking-wider uppercase" colspan="12">Tiempos de atención</td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Hora Inicio: (en Fila)</td>
+<td class="border-b border-r border-surface-variant/50">17:37</td><td class="border-b border-r border-surface-variant/50">18:04</td><td class="border-b border-r border-surface-variant/50">18:03</td><td class="border-b border-r border-surface-variant/50">17:16</td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50">17:13</td><td class="border-b border-r border-surface-variant/50">16:58</td><td class="border-b border-r border-surface-variant/50">17:57</td><td class="border-b border-r border-surface-variant/50">17:50</td><td class="border-b border-r border-surface-variant/50">18:01</td><td class="border-b"></td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Hora Fin: (en Fila)</td>
+<td class="border-b border-r border-surface-variant/50">23:00</td><td class="border-b border-r border-surface-variant/50">23:00</td><td class="border-b border-r border-surface-variant/50">22:22</td><td class="border-b border-r border-surface-variant/50">21:00</td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50">21:00</td><td class="border-b border-r border-surface-variant/50">21:25</td><td class="border-b border-r border-surface-variant/50">18:34</td><td class="border-b border-r border-surface-variant/50">18:50</td><td class="border-b border-r border-surface-variant/50">19:59</td><td class="border-b"></td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Fila FMA:</td>
+<td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b"></td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Fila Mexicanos:</td>
+<td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b"></td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">Extranjeros:</td>
+<td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b"></td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">SR Hora Inicio:</td>
+<td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b"></td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-b border-r border-surface-variant/50 text-left font-body-md">SR Hora Fin:</td>
+<td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b border-r border-surface-variant/50"></td><td class="border-b"></td>
+</tr>
+<tr class="bg-surface hover:bg-surface-container-low transition-colors text-center font-data-mono">
+<td class="py-2 px-3 border-r border-surface-variant/50 text-left font-body-md">SR Duración:</td>
+<td class="border-r border-surface-variant/50"></td><td class="border-r border-surface-variant/50"></td><td class="border-r border-surface-variant/50"></td><td class="border-r border-surface-variant/50"></td><td class="border-r border-surface-variant/50"></td><td class="border-r border-surface-variant/50"></td><td class="border-r border-surface-variant/50"></td><td class="border-r border-surface-variant/50"></td><td class="border-r border-surface-variant/50"></td><td class="border-r border-surface-variant/50"></td><td></td>
+</tr></tbody>
+</table>
+</div>
+</div>
+</main>
+</div>
+<!-- Footer Shared Component -->
+</body></html>

@@ -100,99 +100,104 @@ function renderTabla(data, mostrarTotal = true) {
 
     let html = '<tbody>';
 
-    // Fila Vuelo/Origen — proporciones tipo Img1: label / valor / label / valor
-    const anchoVal = totalCols - 2; // ancho disponible para los dos valores
-    const valIzq = Math.max(Math.floor(anchoVal / 2), 1);
-    const valDer = Math.max(anchoVal - Math.floor(anchoVal / 2), 1);
-    html += `<tr class="row-vuelo">
-        <td class="col-label">Vuelo:</td>
-        <td colspan="${valIzq}">${data.vuelo}</td>
-        <td>Origen:</td>
-        <td colspan="${valDer}">${data.origen}</td>
-    </tr>`;
+    // ── Fila Vuelo / Origen (label / valor / label / valor) ──
+    if (totalCols < 4) {
+        html += `<tr class="row-vuelo"><td class="col-label" colspan="${totalCols}">Vuelo: ${data.vuelo} — Origen: ${data.origen}</td></tr>`;
+    } else {
+        const labelSpan = totalCols >= 6 ? 2 : 1;
+        const anchoVal = totalCols - 2 * labelSpan;
+        const valIzq = Math.max(Math.ceil(anchoVal / 2), 1);
+        const valDer = Math.max(anchoVal - valIzq, 1);
+        html += `<tr class="row-vuelo">
+            <td class="col-label" colspan="${labelSpan}">Vuelo:</td>
+            <td class="val" colspan="${valIzq}">${data.vuelo}</td>
+            <td class="col-label" colspan="${labelSpan}">Origen:</td>
+            <td class="val" colspan="${valDer}">${data.origen}</td>
+        </tr>`;
+    }
 
-    // INADMITIDOS
+    // ── Título INADMITIDOS ──
     html += `<tr class="row-title"><td colspan="${totalCols}">INADMITIDOS</td></tr>`;
 
-    // Días de la semana (vacío + nombres [+ Total])
+    // ── Encabezado: Nacionalidad (rowspan 2) + días [+ Total] ──
     const dias = ['Domingo','Lunes','Martes','Miércoles','Jueves','Viernes','Sábado'];
-    html += `<tr class="row-dias"><td class="col-label"></td>`;
+    html += `<tr class="row-dias"><td class="col-nac-head" rowspan="2">Nacionalidad</td>`;
     for (const rd of data.raw_dates) {
         const d = new Date(rd + 'T00:00:00');
         html += `<td>${dias[d.getDay()]}</td>`;
     }
-    if (mostrarTotal) html += `<td>Total</td>`;
+    if (mostrarTotal) html += `<td class="col-total-head">Total</td>`;
     html += '</tr>';
 
-    // Nacionalidad + fechas
-    html += `<tr class="row-header-nac"><td class="col-label">Nacionalidad</td>`;
-    for (const fecha of data.dates) {
-        html += `<td>${fecha}</td>`;
-    }
+    // ── Fila de fechas (debajo de los días) ──
+    html += `<tr class="row-fechas">`;
+    for (const fecha of data.dates) html += `<td>${fecha}</td>`;
     if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
 
-    // Filas de nacionalidades (alternadas) — suma horizontal por nacionalidad
-    nats.forEach((nat, idx) => {
-        const altClass = idx % 2 === 1 ? ' row-alt' : '';
-        html += `<tr class="row-nac${altClass}"><td class="col-label">${nat}</td>`;
+    // ── Filas de nacionalidades (inadmitidos) — suma horizontal ──
+    nats.forEach((nat) => {
+        html += `<tr class="row-data"><td class="col-label">${nat}</td>`;
         let totalNat = 0;
         for (let d = 0; d < n; d++) {
             const v = data.nationalities[nat][d] ?? 0;
             totalNat += Number(v) || 0;
             html += `<td>${v}</td>`;
         }
-        if (mostrarTotal) html += `<td><strong>${totalNat}</strong></td>`;
+        if (mostrarTotal) html += `<td class="col-total">${totalNat}</td>`;
         html += '</tr>';
     });
 
-    // 2 filas vacías (separador antes del total)
-    const tdSep = `<td></td>`;
-    for (let k = 0; k < 2; k++) {
-        html += `<tr class="row-sep">${tdSep.repeat(totalCols)}</tr>`;
-    }
-
-    // Total Inadmitidos
+    // ── Total Inadmitidos ──
     html += `<tr class="row-total-inad"><td class="col-label">Total Inadmitidos</td>`;
     for (const v of data.totals_inadmitidos) html += `<td>${v}</td>`;
-    if (mostrarTotal) html += `<td>${sumar(data.totals_inadmitidos)}</td>`;
+    if (mostrarTotal) html += `<td class="col-total">${sumar(data.totals_inadmitidos)}</td>`;
     html += '</tr>';
 
-    // Total Internaciones
-    html += `<tr class="row-subtotal row-subtotal-intern"><td class="col-label">Total Internaciones:</td>`;
+    // ── Total Internaciones ──
+    html += `<tr class="row-total-intern"><td class="col-label">Total Internaciones:</td>`;
     for (const v of data.totals_internaciones) html += `<td>${v}</td>`;
-    if (mostrarTotal) html += `<td>${sumar(data.totals_internaciones)}</td>`;
+    if (mostrarTotal) html += `<td class="col-total">${sumar(data.totals_internaciones)}</td>`;
     html += '</tr>';
 
-    // Total SR
-    html += `<tr class="row-subtotal row-subtotal-sr"><td class="col-label">Total Segundas Revisiones:</td>`;
+    // ── Desglose por nacionalidad de las internaciones (indentado) ──
+    const natsIntern = Object.keys(data.internaciones_nationalities || {});
+    natsIntern.forEach((nat) => {
+        const fila = data.internaciones_nationalities[nat];
+        html += `<tr class="row-intern-nac"><td class="col-label">${nat}</td>`;
+        let totalNat = 0;
+        for (let d = 0; d < n; d++) {
+            const v = fila[d] ?? 0;
+            totalNat += Number(v) || 0;
+            html += `<td>${v}</td>`;
+        }
+        if (mostrarTotal) html += `<td class="col-total">${totalNat}</td>`;
+        html += '</tr>';
+    });
+
+    // ── Total Segundas Revisiones ──
+    html += `<tr class="row-total-sr"><td class="col-label">Total Segundas Revisiones:</td>`;
     for (const v of data.totals_sr) html += `<td>${v}</td>`;
     if (mostrarTotal) html += `<td>${sumar(data.totals_sr)}</td>`;
     html += '</tr>';
 
-    // Separador
-    html += `<tr class="row-sep">${tdSep.repeat(totalCols)}</tr>`;
-
-    // Local
-    html += `<tr class="row-pax"><td class="col-label">Pasajeros Locales:</td>`;
+    // ── Pasajeros Locales ──
+    html += `<tr class="row-data"><td class="col-label">Pasajeros Locales:</td>`;
     for (const v of data.local) html += `<td>${v}</td>`;
-    if (mostrarTotal) html += `<td>${sumar(data.local)}</td>`;
+    if (mostrarTotal) html += `<td class="col-total">${sumar(data.local)}</td>`;
     html += '</tr>';
 
-    // Tránsito
-    html += `<tr class="row-pax"><td class="col-label">Pasajeros en tránsito:</td>`;
+    // ── Pasajeros en tránsito ──
+    html += `<tr class="row-data"><td class="col-label">Pasajeros en tránsito:</td>`;
     for (const v of data.transito) html += `<td>${v}</td>`;
-    if (mostrarTotal) html += `<td>${sumar(data.transito)}</td>`;
+    if (mostrarTotal) html += `<td class="col-total">${sumar(data.transito)}</td>`;
     html += '</tr>';
 
-    // Total pasajeros
+    // ── Total pasajeros ──
     html += `<tr class="row-total-pax"><td class="col-label">Total pasajeros:</td>`;
     for (const v of data.total_pasajeros) html += `<td>${v}</td>`;
-    if (mostrarTotal) html += `<td>${sumar(data.total_pasajeros)}</td>`;
+    if (mostrarTotal) html += `<td class="col-total">${sumar(data.total_pasajeros)}</td>`;
     html += '</tr>';
-
-    // Separador antes de tiempos
-    html += `<tr class="row-sep">${tdSep.repeat(totalCols)}</tr>`;
 
     const horaInicio = data.hora_inicio || [];
     const horaFin = data.hora_fin || [];
@@ -206,17 +211,17 @@ function renderTabla(data, mostrarTotal = true) {
     const dExt = data.dur_extranjeros || [];
     const dRS = data.dur_revisiones_secundarias || [];
 
-    // Título Tiempos de atención
-    html += `<tr class="row-dias"><td colspan="${totalCols}">Tiempos de atención</td></tr>`;
+    // Encabezado de sección: Tiempos de atención
+    html += `<tr class="row-section"><td colspan="${totalCols}">Tiempos de atención</td></tr>`;
 
     // Hora Inicio
-    html += `<tr class="row-pax"><td class="col-label">Hora Inicio:</td>`;
+    html += `<tr class="row-data"><td class="col-label">Hora Inicio:</td>`;
     for (let d = 0; d < n; d++) html += `<td>${horaInicio[d] ?? ''}</td>`;
     if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
 
     // Hora Fin (se captura aparte; se muestra después de los rubros)
-    html += `<tr class="row-pax"><td class="col-label">Hora Fin:</td>`;
+    html += `<tr class="row-data"><td class="col-label">Hora Fin:</td>`;
     for (let d = 0; d < n; d++) html += `<td>${horaFin[d] ?? ''}</td>`;
     if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
@@ -234,17 +239,17 @@ function renderTabla(data, mostrarTotal = true) {
     // Cada rubro muestra la hora de término capturada y, entre paréntesis, la
     // duración derivada (hora − hito anterior, calculada en el backend).
     const renderRubro = (label, horaArr, durArr) => {
-        html += `<tr class="row-pax"><td class="col-label">${label}:</td>`;
+        html += `<tr class="row-data"><td class="col-label">${label}:</td>`;
         let totalDur = 0;
         for (let d = 0; d < n; d++) {
             const hora = horaArr[d] ?? '';
             const dur = durArr[d];
             const tieneDur = dur !== '' && dur !== null && dur !== undefined && Number(dur) > 0;
             if (tieneDur) totalDur += Number(dur);
-            const durTxt = (hora && tieneDur) ? ` <span style="opacity:.65">(${fmtMin(dur)})</span>` : '';
+            const durTxt = (hora && tieneDur) ? ` <span class="dur">(${fmtMin(dur)})</span>` : '';
             html += `<td>${hora}${durTxt}</td>`;
         }
-        if (mostrarTotal) html += `<td><strong>${totalDur > 0 ? fmtMin(totalDur) : ''}</strong></td>`;
+        if (mostrarTotal) html += `<td class="col-total">${totalDur > 0 ? fmtMin(totalDur) : ''}</td>`;
         html += '</tr>';
     };
 
@@ -255,7 +260,7 @@ function renderTabla(data, mostrarTotal = true) {
     // Revisiones Secundarias: ventana propia en filas separadas
     // (Hora Inicio / Hora Fin / Duración derivada = fin − inicio).
     const renderHorasRS = (label, horaArr) => {
-        html += `<tr class="row-pax"><td class="col-label">${label}:</td>`;
+        html += `<tr class="row-data"><td class="col-label">${label}:</td>`;
         for (let d = 0; d < n; d++) html += `<td>${horaArr[d] ?? ''}</td>`;
         if (mostrarTotal) html += `<td></td>`;
         html += '</tr>';
@@ -263,7 +268,7 @@ function renderTabla(data, mostrarTotal = true) {
     renderHorasRS('RS Hora Inicio', rsIni);
     renderHorasRS('RS Hora Fin', rsFin);
 
-    html += `<tr class="row-pax"><td class="col-label">RS Duración:</td>`;
+    html += `<tr class="row-data"><td class="col-label">RS Duración:</td>`;
     let totalRS = 0;
     for (let d = 0; d < n; d++) {
         const dur = dRS[d];
@@ -271,7 +276,7 @@ function renderTabla(data, mostrarTotal = true) {
         if (tieneDur) totalRS += Number(dur);
         html += `<td>${tieneDur ? fmtMin(dur) : ''}</td>`;
     }
-    if (mostrarTotal) html += `<td><strong>${totalRS > 0 ? fmtMin(totalRS) : ''}</strong></td>`;
+    if (mostrarTotal) html += `<td class="col-total">${totalRS > 0 ? fmtMin(totalRS) : ''}</td>`;
     html += '</tr>';
 
     html += '</tbody>';
