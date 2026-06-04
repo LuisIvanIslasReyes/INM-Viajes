@@ -100,7 +100,7 @@
     font-family: 'Hanken Grotesk', system-ui, sans-serif;
     font-size: 13px;
     font-weight: 600;
-    color: #374151;
+    color: #6b1d1d;
 }
 .inadmitidos-preview-table .split-bottom {
     padding: 5px 10px;
@@ -108,14 +108,14 @@
     background-color: #f1f1f4;
     font-family: 'JetBrains Mono', ui-monospace, monospace;
     font-size: 13px;
-    color: #6b1d1d;
+    color: #374151;
 }
 /* Celda con sólo conteo de personas (sin tiempo capturado) */
 .inadmitidos-preview-table td.cell-personas {
     font-family: 'Hanken Grotesk', system-ui, sans-serif;
     font-size: 13px;
     font-weight: 600;
-    color: #374151;
+    color: #6b1d1d;
 }
 
 /* ── Fila Vuelo / Origen (primary-container) ── */

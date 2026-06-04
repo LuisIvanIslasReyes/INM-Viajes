@@ -199,17 +199,17 @@ function renderTabla(data, mostrarTotal = true) {
     if (mostrarTotal) html += `<td class="col-total">${sumar(data.total_pasajeros)}</td>`;
     html += '</tr>';
 
-    const horaInicio = data.hora_inicio || [];
-    const horaFin = data.hora_fin || [];
-    const tFma = data.tiempo_fma || [];
-    const pFma = data.fma_personas || [];
-    const tMex = data.tiempo_mexicanos || [];
-    const tExt = data.tiempo_extranjeros || [];
-    const rsIni = data.rs_hora_inicio || [];
-    const rsFin = data.rs_hora_fin || [];
-    const dFma = data.dur_fma || [];
-    const dMex = data.dur_mexicanos || [];
-    const dExt = data.dur_extranjeros || [];
+    const horaInicio = data.hora_inicio         || [];
+    const horaFin = data.hora_fin               || [];
+    const tFma = data.tiempo_fma                || [];
+    const pFma = data.fma_personas              || [];
+    const tMex = data.tiempo_mexicanos          || [];
+    const tExt = data.tiempo_extranjeros        || [];
+    const rsIni = data.rs_hora_inicio           || [];
+    const rsFin = data.rs_hora_fin              || [];
+    const dFma = data.dur_fma                   || [];
+    const dMex = data.dur_mexicanos             || [];
+    const dExt = data.dur_extranjeros           || [];
     const dRS = data.dur_revisiones_secundarias || [];
 
     // Encabezado de sección: Tiempos de atención
@@ -278,11 +278,11 @@ function renderTabla(data, mostrarTotal = true) {
 
             if (tienePersonas && tiempoHtml) {
                 html += `<td class="cell-split"><div class="split-wrap">`
-                     +  `<div class="split-top">${Number(personas)} Personas</div>`
+                     +  `<div class="split-top">${Number(personas)} personas</div>`
                      +  `<div class="split-bottom">${tiempoHtml}</div>`
                      +  `</div></td>`;
             } else if (tienePersonas) {
-                html += `<td class="cell-personas">${Number(personas)} Personas</td>`;
+                html += `<td class="cell-personas">${Number(personas)} personas</td>`;
             } else {
                 html += `<td>${tiempoHtml}</td>`;
             }
