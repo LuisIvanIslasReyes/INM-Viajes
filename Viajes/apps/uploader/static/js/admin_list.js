@@ -523,6 +523,9 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
     const rsFinInput = modal.querySelector('#rsHoraFin');
     const rsHint = modal.querySelector('#rsHint');
 
+    // Conteo de personas atendidas en FMA (independiente de las SR).
+    const fmaPersonasInput = modal.querySelector('#fmaPersonas');
+
     function pintarHint(hint, mins) {
         if (!hint) return;
         const texto = (mins == null || mins < 0) ? '' : formatearDuracion(mins);
@@ -613,6 +616,7 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
         rubros.forEach((r) => { r.input.value = ''; });
         if (rsInicioInput) rsInicioInput.value = '';
         if (rsFinInput) rsFinInput.value = '';
+        if (fmaPersonasInput) fmaPersonasInput.value = '';
         actualizarDuraciones();
     }
 
@@ -640,6 +644,7 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
                 setRubro('fma', data.fma);
                 setRubro('mexicanos', data.mexicanos);
                 setRubro('extranjeros', data.extranjeros);
+                if (fmaPersonasInput) fmaPersonasInput.value = (data.fma_personas ?? '') === '' ? '' : data.fma_personas;
                 if (rsInicioInput) rsInicioInput.value = data.rs_hora_inicio || '';
                 if (rsFinInput) rsFinInput.value = data.rs_hora_fin || '';
                 actualizarDuraciones();

@@ -220,6 +220,11 @@ class TiemposAtencion(models.Model):
     tiempo_mexicanos = models.TimeField(null=True, blank=True, verbose_name='Hora término Mexicanos')
     tiempo_fma = models.TimeField(null=True, blank=True, verbose_name='Hora término FMA')
 
+    # Conteo manual de personas atendidas en la fila FMA. Es independiente de
+    # los registros marcados como Segunda Revisión (SR): se lleva aparte y sólo
+    # aplica a FMA. Se muestra en el reporte junto al tiempo de la fila FMA.
+    fma_personas = models.PositiveIntegerField(null=True, blank=True, verbose_name='Personas FMA')
+
     # Revisiones Secundarias tiene su propia ventana: Hora Inicio y Hora Fin
     # independientes. Su duración = rs_hora_fin − rs_hora_inicio.
     rs_hora_inicio = models.TimeField(null=True, blank=True, verbose_name='RS Hora Inicio')

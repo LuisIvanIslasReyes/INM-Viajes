@@ -89,6 +89,21 @@ def capturar_tiempos_atencion(request):
             return redirect('admin_list')
         valores[campo] = v
 
+    # Conteo de personas atendidas en la fila FMA (opcional, entero >= 0).
+    # Es independiente de los registros marcados como SR.
+    personas_raw = (request.POST.get('fma_personas') or '').strip()
+    if not personas_raw:
+        valores['fma_personas'] = None
+    else:
+        try:
+            personas = int(personas_raw)
+            if personas < 0:
+                raise ValueError
+        except ValueError:
+            messages.error(request, ' Personas (FMA) inválido. Usa un número entero mayor o igual a 0.')
+            return redirect('admin_list')
+        valores['fma_personas'] = personas
+
     _, creado = TiemposAtencion.objects.update_or_create(
         fecha=fecha,
         defaults={
@@ -125,6 +140,7 @@ def obtener_tiempos_atencion(request, fecha):
         'hora_inicio': t.hora_inicio.strftime('%H:%M'),
         'hora_fin': t.hora_fin.strftime('%H:%M'),
         'fma': _hhmm(t.tiempo_fma),
+        'fma_personas': t.fma_personas if t.fma_personas is not None else '',
         'mexicanos': _hhmm(t.tiempo_mexicanos),
         'extranjeros': _hhmm(t.tiempo_extranjeros),
         'rs_hora_inicio': _hhmm(t.rs_hora_inicio),

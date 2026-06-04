@@ -84,6 +84,40 @@
     font-size: 11px;
 }
 
+/* ── Celda subdividida (sólo FMA): personas arriba, tiempo abajo ──
+   Se usa cuando ese día tiene tanto conteo de personas como hora/duración.
+   Si sólo hay uno de los dos, la celda muestra ese valor solo (sin dividir). */
+.inadmitidos-preview-table td.cell-split {
+    padding: 0;
+}
+.inadmitidos-preview-table .split-wrap {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+}
+.inadmitidos-preview-table .split-top {
+    padding: 5px 10px;
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+.inadmitidos-preview-table .split-bottom {
+    padding: 5px 10px;
+    border-top: 1px solid rgba(226, 226, 229, 0.7);
+    background-color: #f1f1f4;
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 13px;
+    color: #6b1d1d;
+}
+/* Celda con sólo conteo de personas (sin tiempo capturado) */
+.inadmitidos-preview-table td.cell-personas {
+    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    font-size: 13px;
+    font-weight: 600;
+    color: #374151;
+}
+
 /* ── Fila Vuelo / Origen (primary-container) ── */
 .inadmitidos-preview-table .row-vuelo td {
     background-color: #6b1d1d;

@@ -117,6 +117,6 @@ class CasoEspecialAdmin(admin.ModelAdmin):
 
 @admin.register(TiemposAtencion)
 class TiemposAtencionAdmin(admin.ModelAdmin):
-    list_display = ('fecha', 'hora_inicio', 'hora_fin', 'tiempo_fma', 'tiempo_mexicanos', 'tiempo_extranjeros', 'rs_hora_inicio', 'rs_hora_fin', 'usuario')
+    list_display = ('fecha', 'hora_inicio', 'hora_fin', 'tiempo_fma', 'fma_personas', 'tiempo_mexicanos', 'tiempo_extranjeros', 'rs_hora_inicio', 'rs_hora_fin', 'usuario')
     list_filter = ('fecha',)
     readonly_fields = ('fecha_creacion', 'fecha_modificacion')

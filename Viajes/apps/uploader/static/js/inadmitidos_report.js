@@ -202,6 +202,7 @@ function renderTabla(data, mostrarTotal = true) {
     const horaInicio = data.hora_inicio || [];
     const horaFin = data.hora_fin || [];
     const tFma = data.tiempo_fma || [];
+    const pFma = data.fma_personas || [];
     const tMex = data.tiempo_mexicanos || [];
     const tExt = data.tiempo_extranjeros || [];
     const rsIni = data.rs_hora_inicio || [];
@@ -257,7 +258,11 @@ function renderTabla(data, mostrarTotal = true) {
 
     // Cada rubro muestra la hora de término capturada y, entre paréntesis, la
     // duración derivada (hora − hito anterior, calculada en el backend).
-    const renderRubro = (label, horaArr, durArr) => {
+    //
+    // `personasArr` (opcional, sólo FMA) lleva el conteo de personas atendidas.
+    // Cuando hay tiempo y personas la celda se subdivide (personas arriba,
+    // tiempo abajo); si sólo hay uno de los dos, se muestra ese valor solo.
+    const renderRubro = (label, horaArr, durArr, personasArr) => {
         html += `<tr class="row-data"><td class="col-label">${label}:</td>`;
         let totalDur = 0;
         for (let d = 0; d < n; d++) {
@@ -266,13 +271,27 @@ function renderTabla(data, mostrarTotal = true) {
             const tieneDur = dur !== '' && dur !== null && dur !== undefined && Number(dur) > 0;
             if (tieneDur) totalDur += Number(dur);
             const durTxt = (hora && tieneDur) ? ` <span class="dur">(${fmtMin(dur)})</span>` : '';
-            html += `<td>${hora}${durTxt}</td>`;
+            const tiempoHtml = hora ? `${hora}${durTxt}` : '';
+
+            const personas = personasArr ? personasArr[d] : null;
+            const tienePersonas = personas !== '' && personas !== null && personas !== undefined && Number(personas) > 0;
+
+            if (tienePersonas && tiempoHtml) {
+                html += `<td class="cell-split"><div class="split-wrap">`
+                     +  `<div class="split-top">${Number(personas)} Personas</div>`
+                     +  `<div class="split-bottom">${tiempoHtml}</div>`
+                     +  `</div></td>`;
+            } else if (tienePersonas) {
+                html += `<td class="cell-personas">${Number(personas)} Personas</td>`;
+            } else {
+                html += `<td>${tiempoHtml}</td>`;
+            }
         }
         if (mostrarTotal) html += `<td class="col-total">${totalDur > 0 ? fmtMin(totalDur) : ''}</td>`;
         html += '</tr>';
     };
 
-    renderRubro('Fila FMA', tFma, dFma);
+    renderRubro('Fila FMA', tFma, dFma, pFma);
     renderRubro('Fila Mexicanos', tMex, dMex);
     renderRubro('Fila Extranjeros', tExt, dExt);
 

@@ -216,7 +216,7 @@ def admin_list(request):
         'is_production': is_production,
         'paises': get_paises(),
         'tiempos_rubros': [
-            {'key': 'fma', 'label': 'FMA'},
+            {'key': 'fma', 'label': 'FMA', 'personas': True},
             {'key': 'mexicanos', 'label': 'Mexicanos'},
             {'key': 'extranjeros', 'label': 'Extranjeros'},
         ],
@@ -405,6 +405,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
     local, transito, total_pasajeros_list = [], [], []
     hora_inicio_list, hora_fin_list = [], []
     tiempo_extranjeros_list, tiempo_mexicanos_list, tiempo_fma_list = [], [], []
+    fma_personas_list = []
     rs_hora_inicio_list, rs_hora_fin_list = [], []
     dur_fma_list, dur_mexicanos_list, dur_extranjeros_list = [], [], []
     dur_revisiones_secundarias_list = []
@@ -473,6 +474,8 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         tiempo_fma_list.append(horas_rubro['fma'])
         tiempo_mexicanos_list.append(horas_rubro['mexicanos'])
         tiempo_extranjeros_list.append(horas_rubro['extranjeros'])
+        # Conteo de personas FMA (independiente de las SR); None si no se capturó.
+        fma_personas_list.append(t.fma_personas if (t and t.fma_personas is not None) else '')
         rs_hora_inicio_list.append(rs_ini.strftime('%H:%M') if rs_ini else '')
         rs_hora_fin_list.append(rs_fin.strftime('%H:%M') if rs_fin else '')
         dur_fma_list.append(durs_rubro['fma'])
@@ -556,6 +559,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         'tiempo_extranjeros': tiempo_extranjeros_list,
         'tiempo_mexicanos': tiempo_mexicanos_list,
         'tiempo_fma': tiempo_fma_list,
+        'fma_personas': fma_personas_list,
         'rs_hora_inicio': rs_hora_inicio_list,
         'rs_hora_fin': rs_hora_fin_list,
         'dur_fma': dur_fma_list,
@@ -735,6 +739,7 @@ def generar_inadmitidos_pdf(request):
         return int(s) if s.isdigit() else 0
 
     fma_vals = data.get('tiempo_fma', [''] * n)
+    fma_personas = data.get('fma_personas', [''] * n)
     mex_vals = data.get('tiempo_mexicanos', [''] * n)
     ext_vals = data.get('tiempo_extranjeros', [''] * n)
     rs_ini_vals = data.get('rs_hora_inicio', [''] * n)
@@ -755,6 +760,27 @@ def generar_inadmitidos_pdf(request):
         """Sólo la duración formateada, o vacío si no hay."""
         return _fmt_min(dur) if _val(dur) > 0 else ''
 
+    estilo_fma_cell = ParagraphStyle(
+        'fma_cell', fontName='Helvetica', fontSize=7.5, leading=9, alignment=TA_CENTER
+    )
+
+    def _personas_txt(personas):
+        """'<n> Personas' si hay conteo > 0, o vacío."""
+        try:
+            p = int(personas)
+        except (TypeError, ValueError):
+            return ''
+        return f'{p} Personas' if p > 0 else ''
+
+    def _celda_fma(hora, dur, personas):
+        """Celda FMA: subdivide (personas / tiempo) cuando hay ambos; si sólo
+        hay uno, muestra ese valor solo."""
+        tiempo = _celda_rubro(hora, dur)
+        pers = _personas_txt(personas)
+        if pers and tiempo:
+            return Paragraph(f'<b>{pers}</b><br/>{tiempo}', estilo_fma_cell)
+        return pers or tiempo
+
     # Encabezado "Tiempos de atención" (span completo)
     r_tiempos_hdr = len(rows); rows.append(['Tiempos de atención'] + [''] * n)
 
@@ -762,7 +788,8 @@ def generar_inadmitidos_pdf(request):
     r_hora_ini = len(rows); rows.append(['Hora Inicio:'] + [str(v) for v in data.get('hora_inicio', [''] * n)])
 
     # FMA / Mexicanos / Extranjeros: hora de término + duración (desde Hora Inicio)
-    r_fma = len(rows); rows.append(['FMA:'] + [_celda_rubro(fma_vals[i], dur_fma[i]) for i in range(n)])
+    # FMA además incluye el conteo de personas (celda subdividida si hay ambos).
+    r_fma = len(rows); rows.append(['FMA:'] + [_celda_fma(fma_vals[i], dur_fma[i], fma_personas[i]) for i in range(n)])
     r_mex = len(rows); rows.append(['Mexicanos:'] + [_celda_rubro(mex_vals[i], dur_mex[i]) for i in range(n)])
     r_ext = len(rows); rows.append(['Extranjeros:'] + [_celda_rubro(ext_vals[i], dur_ext[i]) for i in range(n)])
 
