@@ -445,7 +445,7 @@ async function copiarTodo() {
 
         const tieneMotivos = reporteData && reporteData.motivos_rechazo && reporteData.motivos_rechazo.length > 0;
 
-        let html = '<div style="font-family:Arial,sans-serif;font-size:11pt;">';
+        let html = '<div style="font-family:Calibri,Carlito,sans-serif;font-size:13pt;">';
         html += `<img src="${imgDataUrl}" style="max-width:100%;" alt="Reporte de Inadmitidos"/>`;
         if (tieneMotivos) {
             html += '<br/><br/>';
@@ -519,7 +519,7 @@ async function copiarComentarios() {
 }
 
 function formatearComentariosHTML(motivos) {
-    let html = '<div style="font-family:Arial,sans-serif;font-size:11pt;">';
+    let html = '<div style="font-family:Calibri,Carlito,sans-serif;font-size:13pt;">';
     html += '<p style="margin:0 0 8px 0;"><strong>Motivos de rechazo del día</strong></p>';
     motivos.forEach((m) => {
         html += '<p style="margin:0 0 8px 0;">';

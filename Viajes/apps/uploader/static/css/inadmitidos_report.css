@@ -27,9 +27,9 @@
     border-collapse: collapse;
     width: auto;
     text-align: left;
-    font-family: 'Hanken Grotesk', system-ui, -apple-system, sans-serif;
+    font-family: 'Calibri', 'Carlito', system-ui, -apple-system, sans-serif;
     color: #1a1c1e;
-    font-size: 14px;
+    font-size: 18px;
 }
 
 /* Celdas: borde inferior + derecho tenues (surface-variant) */
@@ -52,7 +52,7 @@
 .inadmitidos-preview-table .col-label {
     text-align: left;
     min-width: 200px;
-    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    font-family: 'Calibri', 'Carlito', system-ui, sans-serif;
 }
 
 /* Números con tipografía mono (JetBrains Mono) */
@@ -63,8 +63,8 @@
 .inadmitidos-preview-table .row-total-sr td,
 .inadmitidos-preview-table .row-total-dia td,
 .inadmitidos-preview-table .row-total-pax td {
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 13px;
+    font-family: 'Calibri', 'Carlito', system-ui, sans-serif;
+    font-size: 16px;
     min-width: 62px;
 }
 .inadmitidos-preview-table .row-data .col-label,
@@ -74,14 +74,14 @@
 .inadmitidos-preview-table .row-total-sr .col-label,
 .inadmitidos-preview-table .row-total-dia .col-label,
 .inadmitidos-preview-table .row-total-pax .col-label {
-    font-family: 'Hanken Grotesk', system-ui, sans-serif;
-    font-size: 14px;
+    font-family: 'Calibri', 'Carlito', system-ui, sans-serif;
+    font-size: 17px;
 }
 
 /* Duración entre paréntesis dentro de los tiempos */
 .inadmitidos-preview-table .dur {
     opacity: 0.6;
-    font-size: 11px;
+    font-size: 15px;
 }
 
 /* ── Celda subdividida (sólo FMA): personas arriba, tiempo abajo ──
@@ -97,8 +97,8 @@
 }
 .inadmitidos-preview-table .split-top {
     padding: 5px 10px;
-    font-family: 'Hanken Grotesk', system-ui, sans-serif;
-    font-size: 13px;
+    font-family: 'Calibri', 'Carlito', system-ui, sans-serif;
+    font-size: 16px;
     font-weight: 600;
     color: #6b1d1d;
 }
@@ -106,14 +106,14 @@
     padding: 5px 10px;
     border-top: 1px solid rgba(226, 226, 229, 0.7);
     background-color: #f1f1f4;
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
-    font-size: 13px;
+    font-family: 'Calibri', 'Carlito', system-ui, sans-serif;
+    font-size: 16px;
     color: #374151;
 }
 /* Celda con sólo conteo de personas (sin tiempo capturado) */
 .inadmitidos-preview-table td.cell-personas {
-    font-family: 'Hanken Grotesk', system-ui, sans-serif;
-    font-size: 13px;
+    font-family: 'Calibri', 'Carlito', system-ui, sans-serif;
+    font-size: 16px;
     font-weight: 600;
     color: #6b1d1d;
 }
@@ -131,7 +131,7 @@
 }
 .inadmitidos-preview-table .row-vuelo td.val {
     text-align: center;
-    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-family: 'Calibri', 'Carlito', system-ui, sans-serif;
     font-weight: 700;
 }
 
@@ -167,7 +167,7 @@
     background-color: rgba(255, 218, 214, 0.22);
     color: #554241;
     font-weight: 600;
-    font-size: 12px;
+    font-size: 14px;
     padding: 5px 8px;
 }
 
@@ -286,7 +286,8 @@
     padding: 14px 18px;
     background-color: #f9f9fc;
     box-shadow: 0 1px 3px rgba(26, 28, 30, 0.06);
-    font-family: 'Hanken Grotesk', system-ui, sans-serif;
+    font-family: 'Calibri', 'Carlito', system-ui, sans-serif;
+    font-size: 16px;
 }
 .motivos-box h4 {
     font-weight: 700;
