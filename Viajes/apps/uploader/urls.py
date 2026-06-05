@@ -23,6 +23,7 @@ urlpatterns = [
     path('inadmitidos/', views.inadmitidos_page, name='inadmitidos_page'),
     path('inadmitidos-data/', views.inadmitidos_data, name='inadmitidos_data'),
     path('inadmitidos-pdf/', views.generar_inadmitidos_pdf, name='generar_inadmitidos_pdf'),
+    path('inadmitidos-excel/', views.generar_inadmitidos_excel, name='generar_inadmitidos_excel'),
     
     # Menores (captura manual)
     path('menores/crear/', views.crear_menor, name='crear_menor'),

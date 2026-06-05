@@ -952,3 +952,264 @@ def generar_inadmitidos_pdf(request):
     response = HttpResponse(pdf_bytes, content_type='application/pdf')
     response['Content-Disposition'] = f'attachment; filename="{nombre}"'
     return response
+
+
+@login_required
+def generar_inadmitidos_excel(request):
+    """Genera el reporte de inadmitidos como Excel (.xlsx) con openpyxl.
+
+    Replica el layout de la tabla del reporte; la cantidad de columnas de
+    fechas depende del rango consultado (un día por columna)."""
+    from io import BytesIO
+    from urllib.parse import quote
+    from django.http import HttpResponse
+    from openpyxl import Workbook
+    from openpyxl.styles import Font, PatternFill, Alignment, Border, Side
+    from openpyxl.utils import get_column_letter
+
+    fecha_inicio_str = request.GET.get('fecha_inicio')
+    fecha_fin_str = request.GET.get('fecha_fin')
+
+    if not fecha_inicio_str or not fecha_fin_str:
+        return HttpResponse('Se requieren fecha_inicio y fecha_fin', status=400)
+
+    try:
+        fecha_inicio = datetime.strptime(fecha_inicio_str, '%Y-%m-%d').date()
+        fecha_fin = datetime.strptime(fecha_fin_str, '%Y-%m-%d').date()
+    except ValueError:
+        return HttpResponse('Formato de fecha inválido', status=400)
+
+    if fecha_fin < fecha_inicio:
+        return HttpResponse('La fecha fin debe ser mayor o igual a la fecha inicio', status=400)
+
+    # El Excel "Autoridades" omite la sección de Tiempos de Atención y los motivos.
+    autoridades = request.GET.get('autoridades') == '1'
+
+    data = _compute_inadmitidos_data(fecha_inicio, fecha_fin)
+    n = len(data['dates'])
+    nats = list(data['nationalities'].keys())
+
+    # La columna Total sólo aporta con varios días (con uno solo sería redundante).
+    incluir_total = n > 1
+    last_col = (n + 2) if incluir_total else (n + 1)  # etiqueta + n días [+ Total]
+
+    # ─── Colores tomados tal cual del CSS del reporte (inadmitidos_report.css),
+    #     aplanando los rgba() sobre fondo blanco. Prefijo 'FF' = alfa opaco. ───
+    MAROON       = 'FF6B1D1D'  # row-vuelo / row-dias
+    DARK_RED     = 'FF4D060A'  # total-sr / encabezado de sección
+    ROSA_TITULO  = 'FFFFEEED'  # row-title / row-total-inad
+    ROSA_FECHAS  = 'FFFFF7F6'  # row-fechas
+    VERDE_INTERN = 'FFE6EDE9'  # row-total-intern (el verde va aquí, en el Total)
+    DATA_BG      = 'FFF9F9FC'  # row-data / row-intern-nac
+    PAX_BG       = 'FFE2E2E5'  # row-total-pax
+
+    fill_maroon   = PatternFill('solid', fgColor=MAROON)
+    fill_dark_red = PatternFill('solid', fgColor=DARK_RED)
+    fill_rosa_tit = PatternFill('solid', fgColor=ROSA_TITULO)
+    fill_rosa_fec = PatternFill('solid', fgColor=ROSA_FECHAS)
+    fill_verde    = PatternFill('solid', fgColor=VERDE_INTERN)
+    fill_data     = PatternFill('solid', fgColor=DATA_BG)
+    fill_pax      = PatternFill('solid', fgColor=PAX_BG)
+
+    # Tipografía Calibri en todo (igual que el reporte)
+    font_data   = Font(name='Calibri', size=11, color='FF1A1C1E')              # valores / etiquetas normales
+    font_blanco = Font(name='Calibri', size=11, bold=True, color='FFFFFFFF')   # filas maroon / encabezados
+    font_maroon = Font(name='Calibri', size=11, bold=True, color='FF6B1D1D')   # row-title / motivos
+    font_fechas = Font(name='Calibri', size=10, bold=True, color='FF554241')   # fila de fechas
+    font_pax    = Font(name='Calibri', size=11, bold=True, color='FF1A1C1E')   # total pasajeros
+
+    # Filas de totales destacados: Calibri 12 en negritas
+    font_tot_inad   = Font(name='Calibri', size=12, bold=True, color='FF6B1D1D')   # Total Inadmitidos
+    font_tot_intern = Font(name='Calibri', size=12, bold=True, color='FF1C2522')   # Total Internaciones
+    font_tot_sr     = Font(name='Calibri', size=12, bold=True, color='FFFFFFFF')   # Total Segundas Revisiones
+
+    thin = Side(style='thin', color='FFE2E2E5')
+    borde = Border(left=thin, right=thin, top=thin, bottom=thin)
+    center = Alignment(horizontal='center', vertical='center', wrap_text=True)
+    left = Alignment(horizontal='left', vertical='center', wrap_text=True)
+
+    wb = Workbook()
+    ws = wb.active
+    ws.title = 'Inadmitidos'
+
+    def _fmt_min(mins):
+        try:
+            m_ = int(mins)
+        except (TypeError, ValueError):
+            return '0m'
+        if m_ <= 0:
+            return '0m'
+        h, m = divmod(m_, 60)
+        if h == 0:
+            return f'{m}m'
+        if m == 0:
+            return f'{h}h'
+        return f'{h}h {m}m'
+
+    def _val(x):
+        s = str(x).strip()
+        return int(s) if s.isdigit() else 0
+
+    def _celda_rubro(hora, dur):
+        h = str(hora).strip()
+        if not h:
+            return ''
+        return f'{h} ({_fmt_min(dur)})' if _val(dur) > 0 else h
+
+    def _celda_dur(dur):
+        return _fmt_min(dur) if _val(dur) > 0 else ''
+
+    def _celda_fma(hora, dur, personas):
+        tiempo = _celda_rubro(hora, dur)
+        try:
+            p = int(personas)
+        except (TypeError, ValueError):
+            p = 0
+        pers = f'{p} Personas' if p > 0 else ''
+        if pers and tiempo:
+            return f'{pers}\n{tiempo}'
+        return pers or tiempo
+
+    def _suma(arr):
+        """Suma horizontal de conteos (la columna Total)."""
+        return sum(_val(v) for v in arr)
+
+    def _suma_dur(arr):
+        """Suma de duraciones (minutos) formateada, o vacío si no hay."""
+        tot = 0
+        for v in arr:
+            try:
+                iv = int(v)
+            except (TypeError, ValueError):
+                iv = 0
+            if iv > 0:
+                tot += iv
+        return _fmt_min(tot) if tot > 0 else ''
+
+    def _con_total(valores, total):
+        """Agrega la celda Total al final de la fila (sólo si incluir_total)."""
+        return valores + [total] if incluir_total else valores
+
+    # Cada elemento de `filas` es (lista_de_valores, fill, font, span_completo).
+    # span_completo=True fusiona toda la fila en una sola celda.
+    filas = []
+
+    # Encabezado Vuelo / Origen (row-vuelo, maroon). Con ancho suficiente se
+    # ponen en celdas separadas (y se fusiona el origen); si no, en una sola.
+    if last_col >= 4:
+        filas.append((
+            ['Vuelo:', data['vuelo'], 'Origen:', data['origen']] + [''] * (last_col - 4),
+            fill_maroon, font_blanco, False,
+        ))
+        merge_origen = True
+    else:
+        filas.append(([f"Vuelo: {data['vuelo']}   Origen: {data['origen']}"], fill_maroon, font_blanco, True))
+        merge_origen = False
+
+    # INADMITIDOS (row-title, rosa claro, span)
+    filas.append((['INADMITIDOS'], fill_rosa_tit, font_maroon, True))
+    # Días de la semana (row-dias, maroon) + encabezado de la columna Total
+    day_names = [DIAS_ES[datetime.strptime(r, '%Y-%m-%d').date().weekday()] for r in data['raw_dates']]
+    filas.append((_con_total(['Nacionalidad'] + day_names, 'Total'), fill_maroon, font_blanco, False))
+    # Fechas (row-fechas, rosa muy claro)
+    filas.append((_con_total([''] + list(data['dates']), ''), fill_rosa_fec, font_fechas, False))
+
+    # Nacionalidades (row-data, gris muy claro uniforme)
+    for nat in nats:
+        vals = data['nationalities'][nat]
+        filas.append((_con_total([nat] + [str(v) for v in vals], str(_suma(vals))), fill_data, font_data, False))
+
+    # Total Inadmitidos (row-total-inad, rosa claro, Calibri 12 negritas)
+    filas.append((_con_total(['Total Inadmitidos'] + [str(v) for v in data['totals_inadmitidos']],
+                             str(_suma(data['totals_inadmitidos']))), fill_rosa_tit, font_tot_inad, False))
+    # Total Internaciones (row-total-intern, verde claro, Calibri 12 negritas)
+    filas.append((_con_total(['Total Internaciones:'] + [str(v) for v in data['totals_internaciones']],
+                             str(_suma(data['totals_internaciones']))), fill_verde, font_tot_intern, False))
+    # Desglose internaciones por nacionalidad (row-intern-nac, gris claro, indentado)
+    intern_nats = list(data.get('internaciones_nationalities', {}).keys())
+    for nat in intern_nats:
+        vals = data['internaciones_nationalities'][nat]
+        filas.append((_con_total([f'   {nat}'] + [str(v) for v in vals], str(_suma(vals))), fill_data, font_data, False))
+    # Total Segundas Revisiones (row-total-sr, rojo oscuro, Calibri 12 negritas)
+    filas.append((_con_total(['Total Segundas Revisiones:'] + [str(v) for v in data['totals_sr']],
+                             str(_suma(data['totals_sr']))), fill_dark_red, font_tot_sr, False))
+    # Local / Tránsito (row-data) / Total pasajeros (row-total-pax)
+    filas.append((_con_total(['Local:'] + [str(v) for v in data['local']], str(_suma(data['local']))), fill_data, font_data, False))
+    filas.append((_con_total(['En tránsito:'] + [str(v) for v in data['transito']], str(_suma(data['transito']))), fill_data, font_data, False))
+    filas.append((_con_total(['Total pasajeros:'] + [str(v) for v in data['total_pasajeros']],
+                             str(_suma(data['total_pasajeros']))), fill_pax, font_pax, False))
+
+    # ─── Tiempos de atención (sólo en el Excel completo, no en el de autoridades) ───
+    if not autoridades:
+        fma_vals = data.get('tiempo_fma', [''] * n)
+        fma_personas = data.get('fma_personas', [''] * n)
+        mex_vals = data.get('tiempo_mexicanos', [''] * n)
+        ext_vals = data.get('tiempo_extranjeros', [''] * n)
+        rs_ini_vals = data.get('rs_hora_inicio', [''] * n)
+        rs_fin_vals = data.get('rs_hora_fin', [''] * n)
+        dur_fma = data.get('dur_fma', [''] * n)
+        dur_mex = data.get('dur_mexicanos', [''] * n)
+        dur_ext = data.get('dur_extranjeros', [''] * n)
+        dur_rs = data.get('dur_revisiones_secundarias', [''] * n)
+
+        filas.append((['Tiempos de atención'], fill_dark_red, font_blanco, True))
+        filas.append((_con_total(['Hora Inicio:'] + [str(v) for v in data.get('hora_inicio', [''] * n)], ''), fill_data, font_data, False))
+        filas.append((_con_total(['FMA:'] + [_celda_fma(fma_vals[i], dur_fma[i], fma_personas[i]) for i in range(n)], _suma_dur(dur_fma)), fill_data, font_data, False))
+        filas.append((_con_total(['Mexicanos:'] + [_celda_rubro(mex_vals[i], dur_mex[i]) for i in range(n)], _suma_dur(dur_mex)), fill_data, font_data, False))
+        filas.append((_con_total(['Extranjeros:'] + [_celda_rubro(ext_vals[i], dur_ext[i]) for i in range(n)], _suma_dur(dur_ext)), fill_data, font_data, False))
+        filas.append((_con_total(['Hora Fin:'] + [str(v) for v in data.get('hora_fin', [''] * n)], ''), fill_data, font_data, False))
+        filas.append((_con_total(['RS Hora Inicio:'] + [str(rs_ini_vals[i]) for i in range(n)], ''), fill_data, font_data, False))
+        filas.append((_con_total(['RS Hora Fin:'] + [str(rs_fin_vals[i]) for i in range(n)], ''), fill_data, font_data, False))
+        filas.append((_con_total(['RS Duración:'] + [_celda_dur(dur_rs[i]) for i in range(n)], _suma_dur(dur_rs)), fill_data, font_data, False))
+
+    # ─── Volcado a la hoja ───
+    for r_idx, (valores, fill, font, span) in enumerate(filas, start=1):
+        for c_idx in range(1, last_col + 1):
+            valor = valores[c_idx - 1] if c_idx - 1 < len(valores) else ''
+            celda = ws.cell(row=r_idx, column=c_idx, value=valor)
+            celda.fill = fill
+            celda.font = font
+            celda.border = borde
+            celda.alignment = left if c_idx == 1 else center
+        if span:
+            ws.merge_cells(start_row=r_idx, start_column=1, end_row=r_idx, end_column=last_col)
+            ws.cell(row=r_idx, column=1).alignment = center
+
+    # Span del origen en el encabezado (col D..fin) cuando van en celdas separadas
+    if merge_origen:
+        ws.merge_cells(start_row=1, start_column=4, end_row=1, end_column=last_col)
+        ws.cell(row=1, column=4).alignment = left
+
+    # Anchos de columna
+    ws.column_dimensions['A'].width = 26
+    for c in range(2, last_col + 1):
+        ws.column_dimensions[get_column_letter(c)].width = 16
+
+    # ─── Motivos de rechazo (no se incluyen en el Excel de autoridades) ───
+    if data['motivos_rechazo'] and not autoridades:
+        r = len(filas) + 2
+        c = ws.cell(row=r, column=1, value='Motivos de rechazo del día:')
+        c.font = font_maroon
+        ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=last_col)
+        for m in data['motivos_rechazo']:
+            r += 1
+            texto = (f"Extranjero de {m['nacionalidad']} [{m['fecha']}] "
+                     f"{m['nombre']}, {m['numero_documento']}: {m['comentario']}")
+            cm = ws.cell(row=r, column=1, value=texto)
+            cm.font = font_data
+            cm.alignment = left
+            ws.merge_cells(start_row=r, start_column=1, end_row=r, end_column=last_col)
+
+    buffer = BytesIO()
+    wb.save(buffer)
+    xlsx_bytes = buffer.getvalue()
+    buffer.close()
+
+    prefijo = 'Inadmitidos_Autoridades' if autoridades else 'Inadmitidos'
+    nombre = f"{prefijo}_{data['vuelo']}_{fecha_inicio_str}_{fecha_fin_str}.xlsx"
+    response = HttpResponse(
+        xlsx_bytes,
+        content_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    )
+    response['Content-Disposition'] = f"attachment; filename*=UTF-8''{quote(nombre)}"
+    return response

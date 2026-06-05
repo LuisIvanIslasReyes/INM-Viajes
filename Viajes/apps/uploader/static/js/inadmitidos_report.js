@@ -51,7 +51,8 @@ async function generarReporte(mostrarTotal = true) {
     ocultarError();
     mostrarSpinner(true);
     document.getElementById('tabla-preview').classList.add('hidden');
-    document.getElementById('btn-pdf').classList.add('hidden');
+    document.getElementById('btn-excel').classList.add('hidden');
+    document.getElementById('btn-excel-autoridades').classList.add('hidden');
 
     const url = `${window.INADMITIDOS_DATA_URL}?fecha_inicio=${inicio}&fecha_fin=${fin}`;
 
@@ -63,7 +64,8 @@ async function generarReporte(mostrarTotal = true) {
         }
         reporteData = await resp.json();
         renderTabla(reporteData, mostrarTotal);
-        document.getElementById('btn-pdf').classList.remove('hidden');
+        document.getElementById('btn-excel').classList.remove('hidden');
+        document.getElementById('btn-excel-autoridades').classList.remove('hidden');
     } catch (e) {
         mostrarError(e.message || 'Error al obtener los datos.');
     } finally {
@@ -347,13 +349,24 @@ function renderTabla(data, mostrarTotal = true) {
     document.getElementById('tabla-preview').classList.remove('hidden');
 }
 
-/* --- Descargar PDF (generado en el servidor con ReportLab) --- */
+/* --- Descargar Excel (generado en el servidor con openpyxl) --- */
 
-function descargarPDF() {
+// Excel completo: toda la información (incluye Tiempos de Atención y motivos).
+function descargarExcel() {
+    abrirExcel(false);
+}
+
+// Excel autoridades: omite la sección Tiempos de Atención y los motivos.
+function descargarExcelAutoridades() {
+    abrirExcel(true);
+}
+
+function abrirExcel(autoridades) {
     const inicio = document.getElementById('fecha_inicio').value;
     const fin = document.getElementById('fecha_fin').value;
     if (!inicio || !fin) return;
-    const url = `${window.INADMITIDOS_PDF_URL}?fecha_inicio=${inicio}&fecha_fin=${fin}`;
+    let url = `${window.INADMITIDOS_EXCEL_URL}?fecha_inicio=${inicio}&fecha_fin=${fin}`;
+    if (autoridades) url += '&autoridades=1';
     window.open(url, '_blank');
 }
 

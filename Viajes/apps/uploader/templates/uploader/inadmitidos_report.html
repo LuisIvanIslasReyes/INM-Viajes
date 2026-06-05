@@ -12,9 +12,9 @@
 <script src="https://cdn.jsdelivr.net/npm/html2canvas-pro@1.5.8/dist/html2canvas-pro.min.js"></script>
 <script>
     window.INADMITIDOS_DATA_URL = '{% url "inadmitidos_data" %}';
-    window.INADMITIDOS_PDF_URL = '{% url "generar_inadmitidos_pdf" %}';
+    window.INADMITIDOS_EXCEL_URL = '{% url "generar_inadmitidos_excel" %}';
 </script>
-<script src="{% static 'js/inadmitidos_report.js' %}?v=24"></script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=26"></script>
 {% endblock %}
 
 {% block content %}
@@ -28,7 +28,7 @@
         </h1>
         <p class="text-base-content/70">
             <i class="fas fa-info-circle mr-1" style="color:#700606;"></i>
-            Selecciona el rango de fechas para generar la tabla y descargar el PDF.
+            Selecciona el rango de fechas para generar la tabla y descargar el Excel.
             El vuelo y origen se detectan automáticamente de las cargas del rango.
         </p>
     </div>
@@ -87,9 +87,13 @@
                     <i class="fas fa-table mr-1"></i>
                     Generar Reporte
                 </button>
-                <button id="btn-pdf" onclick="descargarPDF()" class="btn text-white hidden" style="background-color:#700606; border-color:#700606;">
-                    <i class="fas fa-file-pdf mr-1"></i>
-                    Descargar PDF
+                <button id="btn-excel" onclick="descargarExcel()" class="btn text-white hidden" style="background-color:#1F8A4C; border-color:#1F8A4C;">
+                    <i class="fas fa-file-excel mr-1"></i>
+                    Excel Completo
+                </button>
+                <button id="btn-excel-autoridades" onclick="descargarExcelAutoridades()" class="btn text-white hidden" style="background-color:#0F6BB3; border-color:#0F6BB3;">
+                    <i class="fas fa-file-excel mr-1"></i>
+                    Excel Autoridades
                 </button>
             </div>
         </div>

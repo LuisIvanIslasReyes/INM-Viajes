@@ -4,7 +4,7 @@ Organizado en submódulos por funcionalidad.
 """
 
 from .upload import upload_excel, check_duplicates
-from .registros import update_registro, admin_list, generar_pin, inadmitidos_page, inadmitidos_data, generar_inadmitidos_pdf
+from .registros import update_registro, admin_list, generar_pin, inadmitidos_page, inadmitidos_data, generar_inadmitidos_pdf, generar_inadmitidos_excel
 from .reportes import date_range_report, download_batch_file
 from .notificaciones import notificaciones_list, marcar_notificacion_leida
 from .casos_especiales import (
@@ -30,7 +30,8 @@ __all__ = [
     'inadmitidos_page',
     'inadmitidos_data',
     'generar_inadmitidos_pdf',
-    
+    'generar_inadmitidos_excel',
+
     # Reportes
     'date_range_report',
     'download_batch_file',
