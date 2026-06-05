@@ -1050,6 +1050,17 @@ def generar_inadmitidos_excel(request):
         s = str(x).strip()
         return int(s) if s.isdigit() else 0
 
+    def _num(v):
+        """Devuelve int cuando el valor es un entero, para que Excel lo trate
+        como número (sin el aviso 'número almacenado como texto'); si no, el
+        texto original (p. ej. horas '17:36' o duraciones '24m')."""
+        if isinstance(v, bool):
+            return v
+        if isinstance(v, int):
+            return v
+        s = str(v).strip()
+        return int(s) if s.lstrip('-').isdigit() else v
+
     def _celda_rubro(hora, dur):
         h = str(hora).strip()
         if not h:
@@ -1114,30 +1125,37 @@ def generar_inadmitidos_excel(request):
     # Fechas (row-fechas, rosa muy claro)
     filas.append((_con_total([''] + list(data['dates']), ''), fill_rosa_fec, font_fechas, False))
 
-    # Nacionalidades (row-data, gris muy claro uniforme)
+    # Nacionalidades de inadmitidos: SÓLO la celda del nombre va en rosa (5º
+    # elemento = relleno de la etiqueta); los números quedan neutros. Cada fila
+    # se enmarca después (box_rows) para focalizarla.
+    box_rows = []
     for nat in nats:
         vals = data['nationalities'][nat]
-        filas.append((_con_total([nat] + [str(v) for v in vals], str(_suma(vals))), fill_data, font_data, False))
+        filas.append((_con_total([nat] + [_num(v) for v in vals], _suma(vals)), fill_data, font_data, False, fill_rosa_tit))
+        box_rows.append(len(filas))  # nº de fila en la hoja (el volcado usa start=1)
 
-    # Total Inadmitidos (row-total-inad, rosa claro, Calibri 12 negritas)
-    filas.append((_con_total(['Total Inadmitidos'] + [str(v) for v in data['totals_inadmitidos']],
-                             str(_suma(data['totals_inadmitidos']))), fill_rosa_tit, font_tot_inad, False))
-    # Total Internaciones (row-total-intern, verde claro, Calibri 12 negritas)
-    filas.append((_con_total(['Total Internaciones:'] + [str(v) for v in data['totals_internaciones']],
-                             str(_suma(data['totals_internaciones']))), fill_verde, font_tot_intern, False))
-    # Desglose internaciones por nacionalidad (row-intern-nac, gris claro, indentado)
+    # Total Inadmitidos (banda rosa completa, Calibri 12 negritas, enmarcada)
+    filas.append((_con_total(['Total Inadmitidos'] + [_num(v) for v in data['totals_inadmitidos']],
+                             _suma(data['totals_inadmitidos'])), fill_rosa_tit, font_tot_inad, False))
+    box_rows.append(len(filas))
+    # Total Internaciones (banda verde completa, Calibri 12 negritas, enmarcada)
+    filas.append((_con_total(['Total Internaciones:'] + [_num(v) for v in data['totals_internaciones']],
+                             _suma(data['totals_internaciones'])), fill_verde, font_tot_intern, False))
+    box_rows.append(len(filas))
+    # Desglose internaciones: SÓLO la celda del nombre va en verde; enmarcada.
     intern_nats = list(data.get('internaciones_nationalities', {}).keys())
     for nat in intern_nats:
         vals = data['internaciones_nationalities'][nat]
-        filas.append((_con_total([f'   {nat}'] + [str(v) for v in vals], str(_suma(vals))), fill_data, font_data, False))
+        filas.append((_con_total([f'   {nat}'] + [_num(v) for v in vals], _suma(vals)), fill_data, font_data, False, fill_verde))
+        box_rows.append(len(filas))
     # Total Segundas Revisiones (row-total-sr, rojo oscuro, Calibri 12 negritas)
-    filas.append((_con_total(['Total Segundas Revisiones:'] + [str(v) for v in data['totals_sr']],
-                             str(_suma(data['totals_sr']))), fill_dark_red, font_tot_sr, False))
+    filas.append((_con_total(['Total Segundas Revisiones:'] + [_num(v) for v in data['totals_sr']],
+                             _suma(data['totals_sr'])), fill_dark_red, font_tot_sr, False))
     # Local / Tránsito (row-data) / Total pasajeros (row-total-pax)
-    filas.append((_con_total(['Local:'] + [str(v) for v in data['local']], str(_suma(data['local']))), fill_data, font_data, False))
-    filas.append((_con_total(['En tránsito:'] + [str(v) for v in data['transito']], str(_suma(data['transito']))), fill_data, font_data, False))
-    filas.append((_con_total(['Total pasajeros:'] + [str(v) for v in data['total_pasajeros']],
-                             str(_suma(data['total_pasajeros']))), fill_pax, font_pax, False))
+    filas.append((_con_total(['Local:'] + [_num(v) for v in data['local']], _suma(data['local'])), fill_data, font_data, False))
+    filas.append((_con_total(['En tránsito:'] + [_num(v) for v in data['transito']], _suma(data['transito'])), fill_data, font_data, False))
+    filas.append((_con_total(['Total pasajeros:'] + [_num(v) for v in data['total_pasajeros']],
+                             _suma(data['total_pasajeros'])), fill_pax, font_pax, False))
 
     # ─── Tiempos de atención (sólo en el Excel completo, no en el de autoridades) ───
     if not autoridades:
@@ -1163,11 +1181,15 @@ def generar_inadmitidos_excel(request):
         filas.append((_con_total(['RS Duración:'] + [_celda_dur(dur_rs[i]) for i in range(n)], _suma_dur(dur_rs)), fill_data, font_data, False))
 
     # ─── Volcado a la hoja ───
-    for r_idx, (valores, fill, font, span) in enumerate(filas, start=1):
+    # Cada fila es (valores, fill, font, span[, label_fill]); si label_fill está
+    # presente, sólo la celda de la etiqueta (col A) usa ese color.
+    for r_idx, fila in enumerate(filas, start=1):
+        valores, fill, font, span = fila[0], fila[1], fila[2], fila[3]
+        label_fill = fila[4] if len(fila) > 4 else None
         for c_idx in range(1, last_col + 1):
             valor = valores[c_idx - 1] if c_idx - 1 < len(valores) else ''
             celda = ws.cell(row=r_idx, column=c_idx, value=valor)
-            celda.fill = fill
+            celda.fill = label_fill if (label_fill is not None and c_idx == 1) else fill
             celda.font = font
             celda.border = borde
             celda.alignment = left if c_idx == 1 else center
@@ -1184,6 +1206,17 @@ def generar_inadmitidos_excel(request):
     ws.column_dimensions['A'].width = 26
     for c in range(2, last_col + 1):
         ws.column_dimensions[get_column_letter(c)].width = 16
+
+    # ── Enmarca cada fila de nacionalidades y de totales (Inadmitidos /
+    #    Internaciones) para focalizarlas: borde superior/inferior en toda la
+    #    fila, izquierdo en la etiqueta y derecho hasta la última columna
+    #    (Total). Verticales internos quedan tenues. ──
+    box = Side(style='thin', color='FF000000')
+    for row_idx in box_rows:
+        for c in range(1, last_col + 1):
+            izq = box if c == 1 else thin
+            der = box if c == last_col else thin
+            ws.cell(row=row_idx, column=c).border = Border(left=izq, right=der, top=box, bottom=box)
 
     # ─── Motivos de rechazo (no se incluyen en el Excel de autoridades) ───
     if data['motivos_rechazo'] and not autoridades:
