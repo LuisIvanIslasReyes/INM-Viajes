@@ -303,7 +303,18 @@ def generar_pin(request, fecha):
 
     total_pekin_tijuana = registros_arribos.filter(filtro_tij).count()
     total_pekin_mexico = registros_arribos.filter(filtro_mex).count()
-    
+
+    # Desglose por nacionalidad: mexicanos vs extranjeros, sobre ambos
+    # Exceles del día (PEK-MEX y PEK-TIJ ya incluidos en registros_arribos).
+    # Mexicano = documento con país de emisión México (código MEX/MX).
+    # Cualquier otro código (chino, ruso, etc.) cuenta como extranjero.
+    filtro_mexicano = (
+        models.Q(codigo_pais_emision__iexact='MEX') |
+        models.Q(codigo_pais_emision__iexact='MX')
+    )
+    total_mexicanos = registros_arribos.filter(filtro_mexicano).count()
+    total_extranjeros = total_pasajeros - total_mexicanos
+
     # Vuelo y origen se autodetectan del primer arribo del día (lo que el
     # parser guardó al subir el Excel). Permite soportar rutas nuevas sin
     # tocar este código — basta con extender ORIGEN_POR_AEROPUERTO.
@@ -338,6 +349,8 @@ def generar_pin(request, fecha):
                 'total_pasajeros': total_pasajeros,
                 'total_pekin_tijuana': total_pekin_tijuana,
                 'total_pekin_mexico': total_pekin_mexico,
+                'total_mexicanos': total_mexicanos,
+                'total_extranjeros': total_extranjeros,
                 'total_sr': total_sr,
                 'total_internaciones': total_internaciones,
                 'total_rechazos': total_rechazos,
@@ -355,6 +368,8 @@ def generar_pin(request, fecha):
         'origen_ciudad': origen_ciudad,
         'origen_pais': origen_pais,
         'total_pasajeros': total_pasajeros,
+        'total_mexicanos': total_mexicanos,
+        'total_extranjeros': total_extranjeros,
         'total_sr': total_sr,
         'total_internaciones': total_internaciones,
         'total_rechazos': total_rechazos,

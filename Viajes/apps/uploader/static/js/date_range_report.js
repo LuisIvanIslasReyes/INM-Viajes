@@ -278,6 +278,9 @@ Vuelo <strong>${data.vuelo_numero}</strong> proveniente de <strong>${data.origen
 ${data.origen_pais} – México (tránsito): <strong>${data.total_pekin_mexico}</strong> pasajeros
 ${data.origen_pais} - Tijuana (local): <strong>${data.total_pekin_tijuana}</strong> pasajeros
 
+<strong>Mexicanos</strong>: ${data.total_mexicanos}
+<strong>Extranjeros</strong>: ${data.total_extranjeros}
+
 <strong>Segundas Revisiones: ${srStr}</strong>
 Rechazos: <strong>${rechStr}</strong>
 Internaciones: <strong>${intStr}</strong>`;
@@ -329,6 +332,8 @@ async function copiarPinBinacional(event) {
             `*Total pasajeros: ${pinBinacionalData.total_pasajeros}*\n` +
             `${pinBinacionalData.origen_pais} – México (tránsito): *${pinBinacionalData.total_pekin_mexico}* pasajeros\n` +
             `${pinBinacionalData.origen_pais} - Tijuana (local): *${pinBinacionalData.total_pekin_tijuana}* pasajeros\n\n` +
+            `*Mexicanos*: ${pinBinacionalData.total_mexicanos}\n` +
+            `*Extranjeros*: ${pinBinacionalData.total_extranjeros}\n\n` +
             `*Segundas Revisiones: ${srStr}*\n` +
             `Rechazos: *${rechStr}*\n` +
             `Internaciones: *${intStr}*`;
