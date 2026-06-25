@@ -137,6 +137,12 @@ function renderTabla(data, mostrarTotal = true) {
     if (mostrarTotal) html += `<td></td>`;
     html += '</tr>';
 
+    // ── Total Inadmitidos ──
+    html += `<tr class="row-total-inad"><td class="col-label">Total Inadmitidos</td>`;
+    for (const v of data.totals_inadmitidos) html += `<td>${v}</td>`;
+    if (mostrarTotal) html += `<td class="col-total">${sumar(data.totals_inadmitidos)}</td>`;
+    html += '</tr>';
+
     // ── Filas de nacionalidades (inadmitidos) — suma horizontal ──
     nats.forEach((nat) => {
         html += `<tr class="row-data"><td class="col-label">${nat}</td>`;
@@ -149,12 +155,6 @@ function renderTabla(data, mostrarTotal = true) {
         if (mostrarTotal) html += `<td class="col-total">${totalNat}</td>`;
         html += '</tr>';
     });
-
-    // ── Total Inadmitidos ──
-    html += `<tr class="row-total-inad"><td class="col-label">Total Inadmitidos</td>`;
-    for (const v of data.totals_inadmitidos) html += `<td>${v}</td>`;
-    if (mostrarTotal) html += `<td class="col-total">${sumar(data.totals_inadmitidos)}</td>`;
-    html += '</tr>';
 
     // ── Total Internaciones ──
     html += `<tr class="row-total-intern"><td class="col-label">Total Internaciones:</td>`;
