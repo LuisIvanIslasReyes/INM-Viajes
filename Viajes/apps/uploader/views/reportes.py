@@ -1,7 +1,7 @@
 """
 Vistas relacionadas con reportes y descarga de archivos
 """
-from django.contrib.auth.decorators import login_required
+from apps.cuentas.roles import flujo_principal_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.http import FileResponse
@@ -13,7 +13,7 @@ import os
 from ..models import Registro, UploadBatch
 
 
-@login_required
+@flujo_principal_required
 def date_range_report(request):
     """Vista de reporte por rango de fechas - Muestra TODOS los días con vuelos"""
     fecha_inicio = request.GET.get('fecha_inicio')
@@ -65,7 +65,7 @@ def date_range_report(request):
     return render(request, 'uploader/date_range_report.html', context)
 
 
-@login_required
+@flujo_principal_required
 def download_batch_file(request, batch_id):
     """Vista para descargar el archivo Excel de un batch"""
     batch = get_object_or_404(UploadBatch, id=batch_id)

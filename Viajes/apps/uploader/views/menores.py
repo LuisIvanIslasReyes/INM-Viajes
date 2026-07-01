@@ -2,7 +2,7 @@
 Vistas relacionadas con la captura manual de menores de edad
 que no vienen en el manifiesto Excel de China.
 """
-from django.contrib.auth.decorators import login_required
+from apps.cuentas.roles import flujo_principal_required
 from django.shortcuts import redirect
 from django.contrib import messages
 from django.utils import timezone
@@ -32,7 +32,7 @@ def _resolver_pais(nacionalidad_input):
     return nacionalidad_input, ''
 
 
-@login_required
+@flujo_principal_required
 def crear_menor(request):
     """Captura manual de un menor de edad. Crea Registro asociado al
     UploadBatch del mismo día+tipo (o crea uno especial sin archivo)."""

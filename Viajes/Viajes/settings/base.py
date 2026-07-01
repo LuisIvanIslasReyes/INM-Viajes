@@ -19,8 +19,11 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'apps.cuentas',
     'apps.uploader',
     'apps.camara',
+    'apps.directorio',
+    'apps.redacciones',
 ]
 
 MIDDLEWARE = [
@@ -48,6 +51,7 @@ TEMPLATES = [
                 'django.template.context_processors.request',
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
+                'apps.cuentas.roles.roles_context',
             ],
         },
     },
@@ -107,3 +111,9 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 LOGIN_URL = '/accounts/login/'
 LOGIN_REDIRECT_URL = '/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
+
+# Vista previa de documentos (módulo Redacciones): binario de LibreOffice headless.
+# En Windows Server, ruta al ejecutable, p.ej.:
+#   SOFFICE_BIN=C:\Program Files\LibreOffice\program\soffice.exe
+# Si no está disponible, la vista previa se degrada a solo-descarga.
+SOFFICE_BIN = config('SOFFICE_BIN', default='soffice')

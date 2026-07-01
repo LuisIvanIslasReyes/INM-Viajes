@@ -1,7 +1,7 @@
 """
 Vistas relacionadas con el sistema de notificaciones
 """
-from django.contrib.auth.decorators import login_required
+from apps.cuentas.roles import flujo_principal_required
 from django.shortcuts import render
 from django.core.paginator import Paginator
 from django.http import JsonResponse
@@ -9,7 +9,7 @@ from django.http import JsonResponse
 from ..models import Notificacion
 
 
-@login_required
+@flujo_principal_required
 def notificaciones_list(request):
     """Vista para listar notificaciones del usuario"""
     filtro_tipo = request.GET.get('tipo', 'todas')
@@ -49,7 +49,7 @@ def notificaciones_list(request):
     return render(request, 'uploader/notificaciones_list.html', context)
 
 
-@login_required
+@flujo_principal_required
 def marcar_notificacion_leida(request, notificacion_id):
     """Marcar una notificación como leída"""
     if request.method == 'POST':

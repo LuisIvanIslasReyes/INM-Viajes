@@ -3,6 +3,8 @@ from django.contrib.auth.models import User
 from django.contrib.auth.forms import UserCreationForm
 import os
 
+from apps.cuentas.roles import GRUPO_AEROPUERTO, GRUPO_GENERAL
+
 
 class ExcelUploadForm(forms.Form):
     """Formulario para subir archivos Excel"""
@@ -63,6 +65,14 @@ class CreateUserForm(UserCreationForm):
             'class': 'input input-bordered w-full',
             'placeholder': 'Confirme contraseña'
         })
+    )
+    rol = forms.ChoiceField(
+        label='Rol',
+        choices=[
+            (GRUPO_AEROPUERTO, 'Usuario Aeropuerto (flujo principal + módulos)'),
+            (GRUPO_GENERAL, 'Usuario General (solo Directorio y Redacciones)'),
+        ],
+        widget=forms.Select(attrs={'class': 'select select-bordered w-full'}),
     )
 
     class Meta:

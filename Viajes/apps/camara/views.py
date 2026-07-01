@@ -1,4 +1,4 @@
-from django.contrib.auth.decorators import login_required
+from apps.cuentas.roles import flujo_principal_required
 from django.shortcuts import get_object_or_404, redirect
 from django.contrib import messages
 from django.http import JsonResponse
@@ -9,7 +9,7 @@ from .models import FotoRechazo
 from .forms import FotoRechazoForm
 
 
-@login_required
+@flujo_principal_required
 @require_POST
 def subir_foto_rechazo(request, registro_id):
     """Vista para subir foto de un rechazo (AJAX)"""
@@ -58,7 +58,7 @@ def subir_foto_rechazo(request, registro_id):
         })
 
 
-@login_required
+@flujo_principal_required
 def ver_fotos_rechazo(request, registro_id):
     """Vista para ver todas las fotos de un rechazo"""
     registro = get_object_or_404(Registro, id=registro_id)

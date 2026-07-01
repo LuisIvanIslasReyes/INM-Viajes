@@ -8,13 +8,14 @@ Estas vistas permiten al superusuario:
 from datetime import datetime, date, timedelta
 
 from django.contrib.auth.decorators import login_required, user_passes_test
-from django.contrib.auth.models import User
+from django.contrib.auth.models import Group, User
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
 from django.db import models
 from django.utils import timezone
 
+from apps.cuentas.roles import flujo_principal_required
 from ..forms import CreateUserForm
 from ..models import UploadBatch
 
@@ -29,7 +30,7 @@ def _parse_date(value):
         return None
 
 
-@login_required
+@flujo_principal_required
 def batch_list(request):
     """Vista para listar todas las cargas de archivos (TODOS los usuarios)"""
     fecha_exacta = _parse_date(request.GET.get('fecha'))
@@ -98,7 +99,7 @@ def batch_list(request):
     return render(request, 'uploader/batch_list.html', context)
 
 
-@login_required
+@flujo_principal_required
 def delete_batch(request, batch_id):
     """Vista para eliminar una carga de archivo (TODOS los usuarios)"""
     if request.method == 'POST':
@@ -138,7 +139,14 @@ def create_user(request):
             user.is_superuser = False
             user.is_staff = False
             user.save()
-            messages.success(request, f' Usuario {user.username} creado exitosamente.')
+            grupo = Group.objects.filter(name=form.cleaned_data['rol']).first()
+            if grupo:
+                user.groups.add(grupo)
+            messages.success(
+                request,
+                f' Usuario {user.username} creado exitosamente '
+                f'({form.cleaned_data["rol"]}).'
+            )
             return redirect('create_user')
         else:
             for field, errors in form.errors.items():
@@ -147,7 +155,7 @@ def create_user(request):
     else:
         form = CreateUserForm()
 
-    usuarios = User.objects.filter(is_superuser=False).order_by('-date_joined')
+    usuarios = User.objects.filter(is_superuser=False).prefetch_related('groups').order_by('-date_joined')
 
     context = {
         'form': form,

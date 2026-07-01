@@ -1,7 +1,7 @@
 """
 Vistas relacionadas con la subida de archivos Excel
 """
-from django.contrib.auth.decorators import login_required
+from apps.cuentas.roles import flujo_principal_required
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from datetime import datetime, time
@@ -15,7 +15,7 @@ from ..models import UploadBatch, Registro, CasoEspecial, Notificacion
 from ..utils.parsers import obtener_nacionalidad
 
 
-@login_required
+@flujo_principal_required
 def upload_excel(request):
     """Vista para subir archivos Excel"""
     
@@ -324,7 +324,7 @@ def upload_excel(request):
     return render(request, 'uploader/upload.html', context)
 
 
-@login_required
+@flujo_principal_required
 def check_duplicates(request):
     """Vista para identificar registros duplicados"""
     from django.db.models import Count

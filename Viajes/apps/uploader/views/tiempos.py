@@ -14,7 +14,7 @@ propia ventana (`rs_hora_inicio` / `rs_hora_fin`).
 from datetime import date, datetime
 
 from django.contrib import messages
-from django.contrib.auth.decorators import login_required
+from apps.cuentas.roles import flujo_principal_required
 from django.http import JsonResponse
 from django.shortcuts import redirect
 
@@ -49,7 +49,7 @@ def _hora_rubro(post, prefijo):
         return _HORA_INVALIDA
 
 
-@login_required
+@flujo_principal_required
 def capturar_tiempos_atencion(request):
     if request.method != 'POST':
         return redirect('admin_list')
@@ -119,7 +119,7 @@ def capturar_tiempos_atencion(request):
     return redirect('admin_list')
 
 
-@login_required
+@flujo_principal_required
 def obtener_tiempos_atencion(request, fecha):
     """Devuelve en JSON los tiempos guardados para una fecha, para precargar el modal."""
     try:

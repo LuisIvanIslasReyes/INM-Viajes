@@ -1,7 +1,7 @@
 """
 Vistas relacionadas con los casos especiales (duplicados, conflictos)
 """
-from django.contrib.auth.decorators import login_required
+from apps.cuentas.roles import flujo_principal_required
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -10,7 +10,7 @@ from django.utils import timezone
 from ..models import CasoEspecial, Registro
 
 
-@login_required
+@flujo_principal_required
 def casos_especiales_list(request):
     """Vista para listar todos los casos especiales pendientes y resueltos"""
     filtro_estado = request.GET.get('estado', 'pendiente')
@@ -41,7 +41,7 @@ def casos_especiales_list(request):
     return render(request, 'uploader/casos_especiales_list.html', context)
 
 
-@login_required
+@flujo_principal_required
 def resolver_caso_aceptar(request, caso_id):
     """Aceptar ambos registros como válidos"""
     if request.method == 'POST':
@@ -68,7 +68,7 @@ def resolver_caso_aceptar(request, caso_id):
     return redirect('casos_especiales_list')
 
 
-@login_required
+@flujo_principal_required
 def resolver_caso_editar(request, caso_id, registro_id):
     """Editar el número de documento de uno de los registros"""
     if request.method == 'POST':
@@ -111,7 +111,7 @@ def resolver_caso_editar(request, caso_id, registro_id):
     return redirect('casos_especiales_list')
 
 
-@login_required
+@flujo_principal_required
 def resolver_caso_inadmitir(request, caso_id, registro_id):
     """Marcar un registro como rechazado"""
     if request.method == 'POST':
@@ -138,7 +138,7 @@ def resolver_caso_inadmitir(request, caso_id, registro_id):
     return redirect('casos_especiales_list')
 
 
-@login_required
+@flujo_principal_required
 def resolver_caso_eliminar(request, caso_id, registro_id):
     """Eliminar un registro duplicado"""
     if request.method == 'POST':

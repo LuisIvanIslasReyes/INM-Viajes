@@ -1,0 +1,54 @@
+{% extends 'uploader/base.html' %}
+
+{% block title %}{{ empresa.empresa }} | Directorio{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% url 'directorio:listado' %}" class="btn btn-ghost btn-sm btn-circle"><i class="fas fa-arrow-left"></i></a>
+        <h1 class="text-3xl font-bold flex-1">{{ empresa.empresa }}</h1>
+        {% if empresa.tentativa_resolucion == 'INTERNACION' %}
+        <span class="badge badge-success badge-lg gap-1"><i class="fas fa-check"></i> Internación</span>
+        {% else %}
+        <span class="badge badge-error badge-lg gap-1"><i class="fas fa-xmark"></i> Rechazo</span>
+        {% endif %}
+    </div>
+
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body">
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-4">
+                <div>
+                    <p class="text-sm text-base-content/50">Firma del Encargado</p>
+                    <p class="font-semibold">{{ empresa.firma_encargado }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-base-content/50">Teléfono</p>
+                    <p class="font-semibold">{{ empresa.telefono|default:"—" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-base-content/50">Estado</p>
+                    <p class="font-semibold">{{ empresa.estado.nombre|default:"—" }}</p>
+                </div>
+                <div>
+                    <p class="text-sm text-base-content/50">Ciudad</p>
+                    <p class="font-semibold">{{ empresa.ciudad|default:"—" }}</p>
+                </div>
+                <div class="sm:col-span-2">
+                    <p class="text-sm text-base-content/50">Domicilio</p>
+                    <p class="font-semibold">{{ empresa.domicilio|default:"—" }}</p>
+                </div>
+            </div>
+
+            <div class="divider"></div>
+            <div class="flex flex-wrap justify-between gap-2 text-sm text-base-content/50">
+                <span>Registrado por {{ empresa.creado_por.username|default:"—" }}</span>
+                <span>{{ empresa.fecha_creacion|date:"d/m/Y H:i" }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="flex justify-end mt-6">
+        <a href="{% url 'directorio:crear' %}" class="btn btn-primary gap-2"><i class="fas fa-plus"></i> Nueva empresa</a>
+    </div>
+</div>
+{% endblock %}

@@ -1,7 +1,7 @@
 """
 Vistas relacionadas con la gestión de registros de pasajeros
 """
-from django.contrib.auth.decorators import login_required
+from apps.cuentas.roles import flujo_principal_required
 from django.shortcuts import render, redirect
 from django.contrib import messages
 from django.core.paginator import Paginator
@@ -53,7 +53,7 @@ def _detectar_vuelo_y_origen(registros):
 
     fallback = (primer.aeropuerto_salida or '—').strip() or '—'
     return vuelo, fallback, fallback
-@login_required
+@flujo_principal_required
 def update_registro(request, registro_id):
     """Vista para actualizar campos (TODOS pueden editar TODO)"""
     from urllib.parse import urlencode
@@ -153,7 +153,7 @@ def update_registro(request, registro_id):
     return redirect('admin_list')
 
 
-@login_required
+@flujo_principal_required
 def admin_list(request):
     """Vista para ver y modificar registros (TODOS VEN TODO)"""
     # TODOS ven TODOS los registros
@@ -225,7 +225,7 @@ def admin_list(request):
     return render(request, 'uploader/admin_list.html', context)
 
 
-@login_required
+@flujo_principal_required
 def generar_pin(request, fecha):
     """Vista para generar el PIN oficial del INM por fecha"""
     logger = logging.getLogger(__name__)
@@ -585,7 +585,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
     }
 
 
-@login_required
+@flujo_principal_required
 def inadmitidos_page(request):
     """Página principal del reporte de inadmitidos"""
     return render(request, 'uploader/inadmitidos_report.html', {
@@ -593,7 +593,7 @@ def inadmitidos_page(request):
     })
 
 
-@login_required
+@flujo_principal_required
 def inadmitidos_data(request):
     """Endpoint AJAX que devuelve datos de inadmitidos por rango de fechas"""
     fecha_inicio_str = request.GET.get('fecha_inicio')
@@ -615,7 +615,7 @@ def inadmitidos_data(request):
     return JsonResponse(data)
 
 
-@login_required
+@flujo_principal_required
 def generar_inadmitidos_pdf(request):
     """Genera el reporte de inadmitidos como PDF con ReportLab"""
     from io import BytesIO
@@ -969,7 +969,7 @@ def generar_inadmitidos_pdf(request):
     return response
 
 
-@login_required
+@flujo_principal_required
 def generar_inadmitidos_excel(request):
     """Genera el reporte de inadmitidos como Excel (.xlsx) con openpyxl.
 

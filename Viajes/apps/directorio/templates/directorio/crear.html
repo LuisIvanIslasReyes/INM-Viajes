@@ -1,0 +1,145 @@
+{% extends 'uploader/base.html' %}
+
+{% block title %}Nueva empresa | Directorio{% endblock %}
+
+{% block content %}
+<div class="max-w-3xl mx-auto">
+    <div class="flex items-center gap-3 mb-6">
+        <a href="{% url 'directorio:listado' %}" class="btn btn-ghost btn-sm btn-circle"><i class="fas fa-arrow-left"></i></a>
+        <div>
+            <h1 class="text-3xl font-bold">Nueva empresa</h1>
+            <p class="text-base-content/60">Antes de registrar, revisa si la empresa ya existe.</p>
+        </div>
+    </div>
+
+    <!-- Coincidencias detectadas por el servidor (bloqueo/confirmación) -->
+    {% if coincidencias %}
+    <div class="card bg-base-100 shadow-md border-l-4 border-warning mb-6">
+        <div class="card-body">
+            <h2 class="card-title text-warning"><i class="fas fa-triangle-exclamation"></i> Coincidencias existentes</h2>
+            <div class="overflow-x-auto">
+                <table class="table table-sm">
+                    <thead><tr><th>Empresa</th><th>Encargado</th><th>Teléfono</th><th>Resolución</th><th></th></tr></thead>
+                    <tbody>
+                        {% for c in coincidencias %}
+                        <tr>
+                            <td class="font-semibold">{{ c.empresa }}</td>
+                            <td>{{ c.firma_encargado }}</td>
+                            <td>{{ c.telefono|default:"—" }}</td>
+                            <td>{{ c.get_tentativa_resolucion_display }}</td>
+                            <td><a href="{% url 'directorio:detalle' c.pk %}" class="link link-primary">Ver</a></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Búsqueda previa en vivo -->
+    <div id="coincidencias-live" class="mb-6 hidden">
+        <div class="card bg-base-100 shadow-md border-l-4 border-info">
+            <div class="card-body py-4">
+                <h3 class="font-semibold text-info flex items-center gap-2"><i class="fas fa-magnifying-glass"></i> Ya registradas con este nombre</h3>
+                <ul id="coincidencias-live-list" class="mt-2 space-y-1 text-sm"></ul>
+            </div>
+        </div>
+    </div>
+
+    <!-- Formulario -->
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                {% if requiere_confirmacion %}<input type="hidden" name="confirmar" value="1">{% endif %}
+
+                {% if form.non_field_errors %}
+                <div class="alert alert-error mb-4">{{ form.non_field_errors }}</div>
+                {% endif %}
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="form-control md:col-span-2">
+                        <label class="label" for="{{ form.empresa.id_for_label }}"><span class="label-text font-semibold">Empresa *</span></label>
+                        {{ form.empresa }}
+                        {% if form.empresa.errors %}<span class="label-text-alt text-error mt-1">{{ form.empresa.errors|striptags }}</span>{% endif %}
+                    </div>
+                    <div class="form-control md:col-span-2">
+                        <label class="label" for="{{ form.domicilio.id_for_label }}"><span class="label-text font-semibold">Domicilio</span></label>
+                        {{ form.domicilio }}
+                    </div>
+                    <div class="form-control">
+                        <label class="label" for="{{ form.estado.id_for_label }}"><span class="label-text font-semibold">Estado</span></label>
+                        {{ form.estado }}
+                    </div>
+                    <div class="form-control">
+                        <label class="label" for="{{ form.ciudad.id_for_label }}"><span class="label-text font-semibold">Ciudad</span></label>
+                        {{ form.ciudad }}
+                    </div>
+                    <div class="form-control">
+                        <label class="label" for="{{ form.firma_encargado.id_for_label }}"><span class="label-text font-semibold">Firma del Encargado *</span></label>
+                        {{ form.firma_encargado }}
+                        {% if form.firma_encargado.errors %}<span class="label-text-alt text-error mt-1">{{ form.firma_encargado.errors|striptags }}</span>{% endif %}
+                    </div>
+                    <div class="form-control">
+                        <label class="label" for="{{ form.telefono.id_for_label }}"><span class="label-text font-semibold">Teléfono</span></label>
+                        {{ form.telefono }}
+                        {% if form.telefono.errors %}<span class="label-text-alt text-error mt-1">{{ form.telefono.errors|striptags }}</span>{% endif %}
+                    </div>
+                    <div class="form-control md:col-span-2">
+                        <label class="label" for="{{ form.tentativa_resolucion.id_for_label }}"><span class="label-text font-semibold">Tentativa de Resolución *</span></label>
+                        {{ form.tentativa_resolucion }}
+                        {% if form.tentativa_resolucion.errors %}<span class="label-text-alt text-error mt-1">{{ form.tentativa_resolucion.errors|striptags }}</span>{% endif %}
+                    </div>
+                </div>
+
+                <div class="card-actions justify-end mt-6 gap-2">
+                    <a href="{% url 'directorio:listado' %}" class="btn btn-ghost">Cancelar</a>
+                    <button type="submit" class="btn {% if requiere_confirmacion %}btn-warning{% else %}btn-primary{% endif %} gap-2">
+                        <i class="fas fa-save"></i>
+                        {% if requiere_confirmacion %}Registrar de todos modos{% else %}Guardar{% endif %}
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const input = document.getElementById('id_empresa');
+    const box = document.getElementById('coincidencias-live');
+    const list = document.getElementById('coincidencias-live-list');
+    const url = "{% url 'directorio:buscar_coincidencias' %}";
+    let timer = null;
+
+    if (!input) return;
+
+    function render(resultados) {
+        if (!resultados.length) { box.classList.add('hidden'); list.innerHTML = ''; return; }
+        list.innerHTML = resultados.map(r =>
+            `<li class="flex flex-wrap items-center gap-2 border-b border-base-200 pb-1">
+                <a href="${r.url}" class="link link-primary font-semibold">${r.empresa}</a>
+                <span class="text-base-content/60">· ${r.encargado || '—'}</span>
+                <span class="text-base-content/60">· ${r.telefono || '—'}</span>
+                <span class="badge badge-ghost badge-sm">${r.resolucion}</span>
+            </li>`).join('');
+        box.classList.remove('hidden');
+    }
+
+    input.addEventListener('input', function () {
+        const q = input.value.trim();
+        clearTimeout(timer);
+        if (q.length < 2) { box.classList.add('hidden'); return; }
+        timer = setTimeout(function () {
+            fetch(url + '?empresa=' + encodeURIComponent(q))
+                .then(r => r.json())
+                .then(d => render(d.resultados || []))
+                .catch(() => {});
+        }, 300);
+    });
+})();
+</script>
+{% endblock %}

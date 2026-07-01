@@ -1,0 +1,115 @@
+{% extends 'uploader/base.html' %}
+
+{% block title %}Directorio de Empresas | INM Viajes{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-3xl font-bold flex items-center gap-2">
+                <i class="fas fa-building text-primary"></i> Directorio de Empresas
+            </h1>
+            <p class="text-base-content/60 mt-1">
+                Catálogo histórico de empresas en procesos migratorios · {{ total }} registro{{ total|pluralize }}
+            </p>
+        </div>
+        <a href="{% url 'directorio:crear' %}" class="btn btn-primary gap-2">
+            <i class="fas fa-plus"></i> Nueva empresa
+        </a>
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <form method="get" class="flex flex-wrap items-end gap-3">
+                <div class="form-control flex-1 min-w-[220px]">
+                    <label class="label"><span class="label-text font-semibold">Buscar</span></label>
+                    <input type="text" name="q" value="{{ busqueda }}"
+                           placeholder="Empresa, encargado o ciudad…"
+                           class="input input-bordered w-full">
+                </div>
+                <div class="form-control min-w-[200px]">
+                    <label class="label"><span class="label-text font-semibold">Resolución</span></label>
+                    <select name="resolucion" class="select select-bordered">
+                        <option value="">Todas</option>
+                        {% for value, label in resoluciones %}
+                        <option value="{{ value }}" {% if resolucion == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary gap-2"><i class="fas fa-search"></i> Buscar</button>
+                    <a href="{% url 'directorio:listado' %}" class="btn btn-ghost">Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resultados -->
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body p-0">
+            <div class="overflow-x-auto">
+                <table class="table table-zebra">
+                    <thead>
+                        <tr class="bg-base-200">
+                            <th>Empresa</th>
+                            <th>Ciudad</th>
+                            <th>Estado</th>
+                            <th>Encargado</th>
+                            <th>Teléfono</th>
+                            <th>Resolución</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for empresa in page_obj %}
+                        <tr>
+                            <td class="font-semibold">{{ empresa.empresa }}</td>
+                            <td>{{ empresa.ciudad|default:"—" }}</td>
+                            <td>{{ empresa.estado.nombre|default:"—" }}</td>
+                            <td>{{ empresa.firma_encargado }}</td>
+                            <td>{{ empresa.telefono|default:"—" }}</td>
+                            <td>
+                                {% if empresa.tentativa_resolucion == 'INTERNACION' %}
+                                <span class="badge badge-success gap-1"><i class="fas fa-check"></i> Internación</span>
+                                {% else %}
+                                <span class="badge badge-error gap-1"><i class="fas fa-xmark"></i> Rechazo</span>
+                                {% endif %}
+                            </td>
+                            <td class="text-right">
+                                <a href="{% url 'directorio:detalle' empresa.pk %}" class="btn btn-ghost btn-sm">
+                                    Ver <i class="fas fa-chevron-right"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="7" class="text-center py-12 text-base-content/50">
+                                <i class="fas fa-folder-open text-4xl mb-3 block"></i>
+                                No hay empresas que coincidan con la búsqueda.
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Paginación -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="flex justify-center mt-6">
+        <div class="join">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="join-item btn btn-sm">«</a>
+            {% endif %}
+            <button class="join-item btn btn-sm btn-active">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</button>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="join-item btn btn-sm">»</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

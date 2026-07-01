@@ -1,0 +1,107 @@
+{% extends 'uploader/base.html' %}
+
+{% block title %}Biblioteca de Redacciones | INM Viajes{% endblock %}
+
+{% block content %}
+<div class="max-w-6xl mx-auto">
+    <!-- Header -->
+    <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
+        <div>
+            <h1 class="text-3xl font-bold flex items-center gap-2">
+                <i class="fas fa-folder-tree text-primary"></i> Biblioteca de Redacciones
+            </h1>
+            <p class="text-base-content/60 mt-1">
+                Documentos reutilizables · {{ total }} documento{{ total|pluralize }}
+            </p>
+        </div>
+        {% if puede_subir_redacciones %}
+        <a href="{% url 'redacciones:subir' %}" class="btn btn-primary gap-2">
+            <i class="fas fa-upload"></i> Subir documento
+        </a>
+        {% endif %}
+    </div>
+
+    <!-- Filtros -->
+    <div class="card bg-base-100 shadow-md mb-6">
+        <div class="card-body">
+            <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Resolución</span></label>
+                    <select name="resolucion" class="select select-bordered">
+                        <option value="">Todas</option>
+                        {% for value, label in resoluciones %}
+                        <option value="{{ value }}" {% if resolucion == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Tema</span></label>
+                    <input type="text" name="tema" value="{{ tema }}" list="temas-filtro"
+                           placeholder="Cualquiera" class="input input-bordered" autocomplete="off">
+                    <datalist id="temas-filtro">
+                        {% for t in temas %}<option value="{{ t }}">{% endfor %}
+                    </datalist>
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">País</span></label>
+                    <select name="pais" class="select select-bordered">
+                        <option value="">Todos</option>
+                        {% for p in paises %}
+                        <option value="{{ p.id }}" {% if pais_id == p.id|stringformat:'s' %}selected{% endif %}>{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="flex gap-2">
+                    <button type="submit" class="btn btn-primary flex-1 gap-2"><i class="fas fa-filter"></i> Filtrar</button>
+                    <a href="{% url 'redacciones:biblioteca' %}" class="btn btn-ghost">Limpiar</a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Resultados -->
+    {% if page_obj %}
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+        {% for doc in page_obj %}
+        <a href="{% url 'redacciones:detalle' doc.pk %}" class="card bg-base-100 shadow-md hover:shadow-lg transition-shadow">
+            <div class="card-body">
+                <div class="flex items-start justify-between gap-2">
+                    <i class="fas {% if doc.es_pdf %}fa-file-pdf text-error{% else %}fa-file-word text-info{% endif %} text-2xl"></i>
+                    {% if doc.resolucion == 'INTERNACION' %}
+                    <span class="badge badge-success gap-1"><i class="fas fa-check"></i> Internación</span>
+                    {% else %}
+                    <span class="badge badge-error gap-1"><i class="fas fa-xmark"></i> Rechazo</span>
+                    {% endif %}
+                </div>
+                <h3 class="card-title text-base mt-2">{{ doc.titulo }}</h3>
+                <p class="text-sm text-base-content/70"><i class="fas fa-tag mr-1"></i>{{ doc.tema }}</p>
+                <p class="text-sm text-base-content/70"><i class="fas fa-flag mr-1"></i>{{ doc.pais.nombre }}</p>
+            </div>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="card bg-base-100 shadow-md">
+        <div class="card-body text-center py-12 text-base-content/50">
+            <i class="fas fa-folder-open text-4xl mb-3"></i>
+            <p>No hay documentos que coincidan con los filtros.</p>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Paginación -->
+    {% if page_obj.paginator.num_pages > 1 %}
+    <div class="flex justify-center mt-6">
+        <div class="join">
+            {% if page_obj.has_previous %}
+            <a href="?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="join-item btn btn-sm">«</a>
+            {% endif %}
+            <button class="join-item btn btn-sm btn-active">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</button>
+            {% if page_obj.has_next %}
+            <a href="?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="join-item btn btn-sm">»</a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

@@ -23,6 +23,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('', include('apps.uploader.urls')),
     path('camara/', include('apps.camara.urls')),
+    path('directorio/', include('apps.directorio.urls')),
+    path('redacciones/', include('apps.redacciones.urls')),
     path('accounts/', include('django.contrib.auth.urls')),  # Rutas de autenticación
 ]
 
