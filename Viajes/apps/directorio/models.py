@@ -53,7 +53,9 @@ class EmpresaDirectorio(models.Model):
         max_length=20, blank=True, validators=[telefono_validator], verbose_name='Teléfono',
     )
     tentativa_resolucion = models.CharField(
-        max_length=12, choices=ResolucionChoices.choices, verbose_name='Tentativa de Resolución',
+        max_length=12, choices=ResolucionChoices.choices, blank=True,
+        verbose_name='Tentativa de Resolución',
+        help_text='Opcional. Puede definirse más adelante.',
     )
     creado_por = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True,

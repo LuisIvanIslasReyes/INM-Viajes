@@ -2,27 +2,47 @@
 Vistas del módulo Redacciones (biblioteca documental compartida).
 
 - Consulta / descarga / vista previa: todos los roles autenticados (incluye General).
-- Subida: solo SuperUser y Aeropuerto (@puede_subir_required).
+- Subida / edición / eliminación: solo SuperUser y Aeropuerto
+  (@puede_gestionar_redacciones_required).
 """
 import os
+from datetime import datetime, time, timedelta
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import FileResponse, Http404
 from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.utils.dateparse import parse_date
 from django.views.decorators.clickjacking import xframe_options_sameorigin
+from django.views.decorators.http import require_POST
 
-from apps.cuentas.roles import puede_subir_required
+from apps.cuentas.roles import puede_gestionar_redacciones_required
 from .forms import RedaccionForm
 from .models import Pais, Redaccion, ResolucionChoices
+from .utils.busqueda import extraer_palabras, resaltar, snippet
 from .utils.conversion import generar_preview
+from .utils.extraccion import actualizar_texto
 
 
 @login_required
 def biblioteca(request):
-    """Biblioteca con filtros combinables: Resolución + Tema + País."""
+    """Biblioteca con filtros combinables: Búsqueda + Resolución + Tema + País + Fecha."""
     docs = Redaccion.objects.select_related('pais', 'subido_por')
+
+    # Buscador de palabras: cada palabra debe aparecer en título, tema, país
+    # o dentro del contenido del documento (texto extraído del PDF).
+    q = (request.GET.get('q') or '').strip()
+    palabras = extraer_palabras(q)
+    for palabra in palabras:
+        docs = docs.filter(
+            Q(titulo__icontains=palabra)
+            | Q(tema__icontains=palabra)
+            | Q(pais__nombre__icontains=palabra)
+            | Q(texto_contenido__icontains=palabra)
+        )
 
     resolucion = (request.GET.get('resolucion') or '').strip()
     if resolucion in ResolucionChoices.values:
@@ -36,27 +56,60 @@ def biblioteca(request):
     if pais_id.isdigit():
         docs = docs.filter(pais_id=int(pais_id))
 
+    # Rango de fechas de creación (inclusive). Puede venir solo una de las dos.
+    # Los límites se calculan como datetimes en Python: el lookup __date en MySQL
+    # depende de CONVERT_TZ, que devuelve NULL si el servidor no tiene cargadas
+    # las tablas de zonas horarias.
+    fecha_desde = (request.GET.get('fecha_desde') or '').strip()
+    fecha_hasta = (request.GET.get('fecha_hasta') or '').strip()
+    desde = parse_date(fecha_desde)
+    hasta = parse_date(fecha_hasta)
+    if desde and hasta and desde > hasta:
+        desde, hasta = hasta, desde
+        fecha_desde, fecha_hasta = fecha_hasta, fecha_desde
+    tz = timezone.get_current_timezone()
+    if desde:
+        docs = docs.filter(
+            fecha_creacion__gte=datetime.combine(desde, time.min, tzinfo=tz)
+        )
+    if hasta:
+        docs = docs.filter(
+            fecha_creacion__lt=datetime.combine(hasta + timedelta(days=1), time.min, tzinfo=tz)
+        )
+
     paginator = Paginator(docs, 12)
     page_obj = paginator.get_page(request.GET.get('page'))
+
+    # Match finder: resalta las coincidencias en los metadatos y arma un
+    # fragmento del contenido donde aparece la primera palabra encontrada.
+    if palabras:
+        for doc in page_obj:
+            doc.titulo_res = resaltar(doc.titulo, palabras)
+            doc.tema_res = resaltar(doc.tema, palabras)
+            doc.pais_res = resaltar(doc.pais.nombre, palabras)
+            doc.snippet = snippet(doc.texto_contenido, palabras)
 
     params = request.GET.copy()
     params.pop('page', None)
 
     context = {
         'page_obj': page_obj,
+        'q': q,
         'paises': Pais.objects.all(),
         'temas': Redaccion.objects.order_by('tema').values_list('tema', flat=True).distinct(),
         'resoluciones': ResolucionChoices.choices,
         'resolucion': resolucion,
         'tema': tema,
         'pais_id': pais_id,
+        'fecha_desde': fecha_desde if desde else '',
+        'fecha_hasta': fecha_hasta if hasta else '',
         'querystring': params.urlencode(),
         'total': paginator.count,
     }
     return render(request, 'redacciones/biblioteca.html', context)
 
 
-@puede_subir_required
+@puede_gestionar_redacciones_required
 def subir(request):
     """Alta de documento (solo SuperUser/Aeropuerto). Genera vista previa PDF."""
     if request.method == 'POST':
@@ -74,6 +127,7 @@ def subir(request):
                         'El documento se guardó, pero no se pudo generar la vista previa. '
                         'Estará disponible para descarga.'
                     )
+            actualizar_texto(redaccion)
             messages.success(request, f'Documento "{redaccion.titulo}" agregado a la biblioteca.')
             return redirect('redacciones:detalle', pk=redaccion.pk)
     else:
@@ -81,6 +135,59 @@ def subir(request):
 
     temas = Redaccion.objects.order_by('tema').values_list('tema', flat=True).distinct()
     return render(request, 'redacciones/subir.html', {'form': form, 'temas': temas})
+
+
+@puede_gestionar_redacciones_required
+def editar(request, pk):
+    """Edición de metadatos y, opcionalmente, reemplazo del archivo (solo SuperUser/Aeropuerto)."""
+    redaccion = get_object_or_404(Redaccion, pk=pk)
+
+    if request.method == 'POST':
+        form = RedaccionForm(request.POST, request.FILES, instance=redaccion)
+        form.fields['archivo'].required = False
+        if form.is_valid():
+            reemplaza_archivo = 'archivo' in request.FILES
+            if reemplaza_archivo:
+                redaccion.archivo.delete(save=False)
+                if redaccion.archivo_pdf:
+                    redaccion.archivo_pdf.delete(save=False)
+                redaccion.archivo_pdf = None
+
+            redaccion = form.save()
+
+            if reemplaza_archivo:
+                if not redaccion.es_pdf and not generar_preview(redaccion):
+                    messages.warning(
+                        request,
+                        'El documento se actualizó, pero no se pudo generar la vista previa. '
+                        'Estará disponible para descarga.'
+                    )
+                actualizar_texto(redaccion)
+            messages.success(request, f'Documento "{redaccion.titulo}" actualizado.')
+            return redirect('redacciones:detalle', pk=redaccion.pk)
+    else:
+        form = RedaccionForm(instance=redaccion)
+        form.fields['archivo'].required = False
+
+    temas = Redaccion.objects.order_by('tema').values_list('tema', flat=True).distinct()
+    return render(request, 'redacciones/editar.html', {
+        'form': form, 'redaccion': redaccion, 'temas': temas,
+    })
+
+
+@puede_gestionar_redacciones_required
+@require_POST
+def eliminar(request, pk):
+    """Elimina el documento y sus archivos asociados (solo SuperUser/Aeropuerto)."""
+    redaccion = get_object_or_404(Redaccion, pk=pk)
+    titulo = redaccion.titulo
+    if redaccion.archivo:
+        redaccion.archivo.delete(save=False)
+    if redaccion.archivo_pdf:
+        redaccion.archivo_pdf.delete(save=False)
+    redaccion.delete()
+    messages.success(request, f'Documento "{titulo}" eliminado de la biblioteca.')
+    return redirect('redacciones:biblioteca')
 
 
 @login_required

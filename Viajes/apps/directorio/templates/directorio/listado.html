@@ -73,11 +73,16 @@
                             <td>
                                 {% if empresa.tentativa_resolucion == 'INTERNACION' %}
                                 <span class="badge badge-success gap-1"><i class="fas fa-check"></i> Internación</span>
-                                {% else %}
+                                {% elif empresa.tentativa_resolucion == 'RECHAZO' %}
                                 <span class="badge badge-error gap-1"><i class="fas fa-xmark"></i> Rechazo</span>
+                                {% else %}
+                                <span class="badge badge-ghost gap-1">Sin definir</span>
                                 {% endif %}
                             </td>
-                            <td class="text-right">
+                            <td class="text-right whitespace-nowrap">
+                                <a href="{% url 'directorio:editar' empresa.pk %}" class="btn btn-ghost btn-sm btn-square" title="Editar">
+                                    <i class="fas fa-pen"></i>
+                                </a>
                                 <a href="{% url 'directorio:detalle' empresa.pk %}" class="btn btn-ghost btn-sm">
                                     Ver <i class="fas fa-chevron-right"></i>
                                 </a>

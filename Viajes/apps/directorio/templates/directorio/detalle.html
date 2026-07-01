@@ -9,8 +9,10 @@
         <h1 class="text-3xl font-bold flex-1">{{ empresa.empresa }}</h1>
         {% if empresa.tentativa_resolucion == 'INTERNACION' %}
         <span class="badge badge-success badge-lg gap-1"><i class="fas fa-check"></i> Internación</span>
-        {% else %}
+        {% elif empresa.tentativa_resolucion == 'RECHAZO' %}
         <span class="badge badge-error badge-lg gap-1"><i class="fas fa-xmark"></i> Rechazo</span>
+        {% else %}
+        <span class="badge badge-ghost badge-lg gap-1"><i class="fas fa-minus"></i> Sin definir</span>
         {% endif %}
     </div>
 
@@ -47,7 +49,8 @@
         </div>
     </div>
 
-    <div class="flex justify-end mt-6">
+    <div class="flex justify-end gap-2 mt-6">
+        <a href="{% url 'directorio:editar' empresa.pk %}" class="btn btn-outline gap-2"><i class="fas fa-pen"></i> Editar</a>
         <a href="{% url 'directorio:crear' %}" class="btn btn-primary gap-2"><i class="fas fa-plus"></i> Nueva empresa</a>
     </div>
 </div>

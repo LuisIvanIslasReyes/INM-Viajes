@@ -37,10 +37,19 @@
                             <p class="font-semibold">{{ redaccion.subido_por.username|default:"—" }} · {{ redaccion.fecha_creacion|date:"d/m/Y" }}</p>
                         </div>
                     </div>
-                    <div class="card-actions mt-4">
+                    <div class="card-actions mt-4 flex-col">
                         <a href="{% url 'redacciones:descargar' redaccion.pk %}" class="btn btn-primary btn-block gap-2">
                             <i class="fas fa-download"></i> Descargar original
                         </a>
+                        {% if puede_gestionar_redacciones %}
+                        <a href="{% url 'redacciones:editar' redaccion.pk %}" class="btn btn-outline btn-block gap-2">
+                            <i class="fas fa-pen"></i> Editar
+                        </a>
+                        <button type="button" class="btn btn-error btn-outline btn-block gap-2"
+                                onclick="delete_modal.showModal()">
+                            <i class="fas fa-trash"></i> Eliminar
+                        </button>
+                        {% endif %}
                     </div>
                 </div>
             </div>
@@ -64,5 +73,28 @@
             </div>
         </div>
     </div>
+
+    {% if puede_gestionar_redacciones %}
+    <dialog id="delete_modal" class="modal">
+        <div class="modal-box">
+            <h3 class="font-bold text-lg text-warning">
+                <i class="fas fa-triangle-exclamation mr-2"></i>
+                Confirmar Eliminación
+            </h3>
+            <p class="py-4">
+                ¿Está seguro que desea eliminar el documento <strong>{{ redaccion.titulo }}</strong>?
+                <br><br>
+                Esta acción <span class="text-error font-bold">eliminará el archivo y su vista previa</span> y no se puede deshacer.
+            </p>
+            <div class="modal-action">
+                <form method="post" action="{% url 'redacciones:eliminar' redaccion.pk %}">
+                    {% csrf_token %}
+                    <button type="button" class="btn" onclick="delete_modal.close()">Cancelar</button>
+                    <button type="submit" class="btn btn-error">Sí, Eliminar</button>
+                </form>
+            </div>
+        </div>
+    </dialog>
+    {% endif %}
 </div>
 {% endblock %}

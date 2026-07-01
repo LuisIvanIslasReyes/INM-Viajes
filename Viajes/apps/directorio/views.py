@@ -123,6 +123,41 @@ def crear(request):
 
 
 @login_required
+def editar(request, pk):
+    """
+    Edición de una empresa del directorio.
+
+    Disponible para todos los roles autenticados (SuperUser, Aeropuerto y General):
+    todos pueden mantener actualizado el directorio.
+    """
+    empresa = get_object_or_404(EmpresaDirectorio, pk=pk)
+
+    if request.method == 'POST':
+        form = EmpresaDirectorioForm(request.POST, instance=empresa)
+        if form.is_valid():
+            try:
+                with transaction.atomic():
+                    empresa = form.save()
+            except IntegrityError:
+                messages.error(
+                    request,
+                    'Ya existe otro registro idéntico (misma empresa, encargado y '
+                    'teléfono). Ajusta algún dato para diferenciarlo.'
+                )
+                return render(request, 'directorio/editar.html', {
+                    'form': form, 'empresa': empresa,
+                })
+            messages.success(request, f'Empresa "{empresa.empresa}" actualizada.')
+            return redirect('directorio:detalle', pk=empresa.pk)
+    else:
+        form = EmpresaDirectorioForm(instance=empresa)
+
+    return render(request, 'directorio/editar.html', {
+        'form': form, 'empresa': empresa,
+    })
+
+
+@login_required
 def detalle(request, pk):
     """Ficha de una empresa del directorio."""
     empresa = get_object_or_404(

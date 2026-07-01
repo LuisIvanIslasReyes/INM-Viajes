@@ -3,6 +3,15 @@
 {% block title %}Biblioteca de Redacciones | INM Viajes{% endblock %}
 
 {% block content %}
+<style>
+    /* Resaltado de coincidencias del buscador */
+    mark {
+        background-color: #fde68a;
+        color: inherit;
+        padding: 0 2px;
+        border-radius: 3px;
+    }
+</style>
 <div class="max-w-6xl mx-auto">
     <!-- Header -->
     <div class="flex flex-wrap items-center justify-between gap-3 mb-6">
@@ -11,10 +20,10 @@
                 <i class="fas fa-folder-tree text-primary"></i> Biblioteca de Redacciones
             </h1>
             <p class="text-base-content/60 mt-1">
-                Documentos reutilizables · {{ total }} documento{{ total|pluralize }}
+                Documentos reutilizables · {{ total }} documento{{ total|pluralize }}{% if q %} · coincidencia{{ total|pluralize }} para «{{ q }}»{% endif %}
             </p>
         </div>
-        {% if puede_subir_redacciones %}
+        {% if puede_gestionar_redacciones %}
         <a href="{% url 'redacciones:subir' %}" class="btn btn-primary gap-2">
             <i class="fas fa-upload"></i> Subir documento
         </a>
@@ -24,7 +33,19 @@
     <!-- Filtros -->
     <div class="card bg-base-100 shadow-md mb-6">
         <div class="card-body">
-            <form method="get" class="grid grid-cols-1 md:grid-cols-4 gap-3 items-end">
+            <form method="get" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-6 gap-3 items-end">
+                <div class="form-control col-span-full">
+                    <label class="label">
+                        <span class="label-text font-semibold">Buscar palabras</span>
+                        <span class="label-text-alt text-base-content/50">En título, tema, país y contenido del documento · presiona Enter</span>
+                    </label>
+                    <div class="relative">
+                        <i class="fas fa-magnifying-glass absolute left-4 top-1/2 -translate-y-1/2 text-base-content/40 pointer-events-none"></i>
+                        <input type="search" name="q" value="{{ q }}" enterkeyhint="search"
+                               placeholder="Ej. pasaporte alterado, acta circunstanciada…"
+                               class="input input-bordered w-full pl-11" autocomplete="off">
+                    </div>
+                </div>
                 <div class="form-control">
                     <label class="label"><span class="label-text font-semibold">Resolución</span></label>
                     <select name="resolucion" class="select select-bordered">
@@ -51,6 +72,14 @@
                         {% endfor %}
                     </select>
                 </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Desde</span></label>
+                    <input type="date" name="fecha_desde" value="{{ fecha_desde }}" class="input input-bordered">
+                </div>
+                <div class="form-control">
+                    <label class="label"><span class="label-text font-semibold">Hasta</span></label>
+                    <input type="date" name="fecha_hasta" value="{{ fecha_hasta }}" class="input input-bordered">
+                </div>
                 <div class="flex gap-2">
                     <button type="submit" class="btn btn-primary flex-1 gap-2"><i class="fas fa-filter"></i> Filtrar</button>
                     <a href="{% url 'redacciones:biblioteca' %}" class="btn btn-ghost">Limpiar</a>
@@ -73,9 +102,15 @@
                     <span class="badge badge-error gap-1"><i class="fas fa-xmark"></i> Rechazo</span>
                     {% endif %}
                 </div>
-                <h3 class="card-title text-base mt-2">{{ doc.titulo }}</h3>
-                <p class="text-sm text-base-content/70"><i class="fas fa-tag mr-1"></i>{{ doc.tema }}</p>
-                <p class="text-sm text-base-content/70"><i class="fas fa-flag mr-1"></i>{{ doc.pais.nombre }}</p>
+                <h3 class="card-title text-base mt-2">{{ doc.titulo_res|default:doc.titulo }}</h3>
+                <p class="text-sm text-base-content/70"><i class="fas fa-tag mr-1"></i>{{ doc.tema_res|default:doc.tema }}</p>
+                <p class="text-sm text-base-content/70"><i class="fas fa-flag mr-1"></i>{{ doc.pais_res|default:doc.pais.nombre }}</p>
+                <p class="text-sm text-base-content/70"><i class="fas fa-calendar mr-1"></i>{{ doc.fecha_creacion|date:"d/m/Y" }}</p>
+                {% if doc.snippet %}
+                <p class="text-xs text-base-content/60 mt-1 border-l-2 border-primary/40 pl-2 italic">
+                    <i class="fas fa-file-lines mr-1 not-italic"></i>{{ doc.snippet }}
+                </p>
+                {% endif %}
             </div>
         </a>
         {% endfor %}

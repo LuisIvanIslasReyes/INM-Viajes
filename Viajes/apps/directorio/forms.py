@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import EmpresaDirectorio
+from .models import EmpresaDirectorio, ResolucionChoices
 
 INPUT = 'input input-bordered w-full'
 SELECT = 'select select-bordered w-full'
@@ -35,3 +35,9 @@ class EmpresaDirectorioForm(forms.ModelForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['estado'].empty_label = 'Selecciona un estado'
+        # La tentativa de resolución es opcional: puede definirse más adelante.
+        self.fields['tentativa_resolucion'].required = False
+        self.fields['tentativa_resolucion'].choices = [
+            ('', 'Sin especificar (opcional)'),
+            *ResolucionChoices.choices,
+        ]

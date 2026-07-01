@@ -48,6 +48,11 @@ class Redaccion(models.Model):
     subido_por = models.ForeignKey(
         User, on_delete=models.SET_NULL, null=True, blank=True, related_name='redacciones',
     )
+    texto_contenido = models.TextField(
+        blank=True, default='', editable=False,
+        verbose_name='Texto extraído del documento',
+        help_text='Texto plano extraído del PDF para el buscador de palabras.',
+    )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
 

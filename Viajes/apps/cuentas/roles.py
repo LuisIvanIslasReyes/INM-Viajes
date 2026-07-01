@@ -33,8 +33,8 @@ def puede_flujo_principal(user):
     return user.is_authenticated and (user.is_superuser or es_aeropuerto(user))
 
 
-def puede_subir_redacciones(user):
-    """Solo SuperUser y Aeropuerto pueden subir documentos a Redacciones."""
+def puede_gestionar_redacciones(user):
+    """Solo SuperUser y Aeropuerto pueden subir, editar o eliminar documentos de Redacciones."""
     return user.is_authenticated and (user.is_superuser or es_aeropuerto(user))
 
 
@@ -66,14 +66,14 @@ def flujo_principal_required(view_func):
     return _wrapped
 
 
-def puede_subir_required(view_func):
-    """Exige autenticación y permiso para subir documentos (Redacciones)."""
+def puede_gestionar_redacciones_required(view_func):
+    """Exige autenticación y permiso para subir, editar o eliminar documentos (Redacciones)."""
     @wraps(view_func)
     def _wrapped(request, *args, **kwargs):
         if not request.user.is_authenticated:
             return redirect_to_login(request.get_full_path())
-        if not puede_subir_redacciones(request.user):
-            messages.error(request, 'No tienes permiso para subir documentos.')
+        if not puede_gestionar_redacciones(request.user):
+            messages.error(request, 'No tienes permiso para gestionar documentos.')
             return redirect('redacciones:biblioteca')
         return view_func(request, *args, **kwargs)
     return _wrapped
@@ -85,6 +85,6 @@ def roles_context(request):
     return {
         'puede_flujo_principal': puede_flujo_principal(user),
         'es_general': es_general(user),
-        'puede_subir_redacciones': puede_subir_redacciones(user),
+        'puede_gestionar_redacciones': puede_gestionar_redacciones(user),
         'rol_nombre': rol_nombre(user),
     }
