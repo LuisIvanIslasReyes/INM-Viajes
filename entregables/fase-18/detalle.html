@@ -1,55 +1,88 @@
 {% extends 'uploader/base_ds.html' %}
 {# ====================================================================
    FASE 18 · DIRECTORIO — DETALLE (PR 22)
-   ⚠ SUPUESTO: directorio/detalle.html aún no se subió. context (empresa,
-   puede_editar) es propuesta. Encabezado de entidad + datos agrupados
-   (contacto / dirección / notas). Acciones según rol. Backend: 0 cambios.
+   Port del diseño ds- sobre el backend REAL (vista directorio.views.detalle):
+     context: empresa (EmpresaDirectorio con select_related estado, creado_por).
+     Campos reales: empresa (nombre; NO razon_social), firma_encargado,
+              telefono, estado.nombre, ciudad, domicilio, tentativa_resolucion,
+              creado_por.username, fecha_creacion.
+     urls namespaced: directorio:listado, directorio:editar <pk>,
+              directorio:crear.
+   El template real NO usa gate de permiso ni un campo 'iniciales': las
+   iniciales se derivan del nombre y las acciones se muestran siempre.
+   Backend: 0 cambios. Comentario multilínea sin sintaxis de tags (ver F13).
    ==================================================================== #}
-{% block title %}{{ empresa.razon_social }} · Directorio · INM Viajes{% endblock %}
+{% block title %}{{ empresa.empresa }} · Directorio · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="ds-container-read" style="max-width: 900px;">
+<div class="ds-container-read" style="max-width:900px; display:flex; flex-direction:column; gap:var(--ds-sp-5);">
 
-    <nav class="ds-crumbs" aria-label="Ruta de navegación" style="margin-bottom:var(--ds-sp-4);">
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
         <ol>
-            <li><a href="{% url 'directorio_listado' %}">Directorio</a></li>
-            <li aria-current="page">{{ empresa.razon_social }}</li>
+            <li><a href="{% url 'directorio:listado' %}">Directorio</a></li>
+            <li aria-current="page">{{ empresa.empresa }}</li>
         </ol>
     </nav>
 
-    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:var(--ds-sp-4); margin-bottom:var(--ds-sp-6);">
-        <div style="display:flex; gap:var(--ds-sp-4); align-items:center;">
-            <div style="width:52px; height:52px; border-radius:var(--ds-radius-lg); background:var(--ds-warm-100); color:var(--ds-primary); display:grid; place-items:center; font-weight:800; font-size:20px;">{{ empresa.iniciales|default:empresa.razon_social|slice:':2'|upper }}</div>
-            <div>
-                <h1 class="ds-h1" style="font-size:var(--ds-text-2xl);">{{ empresa.razon_social }}</h1>
-                <div class="ds-small" style="margin:0; display:flex; gap:var(--ds-sp-2); align-items:center;">
-                    {{ empresa.giro }}
-                    {% if empresa.activa %}<span class="ds-badge ds-badge-success" style="font-size:10px;"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Activa</span>{% endif %}
-                </div>
-            </div>
+    {# ---------- Encabezado de entidad ---------- #}
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--ds-sp-4);">
+        <div style="display:flex; gap:var(--ds-sp-3); align-items:center; min-width:0;">
+            <span class="ds-avatar" aria-hidden="true" style="width:52px; height:52px; font-size:20px;">{{ empresa.empresa|slice:':2'|upper }}</span>
+            <h1 class="ds-h1" style="margin:0;">{{ empresa.empresa }}</h1>
         </div>
-        {% if puede_editar %}
-        <a href="{% url 'directorio_editar' empresa.id %}" class="ds-btn ds-btn-sm ds-btn-secondary">Editar</a>
+        {% if empresa.tentativa_resolucion == 'INTERNACION' %}
+        <span class="ds-badge ds-badge-success"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Internación</span>
+        {% elif empresa.tentativa_resolucion == 'RECHAZO' %}
+        <span class="ds-badge ds-badge-danger"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>Rechazo</span>
+        {% else %}
+        <span class="ds-badge">Sin definir</span>
         {% endif %}
     </div>
 
-    <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-3);">
-        <section class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6);">
-            <div class="ds-caption" style="margin-bottom:var(--ds-sp-3);">Contacto</div>
-            <div style="display:flex; flex-direction:column; gap:var(--ds-sp-2); font-size:var(--ds-text-sm);">
-                <div><span style="color:var(--ds-text-muted);">Responsable:</span> {{ empresa.contacto|default:'—' }}</div>
-                <div class="ds-tabular"><span style="color:var(--ds-text-muted);">Tel:</span> {{ empresa.telefono|default:'—' }}</div>
-                <div><span style="color:var(--ds-text-muted);">Correo:</span> {{ empresa.correo|default:'—' }}</div>
+    {# ---------- Datos ---------- #}
+    <section class="ds-card">
+        <div class="ds-card-body">
+            <dl style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:var(--ds-sp-4) var(--ds-sp-6); margin:0;">
+                <div>
+                    <dt class="ds-small" style="margin:0;">Firma del encargado</dt>
+                    <dd style="margin:2px 0 0; font-weight:600;">{{ empresa.firma_encargado }}</dd>
+                </div>
+                <div>
+                    <dt class="ds-small" style="margin:0;">Teléfono</dt>
+                    <dd class="ds-tabular" style="margin:2px 0 0; font-weight:600;">{{ empresa.telefono|default:"—" }}</dd>
+                </div>
+                <div>
+                    <dt class="ds-small" style="margin:0;">Estado</dt>
+                    <dd style="margin:2px 0 0; font-weight:600;">{{ empresa.estado.nombre|default:"—" }}</dd>
+                </div>
+                <div>
+                    <dt class="ds-small" style="margin:0;">Ciudad</dt>
+                    <dd style="margin:2px 0 0; font-weight:600;">{{ empresa.ciudad|default:"—" }}</dd>
+                </div>
+                <div style="grid-column:1 / -1;">
+                    <dt class="ds-small" style="margin:0;">Domicilio</dt>
+                    <dd style="margin:2px 0 0; font-weight:600;">{{ empresa.domicilio|default:"—" }}</dd>
+                </div>
+            </dl>
+
+            <hr style="border:0; border-top:1px solid var(--ds-divider); margin:var(--ds-sp-4) 0;">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:8px;">
+                <span class="ds-small" style="margin:0;">Registrado por {{ empresa.creado_por.username|default:"—" }}</span>
+                <span class="ds-small ds-tabular" style="margin:0;">{{ empresa.fecha_creacion|date:"d/m/Y H:i" }}</span>
             </div>
-        </section>
-        <section class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6);">
-            <div class="ds-caption" style="margin-bottom:var(--ds-sp-3);">Dirección</div>
-            <div style="font-size:var(--ds-text-sm); line-height:1.5; color:var(--ds-text-2);">{{ empresa.direccion|default:'Sin domicilio registrado.' }}</div>
-        </section>
-        <section class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6); grid-column:span 2;">
-            <div class="ds-caption" style="margin-bottom:var(--ds-sp-3);">Notas</div>
-            <div style="font-size:var(--ds-text-sm); line-height:1.5; color:var(--ds-text-2);">{{ empresa.notas|default:'Sin notas.' }}</div>
-        </section>
+        </div>
+    </section>
+
+    {# ---------- Acciones ---------- #}
+    <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end;">
+        <a href="{% url 'directorio:editar' empresa.pk %}" class="ds-btn ds-btn-secondary">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+            Editar
+        </a>
+        <a href="{% url 'directorio:crear' %}" class="ds-btn ds-btn-primary">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+            Nueva empresa
+        </a>
     </div>
 </div>
 {% endblock %}
