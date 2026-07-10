@@ -1,138 +1,173 @@
-<!-- filepath: c:\Users\alberto\Documents\GitHub\INM-Viajes\Viajes\uploader\templates\uploader\create_user.html -->
-{% extends 'uploader/base_admin.html' %}
-
-{% block title %}Crear Usuario - INM Viajes{% endblock %}
+{% extends 'uploader/base_admin_ds.html' %}
+{# ====================================================================
+   FASE 12 · GESTIÓN DE USUARIOS (PR 18) — extingue la Gen 1 violeta
+   Port del diseño ds- sobre el backend REAL (vista create_user):
+     context: form (CreateUserForm: username, password1, password2, rol),
+              usuarios (no-superuser, con groups y uploadbatch_set).
+     El campo 'rol' es un ChoiceField con 2 opciones reales (Aeropuerto,
+     General) cuyo valor DEBE coincidir con el nombre del Group → las
+     radio-cards se generan desde form.rol.field.choices (no se hardcodean).
+   Se CONSERVA todo: los 4 campos del form (incl. password2, que el form
+   exige), la url create_user, csrf y la LISTA de usuarios registrados.
+   Mejora: rol como radio-cards accesibles (teclado 2.1.1) + resumen de
+   acceso vivo. Backend: 0 cambios. Sin dependencia de .btn/.form-control.
+   ==================================================================== #}
+{% block title %}Gestión de usuarios · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="flex items-center gap-4">
-        <a href="{% url 'admin_list' %}" class="btn btn-ghost btn-sm">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 19l-7-7 7-7" />
-            </svg>
-            Volver
+<div class="ds-container" style="max-width:1100px; display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+
+    {% include 'uploader/_page_header.html' with titulo='Gestión de usuarios' subtitulo='Crea cuentas de acceso y revisa las existentes.' %}
+
+    <div style="display:flex; justify-content:flex-end;">
+        <a href="{% url 'admin_list' %}" class="ds-btn ds-btn-secondary">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Volver a registros
         </a>
-        <h2 class="text-3xl font-bold">Gestión de Usuarios</h2>
     </div>
-    <p class="text-gray-600 mt-2">Crear y administrar usuarios del sistema</p>
 
+    <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(340px, 1fr)); gap:var(--ds-sp-6); align-items:start;">
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <!-- Formulario de Creación -->
-        <div class="card bg-base-100 shadow-md">
-            <div class="card-body">
-                <h3 class="card-title"> Crear Nuevo Usuario</h3>
-                
-                <form method="post" class="space-y-4">
-                    {% csrf_token %}
-                    
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-semibold">{{ form.username.label }}</span>
-                        </label>
-                        {{ form.username }}
-                        {% if form.username.errors %}
-                        <label class="label">
-                            <span class="label-text-alt text-error">{{ form.username.errors.0 }}</span>
-                        </label>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-semibold">{{ form.password1.label }}</span>
-                        </label>
-                        {{ form.password1 }}
-                        {% if form.password1.errors %}
-                        <label class="label">
-                            <span class="label-text-alt text-error">{{ form.password1.errors.0 }}</span>
-                        </label>
-                        {% endif %}
-                    </div>
-                    
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-semibold">{{ form.password2.label }}</span>
-                        </label>
-                        {{ form.password2 }}
-                        {% if form.password2.errors %}
-                        <label class="label">
-                            <span class="label-text-alt text-error">{{ form.password2.errors.0 }}</span>
-                        </label>
-                        {% endif %}
-                    </div>
+        {# ---------- Formulario de creación ---------- #}
+        <form method="post" action="{% url 'create_user' %}" class="ds-card">
+            <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-5);">
+                {% csrf_token %}
+                <h2 class="ds-h3" style="margin:0; display:flex; align-items:center; gap:8px;">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+                    Crear nuevo usuario
+                </h2>
 
-                    <div class="form-control">
-                        <label class="label">
-                            <span class="label-text font-semibold">{{ form.rol.label }}</span>
-                        </label>
-                        {{ form.rol }}
-                        {% if form.rol.errors %}
-                        <label class="label">
-                            <span class="label-text-alt text-error">{{ form.rol.errors.0 }}</span>
-                        </label>
-                        {% endif %}
-                    </div>
+                {# --- Datos de la cuenta --- #}
+                <div class="ds-field">
+                    <label class="ds-label" for="id_username">{{ form.username.label }} <span class="ds-req" aria-hidden="true">*</span></label>
+                    <input class="ds-input" type="text" id="id_username" name="username" required autocomplete="off"
+                           value="{{ form.username.value|default:'' }}"
+                           {% if form.username.errors %}aria-invalid="true" aria-describedby="username-err"{% endif %}>
+                    {% if form.username.errors %}<p class="ds-error-text" id="username-err"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>{{ form.username.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="id_password1">{{ form.password1.label }} <span class="ds-req" aria-hidden="true">*</span></label>
+                    <input class="ds-input" type="password" id="id_password1" name="password1" required autocomplete="new-password" aria-describedby="password1-help{% if form.password1.errors %} password1-err{% endif %}">
+                    <p class="ds-help" id="password1-help">Mínimo 8 caracteres; no puede ser demasiado común ni solo numérica.</p>
+                    {% if form.password1.errors %}<p class="ds-error-text" id="password1-err"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>{{ form.password1.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="id_password2">{{ form.password2.label }} <span class="ds-req" aria-hidden="true">*</span></label>
+                    <input class="ds-input" type="password" id="id_password2" name="password2" required autocomplete="new-password"
+                           {% if form.password2.errors %}aria-invalid="true" aria-describedby="password2-err"{% endif %}>
+                    {% if form.password2.errors %}<p class="ds-error-text" id="password2-err"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>{{ form.password2.errors.0 }}</p>{% endif %}
+                </div>
 
-                    <button type="submit" class="btn btn-primary btn-block">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M18 9v3m0 0v3m0-3h3m-3 0h-3m-2-5a4 4 0 11-8 0 4 4 0 018 0zM3 20a6 6 0 0112 0v1H3v-1z" />
-                        </svg>
-                        Crear Usuario
+                {# --- Rol como radio-cards (data-driven desde las choices reales) --- #}
+                <fieldset style="border:0; padding:0; margin:0; display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                    <legend class="ds-label" style="padding:0;">{{ form.rol.label }} <span class="ds-req" aria-hidden="true">*</span></legend>
+                    <div style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                        {% for value, label in form.rol.field.choices %}
+                        <label class="rol-card" style="display:flex; align-items:flex-start; gap:10px; border:1px solid var(--ds-border-strong); border-radius:var(--ds-radius-lg); padding:var(--ds-sp-4); cursor:pointer;">
+                            <input type="radio" class="ds-radio" name="rol" value="{{ value }}" style="margin-top:2px;"
+                                   {% if form.rol.value == value %}checked{% endif %}>
+                            <span style="min-width:0;">
+                                <span style="display:block; font-weight:700; font-size:var(--ds-text-sm);">{{ value }}</span>
+                                <span class="ds-small" style="margin:0; line-height:1.4;">{{ label }}</span>
+                            </span>
+                        </label>
+                        {% endfor %}
+                    </div>
+                    {% if form.rol.errors %}<p class="ds-error-text"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>{{ form.rol.errors.0 }}</p>{% endif %}
+                </fieldset>
+
+                {# --- Resumen de acceso vivo --- #}
+                <div class="ds-alert ds-alert-info" id="resumen-acceso" role="status" style="display:none;">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                    <div><b>Acceso resultante:</b> <span id="resumen-texto"></span></div>
+                </div>
+
+                <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end;">
+                    <a href="{% url 'admin_list' %}" class="ds-btn ds-btn-ghost">Cancelar</a>
+                    <button type="submit" class="ds-btn ds-btn-primary">
+                        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+                        Crear usuario
                     </button>
-                </form>
+                </div>
             </div>
-        </div>
+        </form>
 
-        <!-- Lista de Usuarios -->
-        <div class="card bg-base-100 shadow-md">
-            <div class="card-body">
-                <h3 class="card-title">Usuarios Registrados</h3>
-                
-                {% if usuarios %}
-                <div class="overflow-x-auto">
-                    <table class="table table-zebra table-sm">
-                        <thead>
-                            <tr>
-                                <th>Usuario</th>
-                                <th>Rol</th>
-                                <th>Fecha Registro</th>
-                                <th>Cargas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for usuario in usuarios %}
-                            <tr>
-                                <td>
-                                    <div class="flex items-center gap-2">
-                                        <div class="avatar placeholder">
-                                            <div class="bg-neutral text-neutral-content rounded-full w-8">
-                                                <span class="text-xs">{{ usuario.username|first|upper }}</span>
-                                            </div>
-                                        </div>
-                                        <strong>{{ usuario.username }}</strong>
-                                    </div>
-                                </td>
-                                <td><span class="badge badge-ghost">{{ usuario.groups.first.name|default:"Sin rol" }}</span></td>
-                                <td>{{ usuario.date_joined|date:"d/m/Y" }}</td>
-                                <td>
-                                    <span class="badge badge-primary">
-                                        {{ usuario.uploadbatch_set.count }} archivo(s)
-                                    </span>
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-                {% else %}
-                <div class="text-center py-8">
-                    <p class="text-gray-500">No hay usuarios registrados aún</p>
-                </div>
-                {% endif %}
+        {# ---------- Lista de usuarios registrados ---------- #}
+        <section class="ds-card" style="padding:0;">
+            <div class="ds-card-body" style="padding-bottom:0;">
+                <h2 class="ds-h3" style="margin:0; display:flex; align-items:center; gap:8px;">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                    Usuarios registrados
+                    <span class="ds-small" style="margin:0; font-weight:400;">· {{ usuarios|length }}</span>
+                </h2>
             </div>
-        </div>
+
+            {% if usuarios %}
+            <div class="ds-table-wrap" tabindex="0" role="region" aria-label="Usuarios registrados" style="border:0;">
+                <table class="ds-table ds-table-compact">
+                    <thead><tr>
+                        <th scope="col">Usuario</th>
+                        <th scope="col">Rol</th>
+                        <th scope="col">Registro</th>
+                        <th scope="col" style="text-align:right;">Cargas</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for usuario in usuarios %}
+                        <tr>
+                            <td>
+                                <div style="display:flex; align-items:center; gap:8px;">
+                                    <span class="ds-avatar" aria-hidden="true">{{ usuario.username|first|upper }}</span>
+                                    <span style="font-weight:600;">{{ usuario.username }}</span>
+                                </div>
+                            </td>
+                            <td><span class="ds-badge ds-badge-info">{{ usuario.groups.first.name|default:"Sin rol" }}</span></td>
+                            <td class="ds-tabular">{{ usuario.date_joined|date:"d/m/Y" }}</td>
+                            <td class="ds-tabular" style="text-align:right;"><span class="ds-badge ds-badge-brand">{{ usuario.uploadbatch_set.count }}</span></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <div class="ds-empty">
+                <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg></div>
+                <h3 class="ds-h3">Aún no hay usuarios</h3>
+                <p class="ds-empty-desc">Las cuentas que crees aparecerán aquí.</p>
+            </div>
+            {% endif %}
+        </section>
     </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var resumen = document.getElementById('resumen-acceso');
+    var texto = document.getElementById('resumen-texto');
+    var username = document.getElementById('id_username');
+    var cards = Array.prototype.slice.call(document.querySelectorAll('.rol-card'));
+
+    function pintar() {
+        cards.forEach(function (c) {
+            var checked = c.querySelector('input[name="rol"]').checked;
+            c.style.borderColor = checked ? 'var(--ds-primary)' : 'var(--ds-border-strong)';
+            c.style.borderWidth = checked ? '1.5px' : '1px';
+            c.style.background = checked ? 'var(--ds-warm-50)' : 'transparent';
+        });
+    }
+    function actualizar() {
+        var sel = document.querySelector('input[name="rol"]:checked');
+        if (!sel) { resumen.style.display = 'none'; return; }
+        // Descripción tomada de la etiqueta real de la choice (label del <span>)
+        var desc = sel.closest('.rol-card').querySelector('.ds-small').textContent.trim();
+        var quien = (username.value || '').trim() || 'La cuenta';
+        texto.textContent = quien + ' tendrá el rol ' + sel.value + ' — ' + desc;
+        resumen.style.display = 'flex';
+    }
+    document.querySelectorAll('input[name="rol"]').forEach(function (radio) {
+        radio.addEventListener('change', function () { pintar(); actualizar(); });
+    });
+    username.addEventListener('input', actualizar);
+    pintar(); actualizar(); // refleja el estado inicial (p. ej. tras un error de validación)
+});
+</script>
 {% endblock %}
