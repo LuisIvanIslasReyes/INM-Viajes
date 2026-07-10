@@ -109,7 +109,8 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 # Autenticación
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
+# Fase 25: el dispatcher por rol decide dónde aterriza cada usuario tras login.
+LOGIN_REDIRECT_URL = '/inicio/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
 
 # Vista previa de documentos (módulo Redacciones): binario de LibreOffice headless.

@@ -68,5 +68,6 @@ STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
 
 # CON prefijo /viajes/ porque FORCE_SCRIPT_NAME lo agrega
 LOGIN_URL = '/viajes/accounts/login/'
-LOGIN_REDIRECT_URL = '/viajes/'
+# Fase 25: dispatcher por rol tras login (con el prefijo /viajes/).
+LOGIN_REDIRECT_URL = '/viajes/inicio/'
 LOGOUT_REDIRECT_URL = '/viajes/accounts/login/'

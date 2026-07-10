@@ -3,7 +3,11 @@ from apps.uploader import views
 
 urlpatterns = [
     path('', views.admin_list, name='admin_list'),
+    # Dispatcher post-login (Fase 25): reencamina a la home de cada rol.
+    path('inicio/', views.home, name='home'),
     path('home-admin/', views.home_admin, name='home_admin'),
+    path('home-aeropuerto/', views.home_aeropuerto, name='home_aeropuerto'),
+    path('home-general/', views.home_general, name='home_general'),
     path('upload/', views.upload_excel, name='upload_excel'),
     path('update/<int:registro_id>/', views.update_registro, name='update_registro'),
     path('batch/delete/<int:batch_id>/', views.delete_batch, name='delete_batch'),

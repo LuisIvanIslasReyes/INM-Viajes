@@ -1,0 +1,51 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 25 · HOME OPERATIVO — AEROPUERTO (PR 04)
+   ⚠ VISTA NUEVA + mismo dispatcher de redirect por rol que F24.
+   Fitts: 3 acciones grandes (≥44px, targets amplios). Resumen del turno
+   lee agregados existentes. context: propuesta. Sin modelos nuevos.
+   ==================================================================== #}
+{% block title %}Inicio · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="max-width: 860px;">
+
+    <div style="margin-bottom:var(--ds-sp-4);">
+        <div class="ds-caption" style="color:var(--ds-gold-ink);">{{ turno_nombre|default:'Turno actual' }} · {{ terminal|default:'Terminal 1' }}</div>
+        <h1 class="ds-h1" style="font-size:var(--ds-text-2xl);">Hola, {{ request.user.get_short_name|default:request.user.username }}</h1>
+    </div>
+
+    {# 3 acciones grandes — Ley de Fitts #}
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--ds-sp-3); margin-bottom:var(--ds-sp-4);">
+        <a href="{% url 'upload_excel' %}" class="ds-card ds-card-hover" style="padding:var(--ds-sp-6); display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-3); text-align:center; text-decoration:none; color:inherit;">
+            <span style="width:56px; height:56px; border-radius:var(--ds-radius-lg); background:var(--ds-primary); color:#fff; display:grid; place-items:center;">
+                <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+            </span>
+            <span style="font-weight:700;">Subir Excel</span>
+        </a>
+        <a href="{% url 'admin_list' %}" class="ds-card ds-card-hover" style="padding:var(--ds-sp-6); display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-3); text-align:center; text-decoration:none; color:inherit;">
+            <span style="width:56px; height:56px; border-radius:var(--ds-radius-lg); background:var(--ds-warm-100); color:var(--ds-primary); display:grid; place-items:center;">
+                <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3v18h18"/><rect x="7" y="10" width="3" height="7"/><rect x="14" y="6" width="3" height="11"/></svg>
+            </span>
+            <span style="font-weight:700;">Registros</span>
+        </a>
+        <a href="{% url 'notificaciones_list' %}" class="ds-card ds-card-hover" style="padding:var(--ds-sp-6); display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-3); text-align:center; text-decoration:none; color:inherit; position:relative;">
+            <span style="width:56px; height:56px; border-radius:var(--ds-radius-lg); background:var(--ds-warm-100); color:var(--ds-primary); display:grid; place-items:center;">
+                <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            </span>
+            <span style="font-weight:700;">Notificaciones</span>
+            {% if criticas_count %}<span class="ds-badge ds-badge-count" style="position:absolute; top:var(--ds-sp-4); right:var(--ds-sp-4); background:var(--ds-danger);" aria-label="{{ criticas_count }} críticas">{{ criticas_count }}</span>{% endif %}
+        </a>
+    </div>
+
+    {# Resumen del turno — agregados existentes #}
+    <section class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6);">
+        <div class="ds-caption" style="margin-bottom:var(--ds-sp-3);">Resumen del turno</div>
+        <div style="display:flex; flex-wrap:wrap; gap:var(--ds-sp-6); font-size:var(--ds-text-base);">
+            <span><b class="ds-tabular">{{ resumen_registros|default:0 }}</b> registros</span>
+            <span><b class="ds-tabular" style="color:var(--ds-success);">{{ resumen_sr|default:0 }}</b> segunda revisión</span>
+            <span><b class="ds-tabular" style="color:var(--ds-danger);">{{ resumen_casos|default:0 }}</b> casos</span>
+        </div>
+    </section>
+</div>
+{% endblock %}

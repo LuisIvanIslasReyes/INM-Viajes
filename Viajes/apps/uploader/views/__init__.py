@@ -15,6 +15,7 @@ from .casos_especiales import (
     resolver_caso_eliminar
 )
 from .admin import batch_list, delete_batch, create_user, home_admin
+from .home import home, home_aeropuerto, home_general
 from .menores import crear_menor
 from .tiempos import capturar_tiempos_atencion, obtener_tiempos_atencion
 
@@ -52,6 +53,11 @@ __all__ = [
     'delete_batch',
     'create_user',
     'home_admin',
+
+    # Home por rol (dispatcher post-login)
+    'home',
+    'home_aeropuerto',
+    'home_general',
 
     # Menores
     'crear_menor',

@@ -19,5 +19,6 @@ MIDDLEWARE += ['django_browser_reload.middleware.BrowserReloadMiddleware']
 STATIC_URL = '/static/'
 MEDIA_URL = '/media/'
 LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/'
+# Fase 25: el dispatcher por rol decide dónde aterriza cada usuario tras login.
+LOGIN_REDIRECT_URL = '/inicio/'
 LOGOUT_REDIRECT_URL = '/accounts/login/'
