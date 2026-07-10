@@ -1,0 +1,653 @@
+/* ====================================================================
+   INM-VIAJES · DESIGN SYSTEM — COMPONENTES ds-* (Fase 0 · PR 01)
+   --------------------------------------------------------------------
+   Destino:  Viajes/apps/uploader/static/css/components.css
+   Requiere: design-system.css cargado antes.
+
+   Reemplaza a DaisyUI clase por clase. Cada componente es
+   AUTOCONTENIDO (no depende de utilidades Tailwind para su aspecto);
+   Tailwind se usa solo para layout de página en los templates.
+   Sobre cada bloque va el snippet HTML canónico para copiar/pegar.
+   ==================================================================== */
+
+/* ================= ICONO =================
+   Lucide inline o vía sprite:
+   <svg class="ds-icon" aria-hidden="true"><use href="{% static 'img/lucide-sprite.svg' %}#search"/></svg>
+   Decorativo: aria-hidden="true". Informativo: role="img" + <title>. */
+.ds-icon    { width: 20px; height: 20px; flex: none; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+.ds-icon-sm { width: 16px; height: 16px; }
+.ds-icon-lg { width: 24px; height: 24px; }
+
+/* ================= BOTÓN =================
+   daisy: btn / btn-primary / btn-ghost / btn-error / btn-circle / btn-sm / btn-block
+   <button class="ds-btn ds-btn-primary">
+     <svg class="ds-icon" aria-hidden="true">…</svg> Subir Excel
+   </button>
+   Icon-only SIEMPRE con aria-label:
+   <button class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Editar registro">…</button>
+   Regla: UN solo ds-btn-primary por vista. */
+.ds-btn {
+  display: inline-flex; align-items: center; justify-content: center;
+  gap: var(--ds-sp-2);
+  min-height: 44px;                    /* target táctil AA (2.5.8 y mejores prácticas) */
+  padding: 0 var(--ds-sp-4);
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-md);
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-text-base); font-weight: 600; line-height: 1;
+  color: var(--ds-text);
+  background: transparent;
+  cursor: pointer; user-select: none;
+  text-decoration: none; white-space: nowrap;
+  transition: background-color var(--ds-dur) var(--ds-ease),
+              border-color var(--ds-dur) var(--ds-ease),
+              color var(--ds-dur) var(--ds-ease);
+}
+.ds-btn:focus-visible { outline: none; box-shadow: var(--ds-focus-ring); }
+.ds-btn:disabled, .ds-btn[aria-disabled="true"] { opacity: var(--ds-disabled-opacity); cursor: not-allowed; pointer-events: none; }
+
+.ds-btn-primary { background: var(--ds-primary); color: var(--ds-on-primary); }
+.ds-btn-primary:hover  { background: var(--ds-primary-hover); }
+.ds-btn-primary:active { background: var(--ds-primary-active); }
+
+.ds-btn-secondary { background: var(--ds-bg-surface); border-color: var(--ds-border-strong); color: var(--ds-text); }
+.ds-btn-secondary:hover  { background: var(--ds-hover-bg); border-color: var(--ds-guinda-300); }
+.ds-btn-secondary:active { background: var(--ds-warm-100); }
+
+.ds-btn-ghost { color: var(--ds-text-2); }
+.ds-btn-ghost:hover  { background: var(--ds-bg-sunken); color: var(--ds-text); }
+.ds-btn-ghost:active { background: var(--ds-neutral-100); }
+
+.ds-btn-danger { background: var(--ds-danger); color: #FFFFFF; }
+.ds-btn-danger:hover  { background: var(--ds-danger-hover); }
+.ds-btn-danger:active { background: #7A1B15; }
+
+/* Peligro de baja prominencia (acciones destructivas en menús/tablas) */
+.ds-btn-danger-ghost { color: var(--ds-danger); }
+.ds-btn-danger-ghost:hover { background: var(--ds-warm-200); color: var(--ds-on-danger); }
+
+.ds-btn-icon { width: 44px; min-width: 44px; padding: 0; }
+.ds-btn-sm   { min-height: 36px; padding: 0 var(--ds-sp-3); font-size: var(--ds-text-sm); }
+.ds-btn-sm.ds-btn-icon { width: 36px; min-width: 36px; }  /* solo en filas densas; separación ≥8px entre sí (2.5.8) */
+.ds-btn-lg   { min-height: 52px; padding: 0 var(--ds-sp-6); font-size: var(--ds-text-lg); }
+.ds-btn-block { display: flex; width: 100%; }
+
+/* Botón sobre fondo guinda (navbar) */
+.ds-btn-on-dark { color: var(--ds-warm-100); }
+.ds-btn-on-dark:hover { background: rgba(255, 238, 237, 0.12); color: #FFFFFF; }
+.ds-btn-on-dark:focus-visible { box-shadow: var(--ds-focus-ring-inverse); }
+
+/* Spinner de carga en botón: <span class="ds-btn-spinner" aria-hidden="true"></span> */
+.ds-btn-spinner {
+  width: 16px; height: 16px; flex: none;
+  border: 2px solid currentColor; border-right-color: transparent;
+  border-radius: 999px; animation: ds-spin 0.7s linear infinite;
+}
+
+/* ================= CAMPOS DE FORMULARIO =================
+   daisy: form-control / label / input input-bordered / select / textarea / checkbox / radio / toggle
+   <div class="ds-field">
+     <label class="ds-label" for="curp">CURP <span class="ds-req" aria-hidden="true">*</span></label>
+     <input class="ds-input" id="curp" name="curp" required aria-describedby="curp-help">
+     <p class="ds-help" id="curp-help">18 caracteres, como aparece en el documento.</p>
+   </div>
+   Error: añadir .ds-invalid al input + aria-invalid="true" +
+   <p class="ds-error-text" id="curp-err">…</p> y aria-describedby → id del error. */
+.ds-field { display: flex; flex-direction: column; gap: var(--ds-sp-15); }
+.ds-label { font-size: var(--ds-text-sm); font-weight: 600; color: var(--ds-text); }
+.ds-req   { color: var(--ds-guinda-600); font-weight: 700; }
+.ds-help  { margin: 0; font-size: var(--ds-text-xs); line-height: 1.35; color: var(--ds-text-3); }
+.ds-error-text { margin: 0; display: flex; align-items: center; gap: var(--ds-sp-1); font-size: var(--ds-text-xs); font-weight: 600; color: var(--ds-danger); }
+
+.ds-input, .ds-select, .ds-textarea {
+  width: 100%; min-height: 44px;
+  padding: 0 var(--ds-sp-3);
+  background: var(--ds-bg-surface);
+  border: 1px solid var(--ds-border-strong);
+  border-radius: var(--ds-radius-md);
+  font-family: var(--ds-font-sans); font-size: var(--ds-text-base); color: var(--ds-text);
+  transition: border-color var(--ds-dur) var(--ds-ease), box-shadow var(--ds-dur) var(--ds-ease);
+}
+.ds-textarea { min-height: 96px; padding: var(--ds-sp-2) var(--ds-sp-3); line-height: 1.45; resize: vertical; }
+.ds-input::placeholder, .ds-textarea::placeholder { color: var(--ds-neutral-400); }
+.ds-input:hover, .ds-select:hover, .ds-textarea:hover { border-color: var(--ds-neutral-400); }
+.ds-input:focus, .ds-select:focus, .ds-textarea:focus,
+.ds-input:focus-visible, .ds-select:focus-visible, .ds-textarea:focus-visible {
+  outline: none; border-color: var(--ds-guinda-600); box-shadow: var(--ds-focus-ring);
+}
+.ds-input:disabled, .ds-select:disabled, .ds-textarea:disabled {
+  background: var(--ds-bg-sunken); color: var(--ds-text-disabled); cursor: not-allowed;
+}
+.ds-invalid, .ds-input[aria-invalid="true"], .ds-select[aria-invalid="true"], .ds-textarea[aria-invalid="true"] {
+  border-color: var(--ds-danger); background: var(--ds-warm-50);
+}
+
+.ds-select {
+  appearance: none; padding-right: var(--ds-sp-8); cursor: pointer;
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%2355555C' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'><path d='m6 9 6 6 6-6'/></svg>");
+  background-repeat: no-repeat; background-position: right 12px center;
+}
+
+/* Checkbox / Radio (24px visual, ≥44px de target con el label) */
+.ds-choice { display: inline-flex; align-items: flex-start; gap: var(--ds-sp-2); min-height: 44px; padding-block: 10px; cursor: pointer; font-size: var(--ds-text-base); color: var(--ds-text); }
+.ds-check, .ds-radio {
+  appearance: none; width: 22px; height: 22px; flex: none; margin-top: 0;
+  background: var(--ds-bg-surface);
+  border: 2px solid var(--ds-border-strong); border-radius: var(--ds-radius-sm);
+  cursor: pointer;
+  transition: background-color var(--ds-dur-fast), border-color var(--ds-dur-fast);
+}
+.ds-radio { border-radius: 999px; }
+.ds-check:hover, .ds-radio:hover { border-color: var(--ds-guinda-500); }
+.ds-check:focus-visible, .ds-radio:focus-visible, .ds-switch:focus-visible { outline: none; box-shadow: var(--ds-focus-ring); }
+.ds-check:checked {
+  background-color: var(--ds-primary); border-color: var(--ds-primary);
+  background-image: url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'><path d='M20 6 9 17l-5-5'/></svg>");
+  background-size: 14px; background-position: center; background-repeat: no-repeat;
+}
+.ds-radio:checked { border-color: var(--ds-primary); border-width: 7px; }
+.ds-check:disabled, .ds-radio:disabled, .ds-switch:disabled { opacity: var(--ds-disabled-opacity); cursor: not-allowed; }
+
+/* Switch (toggles SR / R / PI)
+   <label class="ds-choice"><input type="checkbox" class="ds-switch" role="switch"> SR</label> */
+.ds-switch {
+  appearance: none; width: 44px; height: 24px; flex: none;
+  background: var(--ds-neutral-300); border-radius: 999px;
+  position: relative; cursor: pointer;
+  transition: background-color var(--ds-dur) var(--ds-ease);
+}
+.ds-switch::before {
+  content: ""; position: absolute; top: 3px; left: 3px;
+  width: 18px; height: 18px; border-radius: 999px; background: #FFFFFF;
+  box-shadow: var(--ds-shadow-xs);
+  transition: transform var(--ds-dur) var(--ds-ease);
+}
+.ds-switch:checked { background: var(--ds-success); }
+.ds-switch:checked::before { transform: translateX(20px); }
+
+/* ================= BUSCADOR =================
+   <div class="ds-search">
+     <svg class="ds-icon ds-search-icon" aria-hidden="true">…lupa…</svg>
+     <input class="ds-input" type="search" placeholder="Buscar pasajero, vuelo…" aria-label="Buscar">
+     <button class="ds-search-clear" type="button" aria-label="Limpiar búsqueda">✕icon</button>
+   </div>
+   El botón limpiar aparece solo con texto (CSS puro). Debounce 300ms en JS. */
+.ds-search { position: relative; display: flex; align-items: center; }
+.ds-search .ds-input { padding-left: 40px; padding-right: 40px; }
+.ds-search .ds-input::-webkit-search-cancel-button { -webkit-appearance: none; }
+.ds-search-icon { position: absolute; left: 12px; color: var(--ds-text-3); pointer-events: none; }
+.ds-search-clear {
+  position: absolute; right: 4px;
+  display: none; align-items: center; justify-content: center;
+  width: 36px; height: 36px; border: 0; border-radius: var(--ds-radius-sm);
+  background: transparent; color: var(--ds-text-3); cursor: pointer;
+}
+.ds-search-clear:hover { background: var(--ds-bg-sunken); color: var(--ds-text); }
+.ds-search .ds-input:not(:placeholder-shown) ~ .ds-search-clear { display: inline-flex; }
+
+/* ================= BADGE =================
+   daisy: badge / badge-success / badge-warning / badge-error / badge-info / badge-neutral
+   <span class="ds-badge ds-badge-success"><svg class="ds-icon ds-icon-sm">…check…</svg> Procesado</span>
+   Nunca solo color: icono o texto siempre (WCAG 1.4.1). */
+.ds-badge {
+  display: inline-flex; align-items: center; gap: var(--ds-sp-1);
+  padding: 3px 10px;
+  border: 1px solid transparent;
+  border-radius: var(--ds-radius-full);
+  font-size: var(--ds-text-xs); font-weight: 700; line-height: var(--ds-leading-xs);
+  background: var(--ds-bg-sunken); color: var(--ds-text-2); border-color: var(--ds-border);
+  white-space: nowrap;
+}
+.ds-badge .ds-icon-sm { width: 12px; height: 12px; stroke-width: 2.5; }
+.ds-badge-success { background: var(--ds-success-container); color: var(--ds-on-success); border-color: #BCDCC9; }
+.ds-badge-warning { background: var(--ds-warning-container); color: var(--ds-on-warning); border-color: #EBD3A4; }
+.ds-badge-danger  { background: var(--ds-danger-container);  color: var(--ds-on-danger);  border-color: #F4B4AE; }
+.ds-badge-info    { background: var(--ds-info-container);    color: var(--ds-on-info);    border-color: #B9D2E5; }
+.ds-badge-brand   { background: var(--ds-warm-100);          color: var(--ds-guinda-800); border-color: var(--ds-guinda-200); }
+/* Contador (notificaciones) */
+.ds-badge-count {
+  min-width: 20px; height: 20px; padding: 0 6px;
+  align-items: center; justify-content: center;
+  background: var(--ds-guinda-600); color: #FFFFFF; border: 0;
+  font-size: 11px; font-weight: 800;
+}
+
+/* ================= CARD =================
+   daisy: card / card-body / card-title
+   <section class="ds-card">
+     <header class="ds-card-header"><h2 class="ds-h3">…</h2> [acciones]</header>
+     <div class="ds-card-body">…</div>
+     <footer class="ds-card-footer">…</footer>
+   </section> */
+.ds-card {
+  background: var(--ds-bg-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  overflow: hidden;
+}
+.ds-card-header {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--ds-sp-3);
+  padding: var(--ds-sp-4) var(--ds-sp-6);
+  border-bottom: 1px solid var(--ds-divider);
+}
+.ds-card-body   { padding: var(--ds-sp-6); }
+.ds-card-footer {
+  display: flex; align-items: center; justify-content: flex-end; gap: var(--ds-sp-2);
+  padding: var(--ds-sp-3) var(--ds-sp-6);
+  background: var(--ds-neutral-50); border-top: 1px solid var(--ds-divider);
+}
+.ds-card-hover { transition: border-color var(--ds-dur), box-shadow var(--ds-dur); }
+.ds-card-hover:hover { border-color: var(--ds-guinda-300); box-shadow: var(--ds-shadow-sm); }
+/* Estado urgente: borde + fondo + (en el contenido) badge con icono */
+.ds-card-urgent { border-left: 4px solid var(--ds-danger); background: var(--ds-warm-50); }
+
+/* ================= TABLA =================
+   daisy: table / table-zebra
+   <div class="ds-table-wrap" tabindex="0" role="region" aria-label="Registros de viaje">
+     <table class="ds-table">
+       <thead><tr><th scope="col">Pasajero</th>…</tr></thead>
+       <tbody><tr>…<td class="ds-td-actions">…</td></tr></tbody>
+     </table>
+   </div>
+   Densa: <table class="ds-table ds-table-compact"> · Números: class="ds-tabular" */
+.ds-table-wrap {
+  background: var(--ds-bg-surface);
+  border: 1px solid var(--ds-border);
+  border-radius: var(--ds-radius-lg);
+  overflow: auto;
+  max-width: 100%;
+}
+.ds-table { width: 100%; border-collapse: separate; border-spacing: 0; font-size: var(--ds-text-sm); }
+.ds-table thead th {
+  position: sticky; top: 0; z-index: 2;
+  background: var(--ds-bg-sunken);
+  padding: 10px var(--ds-sp-4);
+  text-align: left;
+  font-size: var(--ds-text-xs); font-weight: 700; letter-spacing: var(--ds-tracking-wide); text-transform: uppercase;
+  color: var(--ds-text-2);
+  border-bottom: 1px solid var(--ds-border);
+  white-space: nowrap;
+}
+.ds-table tbody td { padding: var(--ds-sp-3) var(--ds-sp-4); border-top: 1px solid var(--ds-divider); vertical-align: middle; color: var(--ds-text); }
+.ds-table tbody tr:first-child td { border-top: 0; }
+.ds-table tbody tr { transition: background-color var(--ds-dur-fast); }
+.ds-table tbody tr:hover { background: var(--ds-hover-bg); }
+.ds-table tbody tr[aria-selected="true"], .ds-table tbody tr.ds-row-selected { background: var(--ds-selected-bg); box-shadow: inset 3px 0 0 var(--ds-primary); }
+.ds-table-compact tbody td { padding: var(--ds-sp-15) var(--ds-sp-3); }
+.ds-td-actions { display: flex; align-items: center; gap: var(--ds-sp-1); justify-content: flex-end; }
+/* Columna fija izquierda (sustituye el hack oklch de admin_list.css) */
+.ds-table .ds-col-sticky { position: sticky; left: 0; z-index: 1; background: var(--ds-bg-surface); box-shadow: 1px 0 0 var(--ds-border); }
+.ds-table thead .ds-col-sticky { z-index: 3; background: var(--ds-bg-sunken); }
+.ds-table tbody tr:hover .ds-col-sticky { background: var(--ds-hover-bg); }
+
+/* ================= MODAL (dialog nativo) =================
+   daisy: modal / modal-box / modal-action
+   <dialog class="ds-modal" id="m1" aria-labelledby="m1-t">
+     <div class="ds-modal-box">
+       <header class="ds-modal-header">
+         <h2 class="ds-h2" id="m1-t">Título</h2>
+         <button class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="this.closest('dialog').close()">✕</button>
+       </header>
+       <div class="ds-modal-body">…</div>
+       <footer class="ds-modal-footer">…botones…</footer>
+     </div>
+   </dialog>
+   Abrir: document.getElementById('m1').showModal() — foco y Esc nativos. */
+.ds-modal { padding: 0; border: 0; background: transparent; max-width: 100vw; max-height: 100dvh; }
+.ds-modal::backdrop { background: var(--ds-overlay); }
+.ds-modal-box {
+  width: min(560px, calc(100vw - 32px));
+  max-height: calc(100dvh - 64px);
+  display: flex; flex-direction: column;
+  background: var(--ds-bg-elevated);
+  border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-md);
+  overflow: hidden;
+}
+.ds-modal-lg .ds-modal-box { width: min(880px, calc(100vw - 32px)); }
+.ds-modal-header {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--ds-sp-3);
+  padding: var(--ds-sp-4) var(--ds-sp-6);
+  border-bottom: 1px solid var(--ds-divider);
+}
+.ds-modal-body { padding: var(--ds-sp-6); overflow-y: auto; }
+.ds-modal-footer {
+  display: flex; justify-content: flex-end; gap: var(--ds-sp-2);
+  padding: var(--ds-sp-3) var(--ds-sp-6);
+  border-top: 1px solid var(--ds-divider); background: var(--ds-neutral-50);
+}
+
+/* ================= ALERTA (inline, persistente) =================
+   daisy: alert / alert-success / alert-error / alert-warning / alert-info
+   <div class="ds-alert ds-alert-warning" role="alert">
+     <svg class="ds-icon" aria-hidden="true">…</svg>
+     <div><strong>Título.</strong> Detalle de la alerta.</div>
+     [<button class="ds-btn ds-btn-sm ds-btn-secondary">Acción</button>]
+   </div> */
+.ds-alert {
+  display: flex; align-items: flex-start; gap: var(--ds-sp-3);
+  padding: var(--ds-sp-3) var(--ds-sp-4);
+  border: 1px solid var(--ds-border);
+  border-left-width: 4px;
+  border-radius: var(--ds-radius-md);
+  background: var(--ds-bg-sunken); color: var(--ds-text);
+  font-size: var(--ds-text-sm); line-height: 1.5;
+}
+.ds-alert .ds-icon { margin-top: 1px; }
+.ds-alert-success { background: var(--ds-success-container); border-color: #BCDCC9; border-left-color: var(--ds-success); color: var(--ds-on-success); }
+.ds-alert-warning { background: var(--ds-warning-container); border-color: #EBD3A4; border-left-color: var(--ds-warning-accent); color: var(--ds-on-warning); }
+.ds-alert-danger  { background: var(--ds-danger-container); border-color: #F4B4AE; border-left-color: var(--ds-danger); color: var(--ds-on-danger); }
+.ds-alert-info    { background: var(--ds-info-container); border-color: #B9D2E5; border-left-color: var(--ds-info); color: var(--ds-on-info); }
+
+/* ================= TOAST =================
+   Región global (en base_ds.html): <div class="ds-toasts" role="status" aria-live="polite"></div>
+   JS: dsToast('Registro actualizado', 'success') — ver base_ds.html. */
+.ds-toasts {
+  position: fixed; right: var(--ds-sp-4); bottom: var(--ds-sp-4);
+  z-index: var(--ds-z-toast);
+  display: flex; flex-direction: column; gap: var(--ds-sp-2);
+  max-width: min(420px, calc(100vw - 32px));
+}
+.ds-toast {
+  display: flex; align-items: flex-start; gap: var(--ds-sp-3);
+  padding: var(--ds-sp-3) var(--ds-sp-4);
+  background: var(--ds-neutral-900); color: #FFFFFF;
+  border-radius: var(--ds-radius-md);
+  box-shadow: var(--ds-shadow-md);
+  font-size: var(--ds-text-sm); line-height: 1.45;
+  animation: ds-toast-in var(--ds-dur-slow) var(--ds-ease);
+}
+.ds-toast .ds-icon { margin-top: 1px; }
+.ds-toast-success .ds-icon { color: #7DD4A8; }
+.ds-toast-danger .ds-icon  { color: #FFB3AE; }
+.ds-toast-warning .ds-icon { color: #F2CC8A; }
+.ds-toast-close {
+  margin-left: auto; flex: none;
+  width: 28px; height: 28px; display: inline-flex; align-items: center; justify-content: center;
+  border: 0; border-radius: var(--ds-radius-sm); background: transparent; color: rgba(255,255,255,0.7); cursor: pointer;
+}
+.ds-toast-close:hover { background: rgba(255,255,255,0.14); color: #FFFFFF; }
+
+/* ================= NAVBAR =================
+   daisy: navbar / navbar bg-primary
+   Ver base_ds.html — estructura completa. Guinda profundo + pleca dorada. */
+.ds-nav {
+  position: sticky; top: 0; z-index: var(--ds-z-navbar);
+  display: flex; align-items: center; gap: var(--ds-sp-2);
+  height: 56px; padding-inline: var(--ds-sp-3);
+  background: var(--ds-primary-deep);
+  border-bottom: 2px solid var(--ds-gold);
+  color: var(--ds-warm-100);
+}
+.ds-nav-brand {
+  display: inline-flex; align-items: center; gap: var(--ds-sp-2);
+  padding: var(--ds-sp-1) var(--ds-sp-2); border-radius: var(--ds-radius-md);
+  color: #FFFFFF; font-size: var(--ds-text-lg); font-weight: 800; letter-spacing: -0.01em;
+  text-decoration: none;
+}
+.ds-nav-brand:hover { background: rgba(255, 238, 237, 0.1); text-decoration: none; color: #FFFFFF; }
+.ds-nav-brand:focus-visible { outline: none; box-shadow: var(--ds-focus-ring-inverse); }
+.ds-nav-user { display: flex; align-items: center; gap: var(--ds-sp-2); margin-left: auto; }
+.ds-nav-role { font-size: var(--ds-text-xs); color: var(--ds-warm-300); font-weight: 600; }
+.ds-avatar {
+  width: 36px; height: 36px; flex: none;
+  display: inline-flex; align-items: center; justify-content: center;
+  border-radius: 999px;
+  background: var(--ds-warm-100); color: var(--ds-guinda-800);
+  font-weight: 800; font-size: var(--ds-text-sm); text-transform: uppercase;
+}
+
+/* ================= SIDEBAR =================
+   daisy: drawer / menu / menu-title
+   <aside class="ds-side" id="sidebar">
+     <nav aria-label="Navegación principal">
+       <p class="ds-side-title">Operación</p>
+       <a class="ds-side-link" aria-current="page" href="…"><svg class="ds-icon">…</svg> Ver Registros</a>
+       …
+     </nav>
+   </aside> */
+.ds-side {
+  position: fixed; top: 56px; left: 0; bottom: 0; z-index: var(--ds-z-sidebar);
+  width: 264px;
+  display: flex; flex-direction: column;
+  background: var(--ds-bg-surface);
+  border-right: 1px solid var(--ds-border);
+  transform: translateX(0);
+  transition: transform var(--ds-dur-slow) var(--ds-ease);
+  overflow-y: auto;
+}
+.ds-side.ds-side-closed { transform: translateX(-100%); }
+.ds-side-nav { padding: var(--ds-sp-3); display: flex; flex-direction: column; gap: 2px; }
+.ds-side-title {
+  margin: var(--ds-sp-4) var(--ds-sp-3) var(--ds-sp-1);
+  font-size: var(--ds-text-xs); font-weight: 700; letter-spacing: var(--ds-tracking-wide);
+  text-transform: uppercase; color: var(--ds-text-3);
+}
+.ds-side-link {
+  display: flex; align-items: center; gap: var(--ds-sp-3);
+  min-height: 44px; padding: 0 var(--ds-sp-3);
+  border-radius: var(--ds-radius-md);
+  border-left: 3px solid transparent;
+  color: var(--ds-text-2); font-size: var(--ds-text-base); font-weight: 500;
+  text-decoration: none;
+  transition: background-color var(--ds-dur-fast), color var(--ds-dur-fast);
+}
+.ds-side-link:hover { background: var(--ds-bg-sunken); color: var(--ds-text); text-decoration: none; }
+.ds-side-link[aria-current="page"], .ds-side-link.ds-active {
+  background: var(--ds-warm-100); border-left-color: var(--ds-primary);
+  color: var(--ds-guinda-800); font-weight: 700;
+}
+.ds-side-link .ds-icon { color: var(--ds-text-3); }
+.ds-side-link[aria-current="page"] .ds-icon, .ds-side-link.ds-active .ds-icon { color: var(--ds-primary); }
+.ds-side-footer { margin-top: auto; padding: var(--ds-sp-3); border-top: 1px solid var(--ds-divider); }
+.ds-side-overlay {
+  position: fixed; inset: 56px 0 0 0; z-index: calc(var(--ds-z-sidebar) - 1);
+  background: var(--ds-overlay);
+}
+/* Desplazamiento del contenido cuando la sidebar está fija (≥1100px) */
+@media (min-width: 1100px) {
+  .ds-main-with-side { margin-left: 264px; transition: margin-left var(--ds-dur-slow) var(--ds-ease); }
+  .ds-side-closed ~ .ds-main-with-side, .ds-main-full { margin-left: 0; }
+  .ds-side-overlay { display: none; }
+}
+
+/* ================= BREADCRUMBS =================
+   <nav class="ds-crumbs" aria-label="Ruta de navegación"><ol>
+     <li><a href="…">Inicio</a></li><li><a href="…">Reportes</a></li>
+     <li aria-current="page">Inadmitidos</li>
+   </ol></nav> */
+.ds-crumbs ol { display: flex; flex-wrap: wrap; align-items: center; gap: var(--ds-sp-1); margin: 0; padding: 0; list-style: none; font-size: var(--ds-text-sm); }
+.ds-crumbs li { display: inline-flex; align-items: center; gap: var(--ds-sp-1); color: var(--ds-text-3); }
+.ds-crumbs li + li::before { content: "/"; color: var(--ds-neutral-300); margin-right: var(--ds-sp-1); }
+.ds-crumbs a { color: var(--ds-text-3); text-decoration: none; padding: 2px 4px; border-radius: var(--ds-radius-sm); }
+.ds-crumbs a:hover { color: var(--ds-link); text-decoration: underline; }
+.ds-crumbs [aria-current="page"] { color: var(--ds-text); font-weight: 600; }
+
+/* ================= TABS / PILLS =================
+   daisy: tab / tab-active
+   <div class="ds-tabs" role="tablist" aria-label="Secciones">
+     <button class="ds-tab" role="tab" aria-selected="true">Pendientes <span class="ds-badge ds-badge-count">8</span></button>
+     <button class="ds-tab" role="tab" aria-selected="false">Resueltos</button>
+   </div> */
+.ds-tabs { display: flex; gap: var(--ds-sp-1); border-bottom: 1px solid var(--ds-border); }
+.ds-tab {
+  display: inline-flex; align-items: center; gap: var(--ds-sp-2);
+  min-height: 44px; padding: 0 var(--ds-sp-4);
+  border: 0; border-bottom: 2px solid transparent; margin-bottom: -1px;
+  background: transparent; color: var(--ds-text-3);
+  font-family: var(--ds-font-sans); font-size: var(--ds-text-base); font-weight: 600;
+  cursor: pointer;
+}
+.ds-tab:hover { color: var(--ds-text); }
+.ds-tab[aria-selected="true"] { color: var(--ds-guinda-800); border-bottom-color: var(--ds-primary); }
+.ds-tab:focus-visible { outline: none; box-shadow: var(--ds-focus-ring); border-radius: var(--ds-radius-sm); }
+/* Pills (filtros compactos) */
+.ds-pills { display: flex; flex-wrap: wrap; gap: var(--ds-sp-2); }
+.ds-pill {
+  display: inline-flex; align-items: center; gap: var(--ds-sp-1);
+  min-height: 36px; padding: 0 var(--ds-sp-3);
+  border: 1px solid var(--ds-border-strong); border-radius: var(--ds-radius-full);
+  background: var(--ds-bg-surface); color: var(--ds-text-2);
+  font-family: var(--ds-font-sans); font-size: var(--ds-text-sm); font-weight: 600; cursor: pointer;
+  transition: all var(--ds-dur-fast);
+}
+.ds-pill:hover { border-color: var(--ds-guinda-400); color: var(--ds-text); }
+.ds-pill[aria-pressed="true"] { background: var(--ds-warm-100); border-color: var(--ds-guinda-600); color: var(--ds-guinda-800); }
+
+/* ================= ACORDEÓN (details nativo) =================
+   daisy: collapse / collapse-title / collapse-content
+   <details class="ds-acc"><summary class="ds-acc-summary">Datos personales
+     <svg class="ds-icon ds-acc-chev">…chevron…</svg></summary>
+   <div class="ds-acc-body">…</div></details> */
+.ds-acc { border: 1px solid var(--ds-border); border-radius: var(--ds-radius-lg); background: var(--ds-bg-surface); }
+.ds-acc + .ds-acc { margin-top: var(--ds-sp-2); }
+.ds-acc-summary {
+  display: flex; align-items: center; justify-content: space-between; gap: var(--ds-sp-3);
+  min-height: 52px; padding: var(--ds-sp-2) var(--ds-sp-4);
+  font-weight: 700; color: var(--ds-text); cursor: pointer; list-style: none;
+  border-radius: var(--ds-radius-lg);
+}
+.ds-acc-summary::-webkit-details-marker { display: none; }
+.ds-acc-summary:hover { background: var(--ds-hover-bg); }
+.ds-acc-summary:focus-visible { outline: none; box-shadow: var(--ds-focus-ring); }
+.ds-acc-chev { color: var(--ds-text-3); transition: transform var(--ds-dur) var(--ds-ease); }
+.ds-acc[open] > .ds-acc-summary { border-bottom: 1px solid var(--ds-divider); border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0; }
+.ds-acc[open] > .ds-acc-summary .ds-acc-chev { transform: rotate(180deg); }
+.ds-acc-body { padding: var(--ds-sp-4); }
+
+/* ================= MENÚ KEBAB (details nativo) =================
+   daisy: dropdown / dropdown-content / menu
+   <details class="ds-menu">
+     <summary class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Más acciones">⋮icon</summary>
+     <div class="ds-menu-list" role="menu">
+       <a class="ds-menu-item" role="menuitem" href="…">Ver detalle</a>
+       <button class="ds-menu-item" role="menuitem">Archivar</button>
+       <hr class="ds-menu-sep">
+       <button class="ds-menu-item ds-menu-item-danger" role="menuitem">Eliminar…</button>
+     </div>
+   </details>
+   base_ds.html cierra el details al hacer clic fuera o presionar Esc. */
+.ds-menu { position: relative; display: inline-block; }
+.ds-menu > summary { list-style: none; }
+.ds-menu > summary::-webkit-details-marker { display: none; }
+.ds-menu-list {
+  position: absolute; right: 0; top: calc(100% + 4px); z-index: var(--ds-z-dropdown);
+  min-width: 200px; padding: var(--ds-sp-1);
+  background: var(--ds-bg-elevated);
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+  display: flex; flex-direction: column;
+}
+.ds-menu-item {
+  display: flex; align-items: center; gap: var(--ds-sp-2);
+  min-height: 40px; padding: 0 var(--ds-sp-3);
+  border: 0; border-radius: var(--ds-radius-md); background: transparent;
+  color: var(--ds-text); font-family: var(--ds-font-sans); font-size: var(--ds-text-sm); font-weight: 500;
+  text-align: left; text-decoration: none; cursor: pointer; white-space: nowrap;
+}
+.ds-menu-item:hover { background: var(--ds-bg-sunken); text-decoration: none; color: var(--ds-text); }
+.ds-menu-item-danger { color: var(--ds-danger); }
+.ds-menu-item-danger:hover { background: var(--ds-warm-200); color: var(--ds-on-danger); }
+.ds-menu-sep { border: 0; border-top: 1px solid var(--ds-divider); margin: var(--ds-sp-1) 0; }
+
+/* ================= EMPTY STATE =================
+   <div class="ds-empty">
+     <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg">…</svg></div>
+     <h3 class="ds-h3">Sin notificaciones pendientes</h3>
+     <p class="ds-empty-desc">Cuando un vuelo genere alertas aparecerán aquí.</p>
+     <a class="ds-btn ds-btn-primary" href="…">Subir Excel</a>
+   </div> */
+.ds-empty {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--ds-sp-2); padding: var(--ds-sp-16) var(--ds-sp-6);
+  text-align: center;
+}
+.ds-empty-icon {
+  width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;
+  border-radius: 999px; background: var(--ds-warm-100); color: var(--ds-guinda-600);
+  margin-bottom: var(--ds-sp-2);
+}
+.ds-empty-desc { margin: 0 0 var(--ds-sp-3); max-width: 420px; color: var(--ds-text-3); font-size: var(--ds-text-sm); line-height: 1.5; }
+
+/* ================= SKELETON =================
+   <div class="ds-skeleton ds-skeleton-text" aria-hidden="true"></div>
+   Contenedor en carga: aria-busy="true". */
+.ds-skeleton {
+  background: linear-gradient(90deg, var(--ds-neutral-100) 25%, var(--ds-neutral-75) 50%, var(--ds-neutral-100) 75%);
+  background-size: 200% 100%;
+  animation: ds-shimmer 1.4s ease infinite;
+  border-radius: var(--ds-radius-sm);
+}
+.ds-skeleton-text  { height: 12px; width: 100%; }
+.ds-skeleton-title { height: 20px; width: 40%; }
+.ds-skeleton-row   { height: 44px; border-radius: var(--ds-radius-md); }
+.ds-skeleton-card  { height: 120px; border-radius: var(--ds-radius-lg); }
+
+/* ================= PROGRESO Y ETAPAS =================
+   daisy: progress
+   <div class="ds-progress" role="progressbar" aria-valuenow="64" aria-valuemin="0" aria-valuemax="100" aria-label="Subiendo archivo">
+     <div class="ds-progress-bar" style="width:64%"></div>
+   </div> */
+.ds-progress { height: 8px; background: var(--ds-neutral-100); border-radius: 999px; overflow: hidden; }
+.ds-progress-bar { height: 100%; background: var(--ds-primary); border-radius: 999px; transition: width var(--ds-dur-slow) var(--ds-ease); }
+/* Etapas: Subiendo → Validando → Procesando */
+.ds-steps { display: flex; gap: var(--ds-sp-2); margin: 0; padding: 0; list-style: none; }
+.ds-steps li { flex: 1; display: flex; flex-direction: column; gap: var(--ds-sp-15); font-size: var(--ds-text-xs); font-weight: 600; color: var(--ds-text-3); }
+.ds-steps li::before { content: ""; height: 6px; border-radius: 999px; background: var(--ds-neutral-100); }
+.ds-steps li.ds-step-done    { color: var(--ds-on-success); }
+.ds-steps li.ds-step-done::before    { background: var(--ds-success); }
+.ds-steps li.ds-step-current { color: var(--ds-guinda-800); }
+.ds-steps li.ds-step-current::before { background: var(--ds-primary); }
+
+/* ================= DROPZONE =================
+   <label class="ds-dropzone" id="dz">
+     <svg class="ds-icon ds-icon-lg" aria-hidden="true">…upload…</svg>
+     <strong>Arrastra el Excel aquí</strong>
+     <span class="ds-small">o haz clic para seleccionar · .xlsx, máx 10 MB</span>
+     <input type="file" class="ds-sr-only" accept=".xlsx,.xls">
+   </label>
+   JS añade .ds-dropzone-over en dragover. */
+.ds-dropzone {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: var(--ds-sp-2); min-height: 180px; padding: var(--ds-sp-8);
+  background: var(--ds-warm-50);
+  border: 2px dashed var(--ds-guinda-300); border-radius: var(--ds-radius-lg);
+  color: var(--ds-text-2); text-align: center; cursor: pointer;
+  transition: border-color var(--ds-dur), background-color var(--ds-dur);
+}
+.ds-dropzone:hover { border-color: var(--ds-guinda-500); background: var(--ds-warm-100); }
+.ds-dropzone:focus-within { box-shadow: var(--ds-focus-ring); border-color: var(--ds-guinda-600); }
+.ds-dropzone .ds-icon-lg { width: 32px; height: 32px; color: var(--ds-guinda-600); }
+.ds-dropzone-over { border-color: var(--ds-guinda-600); border-style: solid; background: var(--ds-warm-100); }
+
+/* ================= TOOLTIP (CSS puro) =================
+   <button class="ds-btn ds-btn-icon ds-btn-ghost" data-ds-tip="Requiere SR activo" aria-label="PI bloqueado">…</button>
+   Complemento visual; la información esencial va también en aria-label. */
+[data-ds-tip] { position: relative; }
+[data-ds-tip]::after {
+  content: attr(data-ds-tip);
+  position: absolute; bottom: calc(100% + 6px); left: 50%; transform: translateX(-50%) scale(0.96);
+  padding: 5px 10px; border-radius: var(--ds-radius-sm);
+  background: var(--ds-neutral-900); color: #FFFFFF;
+  font-size: var(--ds-text-xs); font-weight: 500; line-height: 1.3; white-space: nowrap;
+  opacity: 0; pointer-events: none;
+  transition: opacity var(--ds-dur-fast) var(--ds-ease), transform var(--ds-dur-fast) var(--ds-ease);
+  z-index: var(--ds-z-dropdown);
+}
+[data-ds-tip]:hover::after, [data-ds-tip]:focus-visible::after { opacity: 1; transform: translateX(-50%) scale(1); }
+
+/* ================= CHIP DE FILTRO ACTIVO =================
+   <span class="ds-chip">Lote: MAYO-12 <button class="ds-chip-x" aria-label="Quitar filtro de lote">✕icon</button></span> */
+.ds-chip {
+  display: inline-flex; align-items: center; gap: var(--ds-sp-1);
+  padding: 4px 6px 4px 12px;
+  background: var(--ds-warm-100); border: 1px solid var(--ds-guinda-200);
+  border-radius: var(--ds-radius-full);
+  font-size: var(--ds-text-sm); font-weight: 600; color: var(--ds-guinda-800);
+}
+.ds-chip-x {
+  display: inline-flex; align-items: center; justify-content: center;
+  width: 22px; height: 22px; border: 0; border-radius: 999px;
+  background: transparent; color: var(--ds-guinda-700); cursor: pointer;
+}
+.ds-chip-x:hover { background: var(--ds-guinda-200); }

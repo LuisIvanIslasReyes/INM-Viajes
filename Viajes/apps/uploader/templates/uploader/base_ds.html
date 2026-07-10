@@ -1,0 +1,242 @@
+
+{% load static %}
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Viajes INM{% endblock %}</title>
+
+    <!-- Tipografía institucional (Public Sans). Sin internet: cae al system stack. -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CDN (Fase 26 lo sustituye por build local con purge) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- Design System INM-Viajes -->
+    <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
+    <link rel="stylesheet" href="{% static 'css/components.css' %}">
+    {% block extra_css %}{% endblock %}
+</head>
+<body class="ds-body">
+    <a class="ds-sr-only" href="#contenido">Saltar al contenido</a>
+
+    <!-- ===================== NAVBAR ===================== -->
+    <header class="ds-nav" role="banner">
+        {% if user.is_authenticated %}
+        <button id="dsSidebarToggle" class="ds-btn ds-btn-icon ds-btn-on-dark"
+                aria-label="Abrir menú de navegación" aria-expanded="true" aria-controls="dsSidebar">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>
+        </button>
+        {% endif %}
+
+        <a href="{% if puede_flujo_principal %}{% url 'admin_list' %}{% else %}{% url 'directorio:listado' %}{% endif %}" class="ds-nav-brand">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+            INM Viajes
+        </a>
+
+        {% if user.is_authenticated %}
+        <div class="ds-nav-user">
+            <div class="text-right hidden sm:block">
+                <div style="font-weight:700; font-size:var(--ds-text-sm); color:#fff;">{{ user.username }}</div>
+                <div class="ds-nav-role">
+                    {% if user.is_superuser %}Administración
+                    {% elif es_general %}Consulta
+                    {% else %}Operación Aeropuerto{% endif %}
+                </div>
+            </div>
+            <span class="ds-avatar" aria-hidden="true">{{ user.username|first|upper }}</span>
+        </div>
+        {% endif %}
+    </header>
+
+    {% if user.is_authenticated %}
+    <!-- ===================== SIDEBAR =====================
+         Misma IA y mismos condicionales de rol que base.html actual.
+         La reorganización por dominios llega en Fase 2. -->
+    <aside class="ds-side" id="dsSidebar">
+        <nav class="ds-side-nav" aria-label="Navegación principal">
+            <p class="ds-side-title">Módulos</p>
+            <a class="ds-side-link" href="{% url 'directorio:listado' %}"
+               {% if request.resolver_match.namespace == 'directorio' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l7-4 7 4v14M9 9h1m4 0h1M9 13h1m4 0h1M9 17h1m4 0h1"/></svg>
+                Directorio
+            </a>
+            <a class="ds-side-link" href="{% url 'redacciones:biblioteca' %}"
+               {% if request.resolver_match.namespace == 'redacciones' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5v15z"/></svg>
+                Redacciones
+            </a>
+
+            {% if puede_flujo_principal %}
+            <p class="ds-side-title">Principal</p>
+            <a class="ds-side-link" href="{% url 'admin_list' %}"
+               {% if request.resolver_match.url_name == 'admin_list' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 5h18M3 12h18M3 19h18M7 5v14"/></svg>
+                Ver Registros
+            </a>
+            <a class="ds-side-link" href="{% url 'upload_excel' %}"
+               {% if request.resolver_match.url_name == 'upload_excel' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                Subir Excel
+            </a>
+
+            <p class="ds-side-title">Búsqueda y análisis</p>
+            <a class="ds-side-link" href="{% url 'date_range_report' %}"
+               {% if request.resolver_match.url_name == 'date_range_report' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+                Búsqueda por Fecha
+            </a>
+            <a class="ds-side-link" href="{% url 'inadmitidos_page' %}"
+               {% if request.resolver_match.url_name == 'inadmitidos_page' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg>
+                Reporte Inadmitidos
+            </a>
+            <a class="ds-side-link" href="{% url 'check_duplicates' %}"
+               {% if request.resolver_match.url_name == 'check_duplicates' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                Verificar Duplicados
+            </a>
+            <a class="ds-side-link" href="{% url 'casos_especiales_list' %}"
+               {% if request.resolver_match.url_name == 'casos_especiales_list' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0zM12 9v4M12 17h.01"/></svg>
+                Casos Especiales
+            </a>
+            <a class="ds-side-link" href="{% url 'batch_list' %}"
+               {% if request.resolver_match.url_name == 'batch_list' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/><path d="M3.3 7 12 12l8.7-5M12 22V12"/></svg>
+                Gestionar Cargas
+            </a>
+            {% endif %}
+
+            {% if user.is_superuser %}
+            <p class="ds-side-title">Administración</p>
+            <a class="ds-side-link" href="{% url 'create_user' %}"
+               {% if request.resolver_match.url_name == 'create_user' %}aria-current="page"{% endif %}>
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg>
+                Crear Usuario
+            </a>
+            <a class="ds-side-link" href="/admin/">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+                Django Admin
+            </a>
+            {% endif %}
+        </nav>
+
+        <div class="ds-side-footer">
+            <form method="post" action="{% url 'logout' %}">
+                {% csrf_token %}
+                <button type="submit" class="ds-btn ds-btn-secondary ds-btn-block">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4M16 17l5-5-5-5M21 12H9"/></svg>
+                    Cerrar sesión
+                </button>
+            </form>
+        </div>
+    </aside>
+    <div class="ds-side-overlay" id="dsSideOverlay" hidden></div>
+    {% endif %}
+
+    <!-- ===================== CONTENIDO ===================== -->
+    <main id="contenido" class="{% if user.is_authenticated %}ds-main-with-side{% endif %}" style="min-height: calc(100vh - 56px);">
+        <div class="ds-container" style="padding-block: var(--ds-sp-6);">
+            {% block page_header %}{% endblock %}
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+
+    <!-- ===================== TOASTS =====================
+         Los messages de Django se anuncian como toasts (aria-live). -->
+    <div class="ds-toasts" id="dsToasts" role="status" aria-live="polite"></div>
+    {% if messages %}
+    <script id="dsDjangoMessages" type="application/json">
+        [{% for message in messages %}{"tags": "{{ message.tags|escapejs }}", "text": "{{ message|escapejs }}"}{% if not forloop.last %},{% endif %}{% endfor %}]
+    </script>
+    {% endif %}
+
+    <script>
+    /* ============ JS del shell (vanilla, sin dependencias) ============ */
+    (function () {
+        'use strict';
+
+        /* --- Sidebar: persistencia en localStorage --- */
+        var side = document.getElementById('dsSidebar');
+        var toggle = document.getElementById('dsSidebarToggle');
+        var overlay = document.getElementById('dsSideOverlay');
+        var mqDesktop = window.matchMedia('(min-width: 1100px)');
+
+        function setSide(open) {
+            if (!side) return;
+            side.classList.toggle('ds-side-closed', !open);
+            if (toggle) toggle.setAttribute('aria-expanded', String(open));
+            if (overlay) overlay.hidden = !(open && !mqDesktop.matches);
+            try { localStorage.setItem('ds.sidebar', open ? '1' : '0'); } catch (e) {}
+        }
+        if (side) {
+            var saved = null;
+            try { saved = localStorage.getItem('ds.sidebar'); } catch (e) {}
+            setSide(saved === null ? mqDesktop.matches : saved === '1');
+            if (toggle) toggle.addEventListener('click', function () {
+                setSide(side.classList.contains('ds-side-closed'));
+            });
+            if (overlay) overlay.addEventListener('click', function () { setSide(false); });
+        }
+
+        /* --- Menús kebab (details): cerrar con clic fuera y Esc --- */
+        document.addEventListener('click', function (e) {
+            document.querySelectorAll('details.ds-menu[open]').forEach(function (d) {
+                if (!d.contains(e.target)) d.removeAttribute('open');
+            });
+        });
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape') {
+                document.querySelectorAll('details.ds-menu[open]').forEach(function (d) {
+                    d.removeAttribute('open');
+                    var s = d.querySelector('summary'); if (s) s.focus();
+                });
+            }
+        });
+
+        /* --- Toasts (sustituye los toasts DaisyUI generados por JS) --- */
+        var ICONS = {
+            success: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+            danger:  '<circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/>',
+            warning: '<path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/>',
+            info:    '<circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/>'
+        };
+        window.dsToast = function (text, kind, opts) {
+            kind = kind || 'info'; opts = opts || {};
+            var region = document.getElementById('dsToasts');
+            if (!region) return;
+            var t = document.createElement('div');
+            t.className = 'ds-toast ds-toast-' + kind;
+            t.innerHTML =
+                '<svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24">' + (ICONS[kind] || ICONS.info) + '</svg>' +
+                '<div></div>' +
+                '<button class="ds-toast-close" aria-label="Cerrar aviso">' +
+                '<svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>';
+            t.children[1].textContent = text;
+            t.querySelector('.ds-toast-close').addEventListener('click', function () { t.remove(); });
+            region.appendChild(t);
+            if (!opts.sticky) setTimeout(function () { t.remove(); }, opts.duration || 6000);
+        };
+
+        /* --- Django messages → toasts --- */
+        var dataEl = document.getElementById('dsDjangoMessages');
+        if (dataEl) {
+            try {
+                JSON.parse(dataEl.textContent).forEach(function (m) {
+                    var kind = m.tags.indexOf('success') > -1 ? 'success'
+                             : m.tags.indexOf('error')   > -1 ? 'danger'
+                             : m.tags.indexOf('warning') > -1 ? 'warning' : 'info';
+                    window.dsToast(m.text, kind, { duration: 8000 });
+                });
+            } catch (e) {}
+        }
+    })();
+    </script>
+
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

@@ -1,0 +1,273 @@
+/* ====================================================================
+   INM-VIAJES · DESIGN SYSTEM — TOKENS (Fase 0 · PR 01)
+   --------------------------------------------------------------------
+   Destino en el repo:  Viajes/apps/uploader/static/css/design-system.css
+   Cargar en <head> DESPUÉS de Tailwind y ANTES de components.css:
+
+     <script src="https://cdn.tailwindcss.com"></script>
+     <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
+     <link rel="stylesheet" href="{% static 'css/components.css' %}">
+
+   Paleta C (híbrida) confirmada 7·jul·2026:
+   guinda institucional propio (#6B1D1D / #4D060A) como primario,
+   dorado federal (#A57F2C) SOLO como acento de detalle (plecas,
+   sellos, líneas) — nunca botones, nunca texto pequeño.
+   Sin dependencia de DaisyUI: ninguna variable daisy (--p, --b2…)
+   se usa aquí ni en components.css.
+   ==================================================================== */
+
+:root {
+  /* ---------- 1. PRIMARIO · GUINDA INSTITUCIONAL (escala 50→950) ----------
+     700 es el tono de marca (#6B1D1D). 900 (#4D060A) es el "guinda profundo"
+     ya en producción (navbar Inadmitidos). Claros 50–200 solo para fondos. */
+  --ds-guinda-50:  #FCF3F2;
+  --ds-guinda-100: #F8E2E0;
+  --ds-guinda-200: #F0C7C4;
+  --ds-guinda-300: #E3A19C;
+  --ds-guinda-400: #D07370;
+  --ds-guinda-500: #B04A47;
+  --ds-guinda-600: #8E2F2E;
+  --ds-guinda-700: #6B1D1D;   /* PRIMARIO — AA sobre blanco 11.5:1 */
+  --ds-guinda-800: #5C1114;
+  --ds-guinda-900: #4D060A;   /* navbar / superficies profundas */
+  --ds-guinda-950: #380407;
+
+  /* Alias semánticos del primario */
+  --ds-primary:        var(--ds-guinda-700);
+  --ds-primary-hover:  var(--ds-guinda-800);
+  --ds-primary-active: var(--ds-guinda-900);
+  --ds-primary-deep:   var(--ds-guinda-900);
+  --ds-on-primary:     #FFFFFF;
+
+  /* ---------- 2. DORADO FEDERAL — SOLO DETALLE ----------
+     #A57F2C sobre blanco = 3.7:1 → prohibido como texto de cuerpo.
+     Usos permitidos: pleca (borde 2–3px), sellos, iconografía decorativa
+     grande, líneas de sección. Para texto dorado usar --ds-gold-ink (7.4:1). */
+  --ds-gold:      #A57F2C;
+  --ds-gold-soft: #D9C48A;
+  --ds-gold-tint: #F7F0DE;
+  --ds-gold-ink:  #6B5118;
+
+  /* ---------- 3. NEUTROS FRÍOS (base #F9F9FC ya en producción) ---------- */
+  --ds-neutral-900: #1A1C1E;  /* tinta principal — 16.9:1 */
+  --ds-neutral-700: #44474A;  /* texto secundario — 9.2:1 */
+  --ds-neutral-600: #55555C;  /* texto terciario — 7.4:1 */
+  --ds-neutral-500: #74747B;  /* meta/captions — 4.7:1 (mín. AA) */
+  --ds-neutral-400: #86868D;  /* SOLO placeholder o texto ≥24px — 3.6:1 */
+  --ds-neutral-300: #C9C9CE;  /* bordes de inputs (3:1 no-texto vs blanco) */
+  --ds-neutral-200: #E2E2E5;  /* bordes de cards y divisores fuertes */
+  --ds-neutral-100: #ECEBEF;  /* divisores suaves */
+  --ds-neutral-75:  #F3F3F6;  /* superficie hundida: thead, wells */
+  --ds-neutral-50:  #F9F9FC;  /* fondo de página (blanco neutro) */
+
+  /* ---------- 4. NEUTROS CÁLIDOS (blanco cálido institucional) ----------
+     Reservados para lo institucional-destacado: selección, hover de fila,
+     contenedores de marca. No mezclar con neutros fríos en el mismo bloque. */
+  --ds-warm-50:  #FFF9F8;   /* hover de fila, fondos apenas cálidos */
+  --ds-warm-100: #FFEEED;   /* blanco cálido — contenedor institucional */
+  --ds-warm-200: #FFDAD6;   /* contenedor de error/rechazo (ya en prod) */
+  --ds-warm-300: #FFB3AE;   /* anillo de foco sobre fondos oscuros */
+  --ds-warm-ink: #554241;   /* tinta sobre cálidos — 8.3:1 sobre #FFEEED */
+
+  /* ---------- 5. SEMÁNTICOS ----------
+     Sin verdes brillantes (no compiten con el guinda). Cada uno con
+     contenedor claro + tinta AA sobre ese contenedor. */
+  --ds-success:           #1C6B43;  /* verde bosque — 6.5:1 s/blanco */
+  --ds-success-container: #E3F1E9;
+  --ds-on-success:        #124A2E;
+
+  --ds-warning:           #8C5A10;  /* ámbar profundo — 5.9:1 s/blanco */
+  --ds-warning-container: #FBF0DC;
+  --ds-on-warning:        #6B4409;
+  --ds-warning-accent:    #E4A93C;  /* solo icono/borde, nunca texto */
+
+  --ds-danger:            #B3261E;  /* distinto del guinda: más claro y saturado — 6.5:1 */
+  --ds-danger-hover:      #93211B;
+  --ds-danger-container:  var(--ds-warm-200);
+  --ds-on-danger:         #690005;
+
+  --ds-info:              #22577E;  /* azul acero — 7.7:1 s/blanco */
+  --ds-info-container:    #E3EEF6;
+  --ds-on-info:           #163A55;
+
+  /* ---------- 6. FONDOS Y SUPERFICIES ---------- */
+  --ds-bg-page:     var(--ds-neutral-50);
+  --ds-bg-surface:  #FFFFFF;           /* cards, tablas, formularios */
+  --ds-bg-sunken:   var(--ds-neutral-75);
+  --ds-bg-elevated: #FFFFFF;           /* + sombra md: dropdowns, modales */
+  --ds-bg-inverse:  var(--ds-guinda-900);
+  --ds-overlay:     rgba(26, 28, 30, 0.45);
+
+  /* ---------- 7. TEXTO Y BORDES (alias de uso diario) ---------- */
+  --ds-text:          var(--ds-neutral-900);
+  --ds-text-2:        var(--ds-neutral-700);
+  --ds-text-3:        var(--ds-neutral-600);
+  --ds-text-muted:    var(--ds-neutral-500);
+  --ds-text-disabled: var(--ds-neutral-400);
+  --ds-link:          var(--ds-guinda-700);
+  --ds-link-hover:    var(--ds-guinda-800);
+  --ds-border:        var(--ds-neutral-200);
+  --ds-border-strong: var(--ds-neutral-300);
+  --ds-divider:       var(--ds-neutral-100);
+
+  /* ---------- 8. ESTADOS ----------
+     Foco: anillo doble (halo blanco + guinda) → visible sobre cualquier
+     fondo, cumple WCAG 2.2 · 2.4.13 (≥2px, contraste ≥3:1). */
+  --ds-focus-ring:         0 0 0 2px #FFFFFF, 0 0 0 4px var(--ds-guinda-600);
+  --ds-focus-ring-inverse: 0 0 0 2px var(--ds-guinda-900), 0 0 0 4px var(--ds-warm-300);
+  --ds-selected-bg:        var(--ds-warm-100);
+  --ds-hover-bg:           var(--ds-warm-50);
+  --ds-disabled-opacity:   0.5;
+
+  /* ---------- 9. TIPOGRAFÍA ----------
+     Public Sans: diseñada para interfaces de gobierno (USWDS), abierta,
+     excelente en cuerpos pequeños y con numerales tabulares.
+     El stack de sistema es el fallback sin internet. */
+  --ds-font-sans: 'Public Sans', -apple-system, BlinkMacSystemFont, 'Segoe UI',
+                  Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --ds-font-mono: ui-monospace, 'SF Mono', 'Cascadia Mono', 'Segoe UI Mono',
+                  Menlo, Consolas, monospace;
+
+  --ds-text-xs:   0.75rem;    --ds-leading-xs:   1rem;      /* 12px · captions, th */
+  --ds-text-sm:   0.875rem;   --ds-leading-sm:   1.25rem;   /* 14px · secundario, celdas densas */
+  --ds-text-base: 0.9375rem;  --ds-leading-base: 1.4375rem; /* 15px · UI por defecto */
+  --ds-text-lg:   1.125rem;   --ds-leading-lg:   1.625rem;  /* 18px · H3 */
+  --ds-text-xl:   1.25rem;    --ds-leading-xl:   1.75rem;   /* 20px · H2 */
+  --ds-text-2xl:  1.5rem;     --ds-leading-2xl:  2rem;      /* 24px · H1 interno */
+  --ds-text-3xl:  1.875rem;   --ds-leading-3xl:  2.25rem;   /* 30px · héroe (login) */
+  --ds-text-4xl:  2.25rem;    --ds-leading-4xl:  2.5rem;    /* 36px · KPI */
+  --ds-tracking-tight: -0.01em;   /* títulos ≥24px */
+  --ds-tracking-wide:  0.06em;    /* etiquetas MAYÚSCULAS */
+
+  /* ---------- 10. ESPACIADO (base 4px) ---------- */
+  --ds-sp-05: 0.125rem;  /*  2px */
+  --ds-sp-1:  0.25rem;   /*  4px */
+  --ds-sp-15: 0.375rem;  /*  6px */
+  --ds-sp-2:  0.5rem;    /*  8px */
+  --ds-sp-3:  0.75rem;   /* 12px */
+  --ds-sp-4:  1rem;      /* 16px */
+  --ds-sp-6:  1.5rem;    /* 24px */
+  --ds-sp-8:  2rem;      /* 32px */
+  --ds-sp-12: 3rem;      /* 48px */
+  --ds-sp-16: 4rem;      /* 64px */
+  --ds-sp-20: 5rem;      /* 80px */
+  --ds-sp-24: 6rem;      /* 96px */
+
+  /* Grid de contenido */
+  --ds-container-max: 1400px;   /* tablas operativas anchas */
+  --ds-container-form: 720px;   /* formularios */
+  --ds-container-read: 860px;   /* fichas/detalle */
+  --ds-gutter: var(--ds-sp-6);
+
+  /* ---------- 11. RADIOS ---------- */
+  --ds-radius-sm:  6px;    /* badges, chips, kbd */
+  --ds-radius-md:  8px;    /* botones, inputs, selects */
+  --ds-radius-lg:  12px;   /* cards, modales, dropzone, dropdowns */
+  --ds-radius-full: 999px; /* pills, avatares, contadores */
+
+  /* ---------- 12. SOMBRAS (mínimas — solo elevación real) ----------
+     xs: separación sutil (thead sticky) · sm: flotantes (dropdown, kebab)
+     md: modales y toasts · lg: reservada a overlays mayores.
+     Cards en reposo: borde, NO sombra. */
+  --ds-shadow-xs: 0 1px 2px rgba(26, 28, 30, 0.06);
+  --ds-shadow-sm: 0 1px 3px rgba(26, 28, 30, 0.09), 0 1px 2px rgba(26, 28, 30, 0.04);
+  --ds-shadow-md: 0 4px 12px rgba(26, 28, 30, 0.10), 0 2px 4px rgba(26, 28, 30, 0.05);
+  --ds-shadow-lg: 0 12px 32px rgba(26, 28, 30, 0.14), 0 4px 8px rgba(26, 28, 30, 0.06);
+
+  /* ---------- 13. MOVIMIENTO ---------- */
+  --ds-ease: cubic-bezier(0.2, 0, 0, 1);
+  --ds-dur-fast: 120ms;
+  --ds-dur: 180ms;
+  --ds-dur-slow: 280ms;
+
+  /* ---------- 14. CAPAS ---------- */
+  --ds-z-sticky: 30;
+  --ds-z-sidebar: 40;
+  --ds-z-navbar: 50;
+  --ds-z-dropdown: 60;
+  --ds-z-modal: 70;
+  --ds-z-toast: 80;
+}
+
+/* ====================================================================
+   BASE — resets mínimos y defaults de página
+   (Tailwind Preflight ya resetea; esto fija la identidad.)
+   ==================================================================== */
+
+html { -webkit-text-size-adjust: 100%; }
+
+body.ds-body {
+  margin: 0;
+  background: var(--ds-bg-page);
+  color: var(--ds-text);
+  font-family: var(--ds-font-sans);
+  font-size: var(--ds-text-base);
+  line-height: var(--ds-leading-base);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Enlaces por defecto */
+.ds-body a { color: var(--ds-link); text-decoration: none; }
+.ds-body a:hover { color: var(--ds-link-hover); text-decoration: underline; }
+
+/* Foco visible universal (teclado) */
+.ds-body :focus-visible {
+  outline: none;
+  box-shadow: var(--ds-focus-ring);
+  border-radius: var(--ds-radius-sm);
+}
+
+/* Selección de texto */
+.ds-body ::selection { background: var(--ds-guinda-200); color: var(--ds-guinda-950); }
+
+/* Numerales tabulares para folios, horas y cifras */
+.ds-tabular { font-variant-numeric: tabular-nums; }
+
+/* Jerarquía tipográfica */
+.ds-h1 { font-size: var(--ds-text-2xl); line-height: var(--ds-leading-2xl); font-weight: 800; letter-spacing: var(--ds-tracking-tight); color: var(--ds-text); margin: 0; }
+.ds-h2 { font-size: var(--ds-text-xl);  line-height: var(--ds-leading-xl);  font-weight: 700; letter-spacing: var(--ds-tracking-tight); color: var(--ds-text); margin: 0; }
+.ds-h3 { font-size: var(--ds-text-lg);  line-height: var(--ds-leading-lg);  font-weight: 700; color: var(--ds-text); margin: 0; }
+.ds-h4 { font-size: var(--ds-text-base); line-height: var(--ds-leading-base); font-weight: 700; color: var(--ds-text); margin: 0; }
+.ds-small   { font-size: var(--ds-text-sm); line-height: var(--ds-leading-sm); color: var(--ds-text-3); }
+.ds-caption { font-size: var(--ds-text-xs); line-height: var(--ds-leading-xs); font-weight: 700; letter-spacing: var(--ds-tracking-wide); text-transform: uppercase; color: var(--ds-text-3); }
+.ds-code    { font-family: var(--ds-font-mono); font-size: 0.8125rem; background: var(--ds-bg-sunken); border: 1px solid var(--ds-divider); border-radius: var(--ds-radius-sm); padding: 1px 6px; }
+
+/* Contenedores */
+.ds-container { max-width: var(--ds-container-max); margin-inline: auto; padding-inline: var(--ds-gutter); }
+.ds-container-form { max-width: var(--ds-container-form); margin-inline: auto; padding-inline: var(--ds-gutter); }
+.ds-container-read { max-width: var(--ds-container-read); margin-inline: auto; padding-inline: var(--ds-gutter); }
+
+/* Solo lectores de pantalla */
+.ds-sr-only {
+  position: absolute; width: 1px; height: 1px; padding: 0; margin: -1px;
+  overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* Pleca dorada institucional (detalle federal — opción C) */
+.ds-pleca { border-bottom: 2px solid var(--ds-gold); }
+
+/* Scrollbar sobrio (WebKit + Firefox) */
+.ds-body * { scrollbar-width: thin; scrollbar-color: var(--ds-neutral-300) transparent; }
+.ds-body *::-webkit-scrollbar { width: 10px; height: 10px; }
+.ds-body *::-webkit-scrollbar-thumb { background: var(--ds-neutral-300); border-radius: 999px; border: 2px solid transparent; background-clip: content-box; }
+.ds-body *::-webkit-scrollbar-track { background: transparent; }
+
+/* Animaciones compartidas */
+@keyframes ds-shimmer {
+  0%   { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@keyframes ds-toast-in {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+@keyframes ds-spin { to { transform: rotate(360deg); } }
+
+/* Accesibilidad: respetar reduce-motion (WCAG 2.3.3) */
+@media (prefers-reduced-motion: reduce) {
+  .ds-body *, .ds-body *::before, .ds-body *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

@@ -1,0 +1,18 @@
+<header style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px; margin-bottom:var(--ds-sp-6);">
+    <div style="min-width:0;">
+        {% if breadcrumbs %}
+        <nav class="ds-crumbs" aria-label="Ruta de navegación" style="margin-bottom:8px;">
+            <ol>
+                {% for etiqueta, url in breadcrumbs %}
+                    {% if url %}<li><a href="{{ url }}">{{ etiqueta }}</a></li>
+                    {% else %}<li aria-current="page">{{ etiqueta }}</li>{% endif %}
+                {% endfor %}
+            </ol>
+        </nav>
+        {% endif %}
+        <h1 class="ds-h1">{{ titulo }}</h1>
+        {% if subtitulo %}<p class="ds-small" style="margin-top:4px;">{{ subtitulo }}</p>{% endif %}
+    </div>
+
+    {% block page_action %}{% endblock %}
+</header>

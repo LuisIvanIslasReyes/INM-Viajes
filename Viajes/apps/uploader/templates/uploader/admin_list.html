@@ -1,783 +1,381 @@
-<!-- filepath: c:\Users\alberto\Documents\GitHub\INM-Viajes\Viajes\uploader\templates\uploader\admin_list.html -->
-{% extends 'uploader/base.html' %}
+{% extends 'uploader/base_ds.html' %}
 {% load static %}
-
-{% block title %}
-    {% if is_superuser %}
-        Registros - Admin | Viajes INM
-    {% else %}
-        Mis registros | Viajes INM
-    {% endif %}
-{% endblock %}
-
-
-{% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin_list.css' %}">
-<style>
-@keyframes pulse {
-    0%, 100% { opacity: 1; transform: scale(1); }
-    50% { opacity: 0.7; transform: scale(1.15); }
-}
-</style>
-{% endblock %}
+{# ====================================================================
+   FASE 5·bis · GESTIÓN DE REGISTROS DE VIAJE  (PR 07)  — la vista de la captura
+   Conserva TODO el context (is_superuser, page_obj, notificaciones_no_leidas,
+   casos_urgentes, casos_pendientes, batches, tiempos_rubros, paises, is_production)
+   y TODOS los IDs/clases que consume admin_list.js:
+     searchInput, clearSearch, clearSearchFilter(), batchFilter,
+     segundaRevisionFilter, rechazadoFilter, internacionFilter,
+     .ajax-toggle (forms SR/R/I), openAccionesModal(), editModal, editForm,
+     comentario, modalFotoRechazo (+ inputFotoRechazo, previewFotoRechazo,
+     imgPreviewRechazo, comentarioRechazo, subirFotoRechazo, limpiarFotoRechazo),
+     btnAbrirTiempos, modalTiemposAtencion (+ tiemposFecha, tiemposEstado,
+     rsHoraInicio, rsHoraFin, rsHint, fmaPersonas), abrirModalMenor,
+     modalCapturaMenor (+ menorFechaVuelo), window.URL_PREFIX.
+   Los toggles siguen enviando el MISMO form/action/hidden → backend intacto.
+   Los modales de Tiempos (F13) y Menor (F14) se refinan en sus fases; aquí
+   quedan operativos con estilo ds-.
+   ==================================================================== #}
+{% block title %}{% if is_superuser %}Registros — Admin{% else %}Mis registros{% endif %} · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="space-y-6">
-    <!-- Header -->
-    <div class="flex justify-between items-center">
-        <div>
-            <h2 class="text-3xl font-bold">Gestión de Registros de Viaje</h2>
-            <p class="text-gray-600 mt-2">Total: <span id="total-registros">{{ page_obj.paginator.count }}</span> registros</p>
-            
-            <!-- Leyenda de colores -->
-            <div class="flex gap-4 mt-3 text-lg">
-                <div class="flex items-center gap-2">
-                    <span class="badge badge-success gap-1 font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        SR
-                    </span>
-                    <span class="text-gray-600 font-bold">Segunda Revisión</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="badge badge-error gap-1 font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        R
-                    </span>
-                    <span class="text-gray-600 font-bold">Rechazo</span>
-                </div>
-                <div class="flex items-center gap-2">
-                    <span class="badge badge-info gap-1 font-bold">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                        </svg>
-                    </span>
-                    <span class="text-gray-600 font-bold">Internación</span>
+<div class="space-y-6" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+
+    {% include 'uploader/_page_header.html' with titulo='Gestión de registros de viaje' %}
+    {% block page_action %}
+    <div style="display:flex; align-items:center; gap:8px;">
+        <!-- Notificaciones -->
+        <a href="{% url 'notificaciones_list' %}" class="ds-btn ds-btn-secondary" style="position:relative;" aria-label="Notificaciones{% if notificaciones_no_leidas > 0 %}: {{ notificaciones_no_leidas }} sin leer{% endif %}">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+            <span class="hidden md:inline">Notificaciones</span>
+            {% if notificaciones_no_leidas > 0 %}<span class="ds-badge ds-badge-count" style="position:absolute; top:-6px; right:-6px;">{{ notificaciones_no_leidas }}</span>{% endif %}
+        </a>
+        <!-- Casos especiales -->
+        <a href="{% url 'casos_especiales_list' %}" class="ds-btn ds-btn-secondary" style="position:relative;" aria-label="Casos especiales{% if casos_pendientes > 0 %}: {{ casos_pendientes }} pendientes{% endif %}">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+            <span class="hidden md:inline">Casos</span>
+            {% if casos_urgentes > 0 %}<span class="ds-badge ds-badge-count" style="position:absolute; top:-6px; right:-6px; background:var(--ds-danger);">{{ casos_pendientes }}</span>
+            {% elif casos_pendientes > 0 %}<span class="ds-badge ds-badge-count" style="position:absolute; top:-6px; right:-6px; background:var(--ds-warning);">{{ casos_pendientes }}</span>{% endif %}
+        </a>
+        <!-- Más acciones (kebab) — descongestiona el header de 8 a 3 -->
+        <details class="ds-menu">
+            <summary class="ds-btn ds-btn-icon ds-btn-secondary" aria-label="Más acciones"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg></summary>
+            <div class="ds-menu-list" role="menu">
+                <button type="button" id="btnAbrirTiempos" class="ds-menu-item" role="menuitem"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Capturar tiempos de atención</button>
+                <button type="button" onclick="abrirModalMenor()" class="ds-menu-item" role="menuitem"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>Capturar menor de edad</button>
+                <hr class="ds-menu-sep">
+                <a href="{% url 'inadmitidos_page' %}" class="ds-menu-item" role="menuitem"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Reporte de inadmitidos</a>
+                <a href="{% url 'date_range_report' %}" class="ds-menu-item" role="menuitem"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>Búsqueda por fecha</a>
+            </div>
+        </details>
+        <!-- CTA primario -->
+        <a href="{% url 'upload_excel' %}" class="ds-btn ds-btn-primary"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>Subir Excel</a>
+    </div>
+    {% endblock %}
+
+    <!-- Barra de herramientas: búsqueda + lote + filtros con la leyenda INTEGRADA -->
+    <section class="ds-card">
+        <div class="ds-card-body" style="display:flex; flex-wrap:wrap; gap:var(--ds-sp-4); align-items:flex-end;">
+            <div class="ds-field" style="flex:1; min-width:280px;">
+                <label class="ds-label" for="searchInput">Buscar por documento o pasajero</label>
+                <div class="ds-search">
+                    <svg class="ds-icon ds-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    <input type="text" id="searchInput" class="ds-input" placeholder="Número de documento o nombre… (Enter para buscar)" value="{{ request.GET.search }}" aria-label="Buscar por documento o pasajero">
+                    <button id="clearSearch" type="button" class="ds-search-clear" onclick="clearSearchFilter()" aria-label="Limpiar búsqueda"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
                 </div>
             </div>
-        </div>
-        <div class="flex gap-3">
-            <!-- Notificaciones -->
-            <a href="{% url 'notificaciones_list' %}" class="btn btn-ghost btn-circle btn-lg relative" title="Notificaciones">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-                </svg>
-                {% if notificaciones_no_leidas > 0 %}
-                <span class="badge badge-error badge-sm absolute -top-1 -right-1">{{ notificaciones_no_leidas }}</span>
-                {% endif %}
-            </a>
-            
-            <!-- Casos Especiales -->
-            <a href="{% url 'casos_especiales_list' %}" class="btn btn-warning btn-circle btn-lg relative" title="Casos Especiales Pendientes">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                </svg>
-                {% if casos_urgentes > 0 %}
-                <span class="badge badge-error badge-sm absolute -top-1 -right-1" style="animation: pulse 1.5s infinite;">{{ casos_pendientes }}</span>
-                {% elif casos_pendientes > 0 %}
-                <span class="badge badge-warning badge-sm absolute -top-1 -right-1" style="border: 2px solid #d97706; background: #1d1d1d; color: white;">{{ casos_pendientes }}</span>
-                {% endif %}
-            </a>
-            
-            <!-- Reporte de Inadmitidos -->
-            <a href="{% url 'inadmitidos_page' %}"class="btn btn-circle btn-lg text-white" style="background-color:#700606; border-color:#700606;" title="Reporte de Inadmitidos">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-            </a>
-
-            <!-- Búsqueda por Fecha -->
-            <a href="{% url 'date_range_report' %}" class="btn btn-info btn-circle btn-lg" title="Búsqueda por Fecha">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="currentColor" viewBox="0 0 384 512">
-                    <path d="M32 32C32 14.3 46.3 0 64 0H320c17.7 0 32 14.3 32 32s-14.3 32-32 32H290.5l11.4 148.2c36.7 19.9 65.7 53.2 79.5 94.7l1 3c3.3 9.8 1.6 20.5-4.4 28.8s-15.7 13.3-26 13.3H32c-10.3 0-19.9-5-26-13.3s-7.7-19.1-4.4-28.8l1-3c13.8-41.5 42.8-74.8 79.5-94.7L93.5 64H64C46.3 64 32 49.7 32 32zM160 384h64v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V384z"/>
-                </svg>
-            </a>
-
-            <!-- Capturar Tiempos de Atención -->
-            <button type="button" id="btnAbrirTiempos" class="btn btn-circle btn-lg text-white" style="background-color:#0f766e; border-color:#0f766e;" title="Capturar Tiempos de Atención">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-            </button>
-
-            <!-- Capturar Menor -->
-            <button type="button" onclick="abrirModalMenor()" class="btn btn-accent btn-circle btn-lg" title="Capturar Menor de Edad">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="currentColor" viewBox="0 0 320 512">
-                    <path d="M96 64a64 64 0 1 1 128 0A64 64 0 1 1 96 64zm48 320v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V288.9l-9.6 16c-9.1 15.1-28.8 20-43.9 10.9s-20-28.8-10.9-43.9l58.3-97c17.4-28.9 48.6-46.6 82.3-46.6h13.7c33.7 0 64.9 17.7 82.3 46.6l58.3 97c9.1 15.1 4.2 34.8-10.9 43.9s-34.8 4.2-43.9-10.9l-9.6-16V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V384H144z"/>
-                </svg>
-            </button>
-
-            <!-- Subir Excel -->
-            <a href="{% url 'upload_excel' %}" class="btn btn-success btn-lg gap-2">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                </svg>
-                Subir Excel
-            </a>
-        </div>
-    </div>
-
-     <!-- Filtros Mejorados -->
-    <div class="card bg-base-100 shadow-md">
-        <div class="card-body">
-            <div class="flex flex-wrap gap-4 items-center">
-                <!-- Buscador de Documento (Principal) -->
-                <div class="form-control flex-1 min-w-[300px]">
-                    <label class="label">
-                        <span class="label-text font-semibold">Buscar por Documento o Pasajero</span>
-                        <span class="label-text-alt text-xs text-base-content/60">
-                            <kbd class="kbd kbd-xs">Enter</kbd> para buscar ya
-                        </span>
+            <div class="ds-field" style="width:260px;">
+                <label class="ds-label" for="batchFilter">Lote de carga</label>
+                <select name="batch" id="batchFilter" class="ds-select">
+                    <option value="">Todos los lotes</option>
+                    {% for batch in batches %}
+                    <option value="{{ batch.id }}" {% if request.GET.batch == batch.id|stringformat:"s" %}selected{% endif %}>Lote #{{ batch.id }} · {{ batch.usuario.username }} ({{ batch.nombre_archivo|default:"sin archivo" }})</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="ds-field">
+                <span class="ds-label" id="lblFiltros">Estatus <span style="font-weight:400; color:var(--ds-text-muted);">· SR Segunda Revisión · R Rechazo · I Internación</span></span>
+                <div class="ds-pills" role="group" aria-labelledby="lblFiltros">
+                    <label class="ds-pill" aria-pressed="{% if request.GET.segunda_revision == 'true' %}true{% else %}false{% endif %}" title="Segunda Revisión">
+                        <input type="checkbox" id="segundaRevisionFilter" class="ds-sr-only" {% if request.GET.segunda_revision == 'true' %}checked{% endif %}>
+                        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-success);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> SR
                     </label>
-                    <div class="relative">
-                        <input 
-                            type="text" 
-                            id="searchInput" 
-                            placeholder="Escribe número de documento o nombre... (Enter para buscar)" 
-                            class="input input-bordered w-full pr-10"
-                            value="{{ request.GET.search }}"
-                        >
-                        <button 
-                            id="clearSearch" 
-                            class="btn btn-ghost btn-sm absolute right-1 top-1/2 -translate-y-1/2 hidden"
-                            onclick="clearSearchFilter()"
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                            </svg>
-                        </button>
-                    </div>
-                </div>
-
-                <!-- Lote de Carga -->
-                <div class="form-control w-full max-w-xs">
-                    <label class="label">
-                        <span class="label-text font-semibold">Lote de Carga</span>
+                    <label class="ds-pill" aria-pressed="{% if request.GET.rechazado == 'true' %}true{% else %}false{% endif %}" title="Rechazo">
+                        <input type="radio" name="filtro_exclusivo" id="rechazadoFilter" class="ds-sr-only" {% if request.GET.rechazado == 'true' %}checked{% endif %}>
+                        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-danger);"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg> R
                     </label>
-                    <select name="batch" id="batchFilter" class="select select-bordered">
-                        <option value="">Todos los lotes</option>
-                        {% for batch in batches %}
-                        <option value="{{ batch.id }}" {% if request.GET.batch == batch.id|stringformat:"s" %}selected{% endif %}>
-                            Lote #{{ batch.id }} - {{ batch.usuario.username }} ({{ batch.nombre_archivo|default:"sin archivo" }})
-                        </option>
-                        {% endfor %}
-                    </select>
-                </div>
-
-                <!-- Filtros Rápidos -->
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text font-semibold">Filtros Rápidos</span>
+                    <label class="ds-pill" aria-pressed="{% if request.GET.internacion == 'true' %}true{% else %}false{% endif %}" title="Internación">
+                        <input type="radio" name="filtro_exclusivo" id="internacionFilter" class="ds-sr-only" {% if request.GET.internacion == 'true' %}checked{% endif %}>
+                        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-info);"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg> I
                     </label>
-                    <div class="flex gap-2">
-                        <!-- Segunda Revisión (Checkbox independiente) -->
-                        <label class="btn btn-sm {% if request.GET.segunda_revision == 'true' %}btn-success{% else %}btn-ghost{% endif %} gap-2 cursor-pointer" title="Segunda Revisión">
-                            <input 
-                                type="checkbox" 
-                                id="segundaRevisionFilter" 
-                                class="checkbox checkbox-xs"
-                                {% if request.GET.segunda_revision == 'true' %}checked{% endif %}
-                            >
-                            <span>SR</span>
-                        </label>
-
-                        <!-- Rechazo (Radio button con Internación) -->
-                        <label class="btn btn-sm {% if request.GET.rechazado == 'true' %}btn-error{% else %}btn-ghost{% endif %} gap-2 cursor-pointer" title="Rechazo">
-                            <input 
-                                type="radio" 
-                                name="filtro_exclusivo"
-                                id="rechazadoFilter" 
-                                class="radio radio-xs"
-                                {% if request.GET.rechazado == 'true' %}checked{% endif %}
-                            >
-                            <span>R</span>
-                        </label>
-
-                        <!-- Internación (Radio button con Rechazo) -->
-                        <label class="btn btn-sm {% if request.GET.internacion == 'true' %}btn-info{% else %}btn-ghost{% endif %} gap-2 cursor-pointer" title="Punto de Internación">
-                            <input 
-                                type="radio" 
-                                name="filtro_exclusivo"
-                                id="internacionFilter" 
-                                class="radio radio-xs"
-                                {% if request.GET.internacion == 'true' %}checked{% endif %}
-                            >
-                            <span>I</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Botón Limpiar -->
-                <div class="form-control">
-                    <label class="label opacity-0">
-                        <span class="label-text">-</span>
-                    </label>
-                    <a href="{% url 'admin_list' %}" class="btn btn-ghost gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Limpiar Todo
-                    </a>
                 </div>
             </div>
+            <a href="{% url 'admin_list' %}" class="ds-btn ds-btn-ghost"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Limpiar</a>
         </div>
-    </div>
+    </section>
 
-    <!-- Tabla de Registros -->
-    <div class="card bg-base-100 shadow-md">
-        <div class="card-body p-0">
-            <div class="overflow-x-auto">
-                <table class="table table-zebra" id="registrosTable">
-                    <thead>
-                        <tr class="bg-primary text-primary-content">
-                            <!-- Campos Administrativos (Izquierda) -->
-                            <th class="sticky left-0 z-10 bg-primary text-center" title="Segunda Revisión">SR</th>
-                            <th class="sticky left-[60px] z-10 bg-primary text-center" title="Rechazo">R</th>
-                            <th class="sticky left-[120px] z-10 bg-primary text-center" title="Punto de Internación">I</th>
-                            <th class="sticky left-[180px] z-10 bg-primary">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                                </svg>
-                                Comentario
-                            </th>
-                            <th class="sticky left-[360px] z-10 bg-primary">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 inline" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                </svg>
-                                Acciones
-                            </th>
-                            
-                            <!-- Campos del Excel -->
-                            <th>Vuelo</th>
-                            <th>Fecha Vuelo</th>
-                            <th>Salida</th>
-                            <th>Llegada</th>
-                            <th>Hora Salida</th>
-                            <th>Pasajero</th>
-                            <th>Documento</th>
-                            <th>Asiento</th>
-                            <th>Equipaje</th>
-                            <th>Piezas</th>
-                            <th>Peso</th>
-                            <th>Estado Check-in</th>
-                            <th>Contacto General</th>
-                            <th>Contacto Reserva</th>
-                            <th>Contacto Pasajero</th>
-                            <th>Ticket</th>
-                            <th>Fecha Nacimiento</th>
-                            <th>Género</th>
-                            <th>Código País</th>
-                            <th>País Emisión</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {% for registro in page_obj %}
-                        <tr id="registro-{{ registro.id }}"
-                            data-documento="{{ registro.numero_documento|default:'' }}" 
-                            data-pasajero="{{ registro.nombre_pasajero|default:''|lower }}">
-
-                            <!-- CAMPOS ADMINISTRATIVOS (FIJOS A LA IZQUIERDA) -->
-                            <!-- SR - Segunda Revisión (Siempre activo) -->
-                            <td class="sticky left-0 z-10 text-center bg-base-100">
-                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline ajax-toggle">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="segunda_revision" value="{% if registro.segunda_revision %}false{% else %}true{% endif %}">
-                                    <button type="submit" class="btn btn-ghost btn-sm" title="Segunda Revisión">
-                                        {% if registro.segunda_revision %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-success" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {% endif %}
-                                    </button>
-                                </form>
-                            </td>
-                            
-                            <!-- R - Rechazo (Solo se habilita cuando SR está activo, SI I está activo, R se desactiva) -->
-                            <td class="sticky left-[60px] z-10 text-center bg-base-100">
-                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline ajax-toggle">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="rechazado" value="{% if registro.rechazado %}false{% else %}true{% endif %}">
-                                    <button type="submit" class="btn btn-ghost btn-sm" 
-                                            title="Rechazo"
-                                            {% if  not registro.segunda_revision %}disabled{% endif %}>
-                                        {% if registro.rechazado %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                        </svg>
-                                        {% endif %}
-                                    </button>
-                                </form>
-                            </td>
-                            
-                            <!-- I - Internación (Solo se habilita si SR está activo) -->
-                            <td class="sticky left-[120px] z-10 text-center bg-base-100">
-                                <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="inline ajax-toggle">
-                                    {% csrf_token %}
-                                    <input type="hidden" name="internacion" value="{% if registro.internacion %}false{% else %}true{% endif %}">
-                                    <button type="submit" class="btn btn-ghost btn-sm" 
-                                            title="Punto de Internación"
-                                            {% if not registro.segunda_revision %}disabled{% endif %}>
-                                        {% if registro.internacion %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-info" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                        </svg>
-                                        {% else %}
-                                        <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 {% if registro.segunda_revision %}text-gray-400{% else %}text-gray-200{% endif %}" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
-                                        </svg>
-                                        {% endif %}
-                                    </button>
-                                </form>
-                            </td>
-                            
-                            <!-- Comentario -->
-                            <td class="sticky left-[180px] z-10 bg-base-100">
-                                <div class="max-w-[170px] truncate text-xs" title="{{ registro.comentario }}">
-                                    {% if registro.comentario %}
-                                    {{ registro.comentario }}
-                                    {% else %}
-                                    <span class="text-gray-400">-</span>
-                                    {% endif %}
-                                </div>
-                            </td>
-                            
-                            <!-- Acciones -->
-                            <td class="sticky left-[360px] z-10 text-center bg-base-100">
-                                <button onclick="openAccionesModal({{ registro.id }}, '{{ registro.comentario|default:""|escapejs }}', {{ registro.rechazado|yesno:'true,false' }})"
-                                        class="btn btn-sm {% if registro.rechazado %}btn-error{% else %}btn-accent{% endif %}"
-                                        title="{% if registro.rechazado %}Subir foto de rechazo{% else %}Editar comentario{% endif %}">
-                                    {% if registro.rechazado %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                                    </svg>
-                                    {% else %}
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                                    </svg>
-                                    {% endif %}
+    <!-- Tabla -->
+    <section class="ds-card" style="padding:0;">
+        <div class="ds-table-wrap" style="border:0;">
+            <table class="ds-table ds-table-compact" id="registrosTable">
+                <thead>
+                    <tr>
+                        <th scope="col" style="position:sticky; left:0; z-index:3; text-align:center;" title="Segunda Revisión">SR</th>
+                        <th scope="col" style="position:sticky; left:52px; z-index:3; text-align:center;" title="Rechazo">R</th>
+                        <th scope="col" style="position:sticky; left:104px; z-index:3; text-align:center;" title="Internación">I</th>
+                        <th scope="col" style="position:sticky; left:156px; z-index:3;">Comentario</th>
+                        <th scope="col" style="position:sticky; left:326px; z-index:3; box-shadow:2px 0 0 var(--ds-border);">Acciones</th>
+                        <th scope="col">Vuelo</th><th scope="col">Fecha</th><th scope="col">Salida</th><th scope="col">Llegada</th><th scope="col">Hora salida</th>
+                        <th scope="col">Pasajero</th><th scope="col">Documento</th><th scope="col">Asiento</th><th scope="col">Equipaje</th><th scope="col">Piezas</th>
+                        <th scope="col">Peso</th><th scope="col">Check-in</th><th scope="col">Contacto gral.</th><th scope="col">Contacto reserva</th><th scope="col">Contacto pasajero</th>
+                        <th scope="col">Ticket</th><th scope="col">Nacimiento</th><th scope="col">Género</th><th scope="col">Cód. país</th><th scope="col">País emisión</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for registro in page_obj %}
+                    <tr id="registro-{{ registro.id }}" data-documento="{{ registro.numero_documento|default:'' }}" data-pasajero="{{ registro.nombre_pasajero|default:''|lower }}">
+                        <!-- SR -->
+                        <td style="position:sticky; left:0; z-index:1; text-align:center; background:var(--ds-bg-surface);">
+                            <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="ajax-toggle" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="segunda_revision" value="{% if registro.segunda_revision %}false{% else %}true{% endif %}">
+                                <button type="submit" class="ds-toggle-cell {% if registro.segunda_revision %}is-on-sr{% endif %}" aria-pressed="{% if registro.segunda_revision %}true{% else %}false{% endif %}" aria-label="Segunda Revisión de {{ registro.nombre_pasajero }}">
+                                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
                                 </button>
-                            </td>
-                            
-                            <!-- CAMPOS DEL EXCEL -->
-                            <td><strong>{{ registro.vuelo_numero }}</strong></td>
-                            <td>
-                                {% if registro.vuelo_fecha %}
-                                {{ registro.vuelo_fecha|date:"d/m/Y" }}
+                            </form>
+                        </td>
+                        <!-- R -->
+                        <td style="position:sticky; left:52px; z-index:1; text-align:center; background:var(--ds-bg-surface);">
+                            <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="ajax-toggle" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="rechazado" value="{% if registro.rechazado %}false{% else %}true{% endif %}">
+                                <button type="submit" class="ds-toggle-cell {% if registro.rechazado %}is-on-r{% endif %}" {% if not registro.segunda_revision %}disabled data-ds-tip="Requiere SR activo"{% endif %} aria-pressed="{% if registro.rechazado %}true{% else %}false{% endif %}" aria-label="Rechazo de {{ registro.nombre_pasajero }}{% if not registro.segunda_revision %} — requiere Segunda Revisión{% endif %}">
+                                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
+                                </button>
+                            </form>
+                        </td>
+                        <!-- I -->
+                        <td style="position:sticky; left:104px; z-index:1; text-align:center; background:var(--ds-bg-surface);">
+                            <form method="post" action="{% url 'update_registro' registro.id %}?{{ request.GET.urlencode }}" class="ajax-toggle" style="display:inline;">
+                                {% csrf_token %}
+                                <input type="hidden" name="internacion" value="{% if registro.internacion %}false{% else %}true{% endif %}">
+                                <button type="submit" class="ds-toggle-cell {% if registro.internacion %}is-on-i{% endif %}" {% if not registro.segunda_revision %}disabled data-ds-tip="Requiere SR activo"{% endif %} aria-pressed="{% if registro.internacion %}true{% else %}false{% endif %}" aria-label="Internación de {{ registro.nombre_pasajero }}{% if not registro.segunda_revision %} — requiere Segunda Revisión{% endif %}">
+                                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+                                </button>
+                            </form>
+                        </td>
+                        <!-- Comentario -->
+                        <td style="position:sticky; left:156px; z-index:1; background:var(--ds-bg-surface); max-width:170px;">
+                            <div class="truncate" style="max-width:160px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; font-size:var(--ds-text-xs);" title="{{ registro.comentario }}">
+                                {% if registro.comentario %}{{ registro.comentario }}{% else %}<span style="color:var(--ds-text-muted);">—</span>{% endif %}
+                            </div>
+                        </td>
+                        <!-- Acciones -->
+                        <td style="position:sticky; left:326px; z-index:1; text-align:center; background:var(--ds-bg-surface); box-shadow:2px 0 0 var(--ds-border);">
+                            <button onclick="openAccionesModal({{ registro.id }}, '{{ registro.comentario|default:''|escapejs }}', {{ registro.rechazado|yesno:'true,false' }})" class="ds-btn ds-btn-sm ds-btn-icon {% if registro.rechazado %}ds-btn-danger{% else %}ds-btn-secondary{% endif %}" aria-label="{% if registro.rechazado %}Subir foto de rechazo{% else %}Editar comentario{% endif %} de {{ registro.nombre_pasajero }}">
+                                {% if registro.rechazado %}
+                                <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"/><circle cx="12" cy="13" r="4"/></svg>
                                 {% else %}
-                                <span class="text-gray-400">-</span>
+                                <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                                 {% endif %}
-                            </td>
-                            <td><span class="badge badge-outline badge-sm">{{ registro.aeropuerto_salida }}</span></td>
-                            <td><span class="badge badge-outline badge-sm">{{ registro.aeropuerto_llegada }}</span></td>
-                            <td class="text-xs">{{ registro.salida_planificada|default:"-" }}</td>
-                            <td class="font-semibold">{{ registro.nombre_pasajero }}</td>
-                            {% if registro.numero_documento %}
-                            <td><code class="text-md">{{ registro.numero_documento }}</code></td>
-                            {% else %}
-                            <td class="bg-error/20 border-l-4 border-error">
-                                <span class="badge badge-error gap-1 font-bold text-white" title="Pasajero sin número de documento — revisar en Casos Especiales">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                    </svg>
-                                    SIN DOCUMENTO
-                                </span>
-                            </td>
-                            {% endif %}
-                            <td><span class="badge badge-primary badge-sm">{{ registro.numero_asiento }}</span></td>
-                            <td class="text-xs max-w-[200px] truncate" title="{{ registro.numero_equipaje }}">
-                                {{ registro.numero_equipaje|default:"-" }}
-                            </td>
-                            <td class="text-center">{{ registro.piezas }}</td>
-                            <td class="text-center">{{ registro.peso }} kg</td>
-                            <td><span class="badge badge-ghost badge-sm">{{ registro.estado_checkin }}</span></td>
-                            <td class="text-xs max-w-[150px] truncate" title="{{ registro.informacion_contacto }}">
-                                {{ registro.informacion_contacto|default:"-" }}
-                            </td>
-                            <td class="text-xs">{{ registro.contacto_reserva|default:"-" }}</td>
-                            <td class="text-xs">{{ registro.contacto_pasajero|default:"-" }}</td>
-                            <td class="font-mono text-xs">{{ registro.numero_ticket }}</td>
-                            <td class="text-xs">
-                                {% if registro.fecha_nacimiento %}
-                                {{ registro.fecha_nacimiento|date:"d/m/Y" }}
-                                {% else %}
-                                -
-                                {% endif %}
-                            </td>
-                            <td class="text-center">
-                                {% if registro.genero == 'M' %}
-                                <span class="badge badge-info badge-sm">M</span>
-                                {% elif registro.genero == 'F' %}
-                                <span class="badge badge-secondary badge-sm">F</span>
-                                {% else %}
-                                {{ registro.genero }}
-                                {% endif %}
-                            </td>
-                            <td class="text-xs">{{ registro.codigo_pais_emision }}</td>
-                            <td>{{ registro.pais_emision }}</td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="25" class="text-center py-8">
-                                <div class="flex flex-col items-center gap-4">
-                                    <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                                    </svg>
-                                    <p class="text-gray-500 text-lg font-semibold">No se encontraron registros</p>
-                                    <p class="text-gray-400 text-sm">Intenta ajustar los filtros o la búsqueda</p>
-                                </div>
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
+                            </button>
+                        </td>
+                        <!-- Campos del Excel -->
+                        <td style="font-weight:700;">{{ registro.vuelo_numero }}</td>
+                        <td class="ds-tabular">{% if registro.vuelo_fecha %}{{ registro.vuelo_fecha|date:"d/m/Y" }}{% else %}<span style="color:var(--ds-text-muted);">—</span>{% endif %}</td>
+                        <td><span class="ds-badge">{{ registro.aeropuerto_salida }}</span></td>
+                        <td><span class="ds-badge">{{ registro.aeropuerto_llegada }}</span></td>
+                        <td class="ds-tabular" style="font-size:var(--ds-text-xs);">{{ registro.salida_planificada|default:"—" }}</td>
+                        <td style="font-weight:600;">{{ registro.nombre_pasajero }}</td>
+                        {% if registro.numero_documento %}
+                        <td style="font-family:var(--ds-font-mono); font-size:var(--ds-text-xs);">{{ registro.numero_documento }}</td>
+                        {% else %}
+                        <td style="background:var(--ds-warm-200); box-shadow:inset 3px 0 0 var(--ds-danger);">
+                            <span class="ds-badge ds-badge-danger" title="Pasajero sin número de documento — revisar en Casos Especiales"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>Sin documento</span>
+                        </td>
+                        {% endif %}
+                        <td><span class="ds-badge ds-badge-info">{{ registro.numero_asiento }}</span></td>
+                        <td class="truncate" style="font-size:var(--ds-text-xs); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ registro.numero_equipaje }}">{{ registro.numero_equipaje|default:"—" }}</td>
+                        <td class="ds-tabular" style="text-align:center;">{{ registro.piezas }}</td>
+                        <td class="ds-tabular" style="text-align:center;">{{ registro.peso }} kg</td>
+                        <td><span class="ds-badge">{{ registro.estado_checkin }}</span></td>
+                        <td class="truncate" style="font-size:var(--ds-text-xs); max-width:150px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ registro.informacion_contacto }}">{{ registro.informacion_contacto|default:"—" }}</td>
+                        <td style="font-size:var(--ds-text-xs);">{{ registro.contacto_reserva|default:"—" }}</td>
+                        <td style="font-size:var(--ds-text-xs);">{{ registro.contacto_pasajero|default:"—" }}</td>
+                        <td style="font-family:var(--ds-font-mono); font-size:var(--ds-text-xs);">{{ registro.numero_ticket }}</td>
+                        <td class="ds-tabular" style="font-size:var(--ds-text-xs);">{% if registro.fecha_nacimiento %}{{ registro.fecha_nacimiento|date:"d/m/Y" }}{% else %}—{% endif %}</td>
+                        <td style="text-align:center;">{% if registro.genero == 'M' %}<span class="ds-badge ds-badge-info">M</span>{% elif registro.genero == 'F' %}<span class="ds-badge ds-badge-brand">F</span>{% else %}{{ registro.genero }}{% endif %}</td>
+                        <td style="font-size:var(--ds-text-xs);">{{ registro.codigo_pais_emision }}</td>
+                        <td>{{ registro.pais_emision }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="25">
+                            <div class="ds-empty">
+                                <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg></div>
+                                <h3 class="ds-h3">No se encontraron registros</h3>
+                                <p class="ds-empty-desc">Ajusta los filtros o la búsqueda, o sube un archivo Excel para empezar.</p>
+                                <a href="{% url 'upload_excel' %}" class="ds-btn ds-btn-primary">Subir Excel</a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
         </div>
-    </div>
+    </section>
 
     <!-- Paginación -->
     {% if page_obj.has_other_pages %}
-    <div class="flex justify-center">
-        <div class="join">
-            {% if page_obj.has_previous %}
-            <a href="?page=1{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado%}&rechazado={{ request.GET.rechazado}}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" 
-               class="join-item btn btn-sm">«</a>
-            <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado%}&rechazado={{ request.GET.rechazado}}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" 
-               class="join-item btn btn-sm">‹</a>
-            {% endif %}
-            
-            <button class="join-item btn btn-sm btn-active">
-                Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}
-            </button>
-            
-            {% if page_obj.has_next %}
-            <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado%}&rechazado={{ request.GET.rechazado}}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" 
-               class="join-item btn btn-sm">›</a>
-            <a href="?page={{ page_obj.paginator.num_pages }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado%}&rechazado={{ request.GET.rechazado}}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" 
-               class="join-item btn btn-sm">»</a>
-            {% endif %}
-        </div>
-    </div>
+    <nav aria-label="Paginación" style="display:flex; justify-content:center; gap:8px;">
+        {% with qs=request.GET.urlencode %}
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado %}&rechazado={{ request.GET.rechazado }}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">‹ Anterior</a>
+        {% endif %}
+        <span class="ds-btn ds-btn-sm ds-btn-ghost ds-tabular" aria-current="page">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado %}&rechazado={{ request.GET.rechazado }}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">Siguiente ›</a>
+        {% endif %}
+        {% endwith %}
+    </nav>
     {% endif %}
 </div>
 
-<!-- Modal para Editar Comentario -->
-<dialog id="editModal" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-primary" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-            </svg>
-            Editar Comentario
-        </h3>
+<!-- Estilo local para las celdas-toggle (autocontenido, sin DaisyUI) -->
+<style>
+    .ds-toggle-cell { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid var(--ds-border); border-radius:var(--ds-radius-md); background:var(--ds-bg-surface); color:var(--ds-neutral-300); cursor:pointer; transition:all var(--ds-dur-fast); }
+    .ds-toggle-cell:hover:not(:disabled) { border-color:var(--ds-guinda-400); }
+    .ds-toggle-cell:focus-visible { outline:none; box-shadow:var(--ds-focus-ring); }
+    .ds-toggle-cell:disabled { opacity:.45; cursor:not-allowed; }
+    .ds-toggle-cell.is-on-sr { background:var(--ds-success-container); border-color:#BCDCC9; color:var(--ds-success); }
+    .ds-toggle-cell.is-on-r  { background:var(--ds-danger-container); border-color:#F4B4AE; color:var(--ds-danger); }
+    .ds-toggle-cell.is-on-i  { background:var(--ds-info-container); border-color:#B9D2E5; color:var(--ds-info); }
+    #registrosTable tbody tr:hover td[style*="sticky"] { background:var(--ds-hover-bg) !important; }
+</style>
+
+<!-- ========================= MODALES ========================= -->
+<!-- Editar comentario -->
+<dialog id="editModal" class="ds-modal">
+    <div class="ds-modal-box">
+        <header class="ds-modal-header"><h2 class="ds-h2" style="font-size:18px;">Editar comentario</h2>
+            <button type="button" class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="closeEditModal()"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </header>
         <form method="post" id="editForm">
             {% csrf_token %}
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text">Comentario</span>
-                </label>
-                <textarea name="comentario" id="comentario" class="textarea textarea-bordered h-32" placeholder="Escribe un comentario..."></textarea>
+            <div class="ds-modal-body">
+                <div class="ds-field"><label class="ds-label" for="comentario">Comentario</label>
+                    <textarea name="comentario" id="comentario" class="ds-textarea" placeholder="Escribe un comentario…"></textarea>
+                </div>
             </div>
-            <div class="modal-action">
-                <button type="button" onclick="closeEditModal()" class="btn btn-ghost">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Cancelar
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Guardar
-                </button>
-            </div>
+            <footer class="ds-modal-footer">
+                <button type="button" onclick="closeEditModal()" class="ds-btn ds-btn-ghost">Cancelar</button>
+                <button type="submit" class="ds-btn ds-btn-primary">Guardar</button>
+            </footer>
         </form>
     </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
+    <form method="dialog" class="ds-sr-only"><button>cerrar</button></form>
 </dialog>
 
-    <!-- Modal para Subir Foto de Rechazo -->
-<dialog id="modalFotoRechazo" class="modal">
-    <div class="modal-box">
-        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-error" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-            </svg>
-            Subir Foto de Rechazo
-        </h3>
-        
-        <p class="text-sm text-base-content/70 mb-4">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 inline mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            Por favor, sube una foto del documento o pasajero rechazado.
-        </p>
-        
+<!-- Subir foto de rechazo (conserva IDs para admin_list.js) -->
+<dialog id="modalFotoRechazo" class="ds-modal">
+    <div class="ds-modal-box">
+        <header class="ds-modal-header"><h2 class="ds-h2" style="font-size:18px;">Subir foto de rechazo</h2>
+            <button type="button" class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="document.getElementById('modalFotoRechazo').close()"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </header>
         <form id="formFotoRechazo" onsubmit="subirFotoRechazo(event)" enctype="multipart/form-data">
             {% csrf_token %}
-            
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text font-semibold">Seleccionar Foto (opcional)</span>
-                </label>
-                <input 
-                    type="file" 
-                    id="inputFotoRechazo"
-                    name="foto" 
-                    accept="image/jpeg,image/jpg,image/png,image/webp"
-                    class="file-input file-input-bordered file-input-primary w-full"
-                >
-                <label class="label">
-                    <span class="label-text-alt">Formatos: JPG, JPEG, PNG, WEBP. También puedes pegar (Ctrl+V) desde portapapeles</span>
-                </label>
-            </div>
-            
-            <!-- Preview de la imagen -->
-            <div id="previewFotoRechazo" class="mb-4 hidden">
-                <label class="label">
-                    <span class="label-text font-semibold">Vista previa</span>
-                </label>
-                <div class="relative">
-                    <img id="imgPreviewRechazo" class="rounded-lg border-2 border-base-300 max-h-64 w-full object-contain" alt="Preview">
-                    <button type="button" onclick="limpiarFotoRechazo()" class="btn btn-error btn-sm absolute top-2 right-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                        </svg>
-                        Eliminar
-                    </button>
+            <div class="ds-modal-body" style="display:flex; flex-direction:column; gap:16px;">
+                <div class="ds-alert ds-alert-info"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div>Sube una foto del documento o pasajero rechazado. También puedes pegar con Ctrl+V desde el portapapeles.</div></div>
+                <div class="ds-field"><label class="ds-label" for="inputFotoRechazo">Foto (opcional)</label>
+                    <input type="file" id="inputFotoRechazo" name="foto" accept="image/jpeg,image/jpg,image/png,image/webp" class="ds-input" style="padding-top:9px;">
+                    <p class="ds-help">JPG, JPEG, PNG o WEBP.</p>
+                </div>
+                <div id="previewFotoRechazo" class="hidden">
+                    <span class="ds-label">Vista previa</span>
+                    <div style="position:relative; margin-top:6px;">
+                        <img id="imgPreviewRechazo" style="border-radius:var(--ds-radius-md); border:1px solid var(--ds-border); max-height:256px; width:100%; object-fit:contain;" alt="Vista previa del rechazo">
+                        <button type="button" onclick="limpiarFotoRechazo()" class="ds-btn ds-btn-sm ds-btn-danger" style="position:absolute; top:8px; right:8px;">Eliminar</button>
+                    </div>
+                </div>
+                <div class="ds-field"><label class="ds-label" for="comentarioRechazo">Comentario del rechazo</label>
+                    <textarea id="comentarioRechazo" name="comentario" class="ds-textarea" rows="3" placeholder="Motivo del rechazo o detalles…"></textarea>
                 </div>
             </div>
-            
-            <div class="form-control mb-4">
-                <label class="label">
-                    <span class="label-text font-semibold flex items-center gap-2">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-accent" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z" />
-                        </svg>
-                        Comentario del rechazo
-                    </span>
-                </label>
-                <textarea 
-                    id="comentarioRechazo"
-                    name="comentario" 
-                    class="textarea textarea-bordered" 
-                    rows="3"
-                    placeholder="Escribe el motivo del rechazo o detalles adicionales..."></textarea>
-                <label class="label">
-                    <span class="label-text-alt">Este comentario se guardará en el registro</span>
-                </label>
-            </div>
-            
-            <div class="modal-action">
-                <button type="button" onclick="document.getElementById('modalFotoRechazo').close()" class="btn btn-ghost">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                    </svg>
-                    Cancelar
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                    </svg>
-                    Subir Foto
-                </button>
-            </div>
+            <footer class="ds-modal-footer">
+                <button type="button" onclick="document.getElementById('modalFotoRechazo').close()" class="ds-btn ds-btn-ghost">Cancelar</button>
+                <button type="submit" class="ds-btn ds-btn-primary">Subir foto</button>
+            </footer>
         </form>
     </div>
-    <form method="dialog" class="modal-backdrop">
-        <button>close</button>
-    </form>
+    <form method="dialog" class="ds-sr-only"><button>cerrar</button></form>
 </dialog>
 
-<!-- Modal Captura de Menor -->
-<dialog id="modalCapturaMenor" class="modal">
-    <div class="modal-box max-w-lg">
-        <h3 class="font-bold text-lg mb-4 flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-accent" fill="currentColor" viewBox="0 0 320 512">
-                <path d="M96 64a64 64 0 1 1 128 0A64 64 0 1 1 96 64zm48 320v96c0 17.7-14.3 32-32 32s-32-14.3-32-32V288.9l-9.6 16c-9.1 15.1-28.8 20-43.9 10.9s-20-28.8-10.9-43.9l58.3-97c17.4-28.9 48.6-46.6 82.3-46.6h13.7c33.7 0 64.9 17.7 82.3 46.6l58.3 97c9.1 15.1 4.2 34.8-10.9 43.9s-34.8 4.2-43.9-10.9l-9.6-16V480c0 17.7-14.3 32-32 32s-32-14.3-32-32V384H144z"/>
-            </svg>
-            Capturar Menor de Edad
-        </h3>
-
-        <form method="post" action="{% url 'crear_menor' %}" class="space-y-3">
+<!-- Captura de Menor (se refina en Fase 14 — IDs conservados) -->
+<dialog id="modalCapturaMenor" class="ds-modal">
+    <div class="ds-modal-box">
+        <header class="ds-modal-header"><h2 class="ds-h2" style="font-size:18px;">Capturar menor de edad</h2>
+            <button type="button" class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="document.getElementById('modalCapturaMenor').close()"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </header>
+        <form method="post" action="{% url 'crear_menor' %}">
             {% csrf_token %}
-
-            <div class="form-control">
-                <label class="label"><span class="label-text font-semibold">Nombre completo *</span></label>
-                <input type="text" name="nombre" required class="input input-bordered w-full" placeholder="Ej. Juan Pérez">
-            </div>
-
-            <div class="form-control">
-                <label class="label"><span class="label-text font-semibold">Número de documento</span></label>
-                <input type="text" name="numero_documento" class="input input-bordered w-full" placeholder="Opcional">
-            </div>
-
-            <div class="form-control">
-                <label class="label"><span class="label-text font-semibold">Género *</span></label>
-                <div class="join w-full">
-                    <input type="radio" name="genero" value="Hombre" class="join-item btn flex-1" aria-label="Hombre" required>
-                    <input type="radio" name="genero" value="Mujer"  class="join-item btn flex-1" aria-label="Mujer">
-                    <input type="radio" name="genero" value="Otro"   class="join-item btn flex-1" aria-label="Otro">
+            <div class="ds-modal-body" style="display:flex; flex-direction:column; gap:14px;">
+                <div class="ds-field"><label class="ds-label" for="menorNombre">Nombre completo <span class="ds-req">*</span></label><input type="text" id="menorNombre" name="nombre" required class="ds-input" placeholder="Ej. Juan Pérez"></div>
+                <div class="ds-field"><label class="ds-label" for="menorDoc">Número de documento</label><input type="text" id="menorDoc" name="numero_documento" class="ds-input" placeholder="Opcional"></div>
+                <div class="ds-field"><span class="ds-label">Género <span class="ds-req">*</span></span>
+                    <div class="ds-pills">
+                        <label class="ds-pill"><input type="radio" name="genero" value="Hombre" class="ds-sr-only" required> Hombre</label>
+                        <label class="ds-pill"><input type="radio" name="genero" value="Mujer" class="ds-sr-only"> Mujer</label>
+                        <label class="ds-pill"><input type="radio" name="genero" value="Otro" class="ds-sr-only"> Otro</label>
+                    </div>
+                </div>
+                <div class="ds-field"><label class="ds-label" for="menorNac">Nacionalidad <span class="ds-req">*</span></label>
+                    <input type="text" id="menorNac" name="nacionalidad" list="paises-list" required class="ds-input" placeholder="Ej. CHINA, MÉXICO, ESPAÑA…" autocomplete="off">
+                    <datalist id="paises-list">{% for p in paises %}<option value="{{ p.nombre }}">{{ p.nacionalidad }} ({{ p.codigo }})</option>{% endfor %}</datalist>
+                </div>
+                <div class="ds-field"><label class="ds-label" for="menorFechaVuelo">Fecha de vuelo <span class="ds-req">*</span></label><input type="date" name="fecha_vuelo" id="menorFechaVuelo" required class="ds-input"></div>
+                <div class="ds-field"><span class="ds-label">Tipo de vuelo <span class="ds-req">*</span></span>
+                    <div class="ds-pills">
+                        <label class="ds-pill"><input type="radio" name="tipo" value="Local" class="ds-sr-only" required> Local (PEK-TIJ)</label>
+                        <label class="ds-pill"><input type="radio" name="tipo" value="Transito" class="ds-sr-only"> Tránsito (PEK-MEX)</label>
+                    </div>
                 </div>
             </div>
-
-            <div class="form-control">
-                <label class="label">
-                    <span class="label-text font-semibold">Nacionalidad *</span>
-                    <span class="label-text-alt text-xs text-base-content/60">Escribe para buscar</span>
-                </label>
-                <input type="text" name="nacionalidad" list="paises-list" required
-                       class="input input-bordered w-full" placeholder="Ej. CHINA, MÉXICO, ESPAÑA..."
-                       autocomplete="off">
-                <datalist id="paises-list">
-                    {% for p in paises %}
-                    <option value="{{ p.nombre }}">{{ p.nacionalidad }} ({{ p.codigo }})</option>
-                    {% endfor %}
-                </datalist>
-            </div>
-
-            <div class="form-control">
-                <label class="label"><span class="label-text font-semibold">Fecha de vuelo *</span></label>
-                <input type="date" name="fecha_vuelo" id="menorFechaVuelo" required class="input input-bordered w-full">
-            </div>
-
-            <div class="form-control">
-                <label class="label"><span class="label-text font-semibold">Tipo de vuelo *</span></label>
-                <div class="join w-full">
-                    <input type="radio" name="tipo" value="Local"    class="join-item btn flex-1" aria-label="Local (PEK-TIJ)" required>
-                    <input type="radio" name="tipo" value="Transito" class="join-item btn flex-1" aria-label="Tránsito (PEK-MEX)">
-                </div>
-            </div>
-
-            <div class="modal-action">
-                <button type="button" onclick="document.getElementById('modalCapturaMenor').close()" class="btn btn-ghost">Cancelar</button>
-                <button type="submit" class="btn btn-accent">Guardar Menor</button>
-            </div>
+            <footer class="ds-modal-footer">
+                <button type="button" onclick="document.getElementById('modalCapturaMenor').close()" class="ds-btn ds-btn-ghost">Cancelar</button>
+                <button type="submit" class="ds-btn ds-btn-primary">Guardar menor</button>
+            </footer>
         </form>
     </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    <form method="dialog" class="ds-sr-only"><button>cerrar</button></form>
 </dialog>
 
-<!-- Modal Captura de Tiempos de Atención -->
-<dialog id="modalTiemposAtencion" class="modal">
-    <div class="modal-box max-w-xl p-0 overflow-hidden rounded-xl shadow-xl tiempos-box">
-        <form method="post" action="{% url 'capturar_tiempos_atencion' %}" class="flex flex-col">
+<!-- Captura de Tiempos de Atención (se refina en Fase 13 — IDs conservados) -->
+<dialog id="modalTiemposAtencion" class="ds-modal">
+    <div class="ds-modal-box">
+        <form method="post" action="{% url 'capturar_tiempos_atencion' %}">
             {% csrf_token %}
-
-            <!-- Encabezado -->
-            <div class="flex items-center gap-3 px-6 py-4 border-b tiempos-section">
-                <span class="flex items-center justify-center h-9 w-9 rounded-full tiempos-icon">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                    </svg>
-                </span>
-                <h3 class="font-bold text-lg" style="color:#1a1c1e;">Capturar Tiempos de Atención</h3>
-            </div>
-
-            <!-- Cuerpo -->
-            <div class="px-6 py-4 flex flex-col gap-3">
-
-                <!-- Fecha -->
-                <div class="flex flex-col gap-1">
-                    <div class="flex justify-between items-baseline">
-                        <label class="tiempos-label">Fecha *</label>
-                        <span class="tiempos-hint-note">Cambia la fecha si el cierre fue del día anterior</span>
-                    </div>
-                    <input type="date" name="fecha" id="tiemposFecha" required min="2026-05-20" class="tiempos-field">
+            <header class="ds-modal-header"><h2 class="ds-h2" style="font-size:18px;">Capturar tiempos de atención</h2>
+                <button type="button" class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="document.getElementById('modalTiemposAtencion').close()"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </header>
+            <div class="ds-modal-body" style="display:flex; flex-direction:column; gap:12px;">
+                <div class="ds-field"><label class="ds-label" for="tiemposFecha">Fecha <span class="ds-req">*</span></label><input type="date" name="fecha" id="tiemposFecha" required min="2026-05-20" class="ds-input"></div>
+                <div id="tiemposEstado" class="ds-alert ds-alert-info hidden" role="status"></div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <div class="ds-field"><label class="ds-label">Hora inicio <span class="ds-req">*</span></label><input type="time" name="hora_inicio" required class="ds-input"></div>
+                    <div class="ds-field"><label class="ds-label">Hora fin <span class="ds-req">*</span></label><input type="time" name="hora_fin" required class="ds-input"></div>
                 </div>
-
-                <div id="tiemposEstado" class="alert py-2 text-sm hidden" role="status"></div>
-
-                <!-- Hora Inicio / Fin -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="tiempos-label">Hora Inicio *</label>
-                        <input type="time" name="hora_inicio" required class="tiempos-field">
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <label class="tiempos-label">Hora Fin *</label>
-                        <input type="time" name="hora_fin" required class="tiempos-field">
-                    </div>
-                </div>
-
-                <!-- Divisor: Tiempos de atención -->
-                <div class="tiempos-divider flex justify-center"><span>Tiempos de atención</span></div>
-
-                <!-- Rubros -->
+                <div style="text-align:center; font-size:var(--ds-text-xs); font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ds-text-3); border-top:1px solid var(--ds-divider); padding-top:10px;">Tiempos de atención</div>
                 {% for rubro in tiempos_rubros %}
-                <div class="flex flex-col gap-1" data-rubro="{{ rubro.key }}">
-                    <div class="flex justify-between items-baseline">
-                        <label class="tiempos-label">{{ rubro.label }}</label>
-                        <span class="tiempos-duration" data-hint="{{ rubro.key }}">&nbsp;</span>
-                    </div>
+                <div class="ds-field" data-rubro="{{ rubro.key }}">
+                    <div style="display:flex; justify-content:space-between; align-items:baseline;"><label class="ds-label">{{ rubro.label }}</label><span class="ds-small ds-tabular" data-hint="{{ rubro.key }}" style="margin:0;">&nbsp;</span></div>
                     {% if rubro.personas %}
-                    <div class="grid grid-cols-2 gap-3">
-                        <div class="flex flex-col gap-1">
-                            <span class="tiempos-sublabel" aria-hidden="true">&nbsp;</span>
-                            <input type="time" name="{{ rubro.key }}" class="tiempos-field" data-hora>
-                        </div>
-                        <div class="flex flex-col gap-1">
-                            <span class="tiempos-sublabel">Personas</span>
-                            <input type="number" name="fma_personas" id="fmaPersonas" min="0" inputmode="numeric"
-                                   class="tiempos-field" placeholder="Número de personas">
-                        </div>
+                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                        <input type="time" name="{{ rubro.key }}" class="ds-input" data-hora>
+                        <input type="number" name="fma_personas" id="fmaPersonas" min="0" inputmode="numeric" class="ds-input" placeholder="Personas">
                     </div>
                     {% else %}
-                    <input type="time" name="{{ rubro.key }}" class="tiempos-field" data-hora>
+                    <input type="time" name="{{ rubro.key }}" class="ds-input" data-hora>
                     {% endif %}
                 </div>
                 {% endfor %}
-
-                <!-- Divisor: Revisiones Secundarias -->
-                <div class="tiempos-divider flex justify-center"><span>Revisiones Secundarias</span></div>
-
-                <!-- SR Hora Inicio / Fin -->
-                <div class="grid grid-cols-2 gap-4">
-                    <div class="flex flex-col gap-1">
-                        <label class="tiempos-label">SR Hora Inicio</label>
-                        <input type="time" name="rs_hora_inicio" id="rsHoraInicio" class="tiempos-field">
-                    </div>
-                    <div class="flex flex-col gap-1">
-                        <div class="flex justify-between items-baseline">
-                            <label class="tiempos-label">SR Hora Fin</label>
-                            <span class="tiempos-duration" id="rsHint">&nbsp;</span>
-                        </div>
-                        <input type="time" name="rs_hora_fin" id="rsHoraFin" class="tiempos-field">
-                    </div>
+                <div style="text-align:center; font-size:var(--ds-text-xs); font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ds-text-3); border-top:1px solid var(--ds-divider); padding-top:10px;">Revisiones secundarias</div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
+                    <div class="ds-field"><label class="ds-label">SR hora inicio</label><input type="time" name="rs_hora_inicio" id="rsHoraInicio" class="ds-input"></div>
+                    <div class="ds-field"><div style="display:flex; justify-content:space-between; align-items:baseline;"><label class="ds-label">SR hora fin</label><span class="ds-small ds-tabular" id="rsHint" style="margin:0;">&nbsp;</span></div><input type="time" name="rs_hora_fin" id="rsHoraFin" class="ds-input"></div>
                 </div>
             </div>
-
-            <!-- Pie -->
-            <div class="px-6 py-4 border-t flex justify-end gap-3 tiempos-section">
-                <button type="button" onclick="document.getElementById('modalTiemposAtencion').close()" class="tiempos-btn-cancel">Cancelar</button>
-                <button type="submit" class="tiempos-btn-save">Guardar</button>
-            </div>
+            <footer class="ds-modal-footer">
+                <button type="button" onclick="document.getElementById('modalTiemposAtencion').close()" class="ds-btn ds-btn-ghost">Cancelar</button>
+                <button type="submit" class="ds-btn ds-btn-primary">Guardar</button>
+            </footer>
         </form>
     </div>
-    <form method="dialog" class="modal-backdrop"><button>close</button></form>
+    <form method="dialog" class="ds-sr-only"><button>cerrar</button></form>
 </dialog>
-
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    // Configuración del prefijo de URL según el entorno
-    window.URL_PREFIX = {{ is_production|yesno:"'/viajes',''"|safe }};
-</script>
+<script>window.URL_PREFIX = {{ is_production|yesno:"'/viajes',''"|safe }};</script>
 <script src="{% static 'js/admin_list.js' %}"></script>
 {% endblock %}

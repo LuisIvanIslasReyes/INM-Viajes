@@ -1,272 +1,137 @@
-{% extends 'uploader/base.html' %}
-
-{% block title %}Notificaciones{% endblock %}
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 5 · NOTIFICACIONES (PR 11)
+   Conserva: context (filtro_tipo, notificaciones paginator, notificaciones_exitosas),
+   la clase .group y .marcar-leida-btn[data-notif-id] que usa el script,
+   la url marcar_notificacion_leida y el auto-dismiss de cargas exitosas.
+   Prioridad por icono+color (no solo color). 2 acciones visibles + kebab.
+   NOTA agrupación temporal (Hoy/Semana): requiere ajuste en backend
+   (regroup del queryset); se deja el hook marcado. Backend: 0 cambios aquí.
+   ==================================================================== #}
+{% block title %}Notificaciones · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="container mx-auto p-6">
+<div class="ds-container-read" style="max-width: 920px; padding: 0;">
 
-    <!-- Header -->
-    <div class="flex justify-between items-center mb-6">
-        <h1 class="text-2xl font-bold flex items-center gap-2">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9" />
-            </svg>
-            Notificaciones
-        </h1>
-        <a href="{% url 'admin_list' %}" class="btn btn-ghost btn-sm gap-1">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
-            </svg>
-            Volver
+    {% include 'uploader/_page_header.html' with titulo='Notificaciones' subtitulo='Alertas de duplicados, casos especiales, errores y sistema.' %}
+    {% block page_action %}
+    <a href="{% url 'admin_list' %}" class="ds-btn ds-btn-secondary">
+        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver a registros
+    </a>
+    {% endblock %}
+
+    <!-- Tabs / filtro persistente por querystring -->
+    <div class="ds-tabs" role="tablist" aria-label="Filtrar notificaciones" style="margin-bottom:var(--ds-sp-4);">
+        <a class="ds-tab" role="tab" href="?tipo=todas" aria-selected="{% if filtro_tipo == 'todas' %}true{% else %}false{% endif %}">
+            Todas {% if filtro_tipo == 'todas' %}<span class="ds-badge ds-badge-count">{{ notificaciones.paginator.count }}</span>{% endif %}
         </a>
+        <a class="ds-tab" role="tab" href="?tipo=importante" aria-selected="{% if filtro_tipo == 'importante' %}true{% else %}false{% endif %}">Importantes</a>
+        <a class="ds-tab" role="tab" href="?tipo=no_importante" aria-selected="{% if filtro_tipo == 'no_importante' %}true{% else %}false{% endif %}">Informativas</a>
     </div>
 
-    <!-- Tabs -->
-    <div class="flex items-center gap-1 mb-6 border-b border-base-200 pb-0">
-        <a href="?tipo=todas"
-           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
-                  {% if filtro_tipo == 'todas' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
-            Todas
-            {% if filtro_tipo == 'todas' %}
-                <span class="badge badge-primary badge-sm">{{ notificaciones.paginator.count }}</span>
-            {% endif %}
-        </a>
-        <a href="?tipo=importante"
-           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
-                  {% if filtro_tipo == 'importante' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-            </svg>
-            Importante
-        </a>
-        <a href="?tipo=no_importante"
-           class="px-4 py-2 text-sm font-medium flex items-center gap-2 border-b-2 -mb-px transition-colors
-                  {% if filtro_tipo == 'no_importante' %}border-primary text-primary{% else %}border-transparent text-base-content/50 hover:text-base-content hover:border-base-300{% endif %}">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            No Importante
-        </a>
-    </div>
-
-    <!-- Notificaciones de carga exitosa (auto-dismiss) -->
+    <!-- Cargas exitosas (auto-dismiss) -->
     {% if notificaciones_exitosas %}
-    <div id="exitosas-container" class="space-y-3 mb-6">
-        <p class="text-xs text-base-content/40 font-medium uppercase tracking-wider">Cargas completadas — se cerrarán automáticamente</p>
+    <div id="exitosas-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-2); margin-bottom:var(--ds-sp-4);">
+        <p class="ds-caption">Cargas completadas — se cierran solas</p>
         {% for notif in notificaciones_exitosas %}
-        <div class="notif-exitosa relative overflow-hidden rounded-lg border border-success/30 bg-success/5 flex flex-col md:flex-row transition-all duration-700 ease-in-out">
-            <div class="absolute left-0 inset-y-0 w-1 bg-success"></div>
-            <div class="flex-1 pl-6 pr-4 py-3 flex items-center gap-3">
-                <span class="badge badge-success badge-sm gap-1">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                    </svg>
-                    Carga Exitosa
-                </span>
-                <span class="text-sm font-medium text-base-content/70">{{ notif.titulo }}</span>
-                {% if notif.mensaje %}
-                    <span class="text-xs text-base-content/50 hidden md:inline">— {{ notif.mensaje }}</span>
-                {% endif %}
-            </div>
-            <div class="px-4 py-3 flex items-center border-t md:border-t-0 md:border-l border-success/20">
-                <span class="text-xs text-base-content/40">{{ notif.fecha_creacion|date:"d/m/Y H:i" }}</span>
-            </div>
+        <div class="notif-exitosa ds-alert ds-alert-success" role="status" style="transition:all .7s ease;">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+            <div style="flex:1;"><strong>{{ notif.titulo }}</strong>{% if notif.mensaje %} — {{ notif.mensaje }}{% endif %}</div>
+            <span class="ds-small ds-tabular" style="margin:0;">{{ notif.fecha_creacion|date:"d/m H:i" }}</span>
         </div>
         {% endfor %}
     </div>
     {% endif %}
 
-    <!-- Lista de notificaciones -->
+    <!-- Lista -->
     {% if notificaciones %}
-        <div class="space-y-3">
-            {% for notif in notificaciones %}
-            <div class="group relative overflow-hidden rounded-lg border flex flex-col md:flex-row transition-all duration-200
-                        {% if notif.leida %}
-                            bg-base-200/50 border-base-300
-                        {% else %}
-                            bg-white border-primary/20 shadow hover:-translate-y-0.5
-                        {% endif %}">
-
-                <!-- Accent bar izquierdo -->
-                <div class="absolute left-0 inset-y-0 w-1
-                            {% if notif.categoria == 'casos_especiales' or notif.categoria == 'error_registro' %}bg-error{% elif notif.categoria == 'duplicados' %}bg-warning{% elif notif.categoria == 'carga_exitosa' %}bg-success{% else %}bg-info{% endif %}
-                            {% if notif.leida %}opacity-20{% endif %}">
-                </div>
-
-                <!-- Contenido principal -->
-                <div class="flex-1 pl-6 pr-4 py-4 flex flex-col gap-2">
-
-                    <!-- Badges -->
-                    <div class="flex flex-wrap items-center gap-2">
-                        {% if notif.categoria == 'duplicados' %}
-                            <span class="badge badge-sm gap-1 {% if notif.leida %}badge-ghost text-base-content/40{% else %}badge-warning{% endif %}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                                </svg>
-                                Duplicados
-                            </span>
-                        {% elif notif.categoria == 'casos_especiales' %}
-                            <span class="badge badge-sm gap-1 {% if notif.leida %}badge-ghost text-base-content/40{% else %}badge-error{% endif %}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-                                </svg>
-                                Casos Especiales
-                            </span>
-                        {% elif notif.categoria == 'error_registro' %}
-                            <span class="badge badge-sm gap-1 {% if notif.leida %}badge-ghost text-base-content/40{% else %}badge-error{% endif %}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
-                                </svg>
-                                Error
-                            </span>
-                        {% elif notif.categoria == 'sistema' %}
-                            <span class="badge badge-sm gap-1 {% if notif.leida %}badge-ghost text-base-content/40{% else %}badge-info{% endif %}">
-                                <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                Sistema
-                            </span>
-                        {% endif %}
-
-                        {% if not notif.leida %}
-                            <span class="badge badge-outline badge-primary badge-sm font-semibold">Nueva</span>
-                        {% endif %}
-                    </div>
-
-                    <!-- Título -->
-                    <h3 class="text-base leading-snug
-                               {% if notif.leida %}text-base-content/50 font-normal{% else %}text-base-content font-semibold{% endif %}">
-                        {{ notif.titulo }}
-                    </h3>
-
-                    <!-- Mensaje -->
-                    <p class="text-sm {% if notif.leida %}text-base-content/40{% else %}text-base-content/65{% endif %}">
-                        {{ notif.mensaje }}
-                    </p>
-
-                    <!-- Fecha -->
-                    <p class="text-xs mt-1 flex items-center gap-1
-                              {% if notif.leida %}text-base-content/30{% else %}text-primary/70{% endif %}">
-                        <svg xmlns="http://www.w3.org/2000/svg" class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                        </svg>
-                        {{ notif.fecha_creacion|date:"d/m/Y H:i" }}
-                    </p>
-                </div>
-
-                <!-- Panel de acciones -->
-                <div class="flex md:flex-col justify-end items-center md:items-stretch gap-2 px-4 py-4
-                            border-t md:border-t-0 md:border-l border-base-200
-                            {% if notif.leida %}bg-base-200/30{% else %}bg-base-100/40{% endif %}">
-                    {% if notif.enlace %}
-                        <a href="{{ notif.enlace }}"
-                           class="btn btn-sm {% if notif.leida %}btn-ghost text-base-content/40{% else %}btn-primary{% endif %}">
-                            Ver Detalles
-                        </a>
+    <div style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+        {% for notif in notificaciones %}
+        <article class="group ds-card {% if not notif.leida %}ds-card-hover{% endif %}"
+                 style="display:flex; {% if notif.leida %}opacity:.72;{% endif %}
+                        border-left:4px solid {% if notif.categoria == 'casos_especiales' or notif.categoria == 'error_registro' %}var(--ds-danger){% elif notif.categoria == 'duplicados' %}var(--ds-warning-accent){% elif notif.categoria == 'carga_exitosa' %}var(--ds-success){% else %}var(--ds-info){% endif %};">
+            <div style="flex:1; padding:var(--ds-sp-4) var(--ds-sp-4); display:flex; flex-direction:column; gap:8px; min-width:0;">
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+                    {% if notif.categoria == 'duplicados' %}
+                        <span class="ds-badge ds-badge-warning"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplicados</span>
+                    {% elif notif.categoria == 'casos_especiales' %}
+                        <span class="ds-badge ds-badge-danger"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>Caso especial</span>
+                    {% elif notif.categoria == 'error_registro' %}
+                        <span class="ds-badge ds-badge-danger"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Error</span>
+                    {% elif notif.categoria == 'sistema' %}
+                        <span class="ds-badge ds-badge-info"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Sistema</span>
                     {% endif %}
-
-                    {% if not notif.leida %}
-                        <button class="btn btn-sm btn-ghost text-base-content/55 marcar-leida-btn gap-1"
-                                data-notif-id="{{ notif.id }}">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
-                            </svg>
-                            Marcar leída
-                        </button>
-                    {% endif %}
+                    {% if not notif.leida %}<span class="ds-badge ds-badge-brand">Nueva</span>{% endif %}
                 </div>
+                <h3 style="margin:0; font-size:var(--ds-text-base); font-weight:{% if notif.leida %}500{% else %}700{% endif %}; color:var(--ds-text); line-height:1.4;">{{ notif.titulo }}</h3>
+                <p style="margin:0; font-size:var(--ds-text-sm); color:var(--ds-text-3); line-height:1.5;">{{ notif.mensaje }}</p>
+                <p class="ds-small ds-tabular" style="margin:0; display:flex; align-items:center; gap:6px; color:var(--ds-text-muted);">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    {{ notif.fecha_creacion|date:"d/m/Y H:i" }}
+                </p>
             </div>
-            {% endfor %}
-        </div>
-
-        <!-- Paginación -->
-        {% if notificaciones.has_other_pages %}
-        <div class="flex justify-center mt-8">
-            <div class="join">
-                {% if notificaciones.has_previous %}
-                    <a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.previous_page_number }}" class="join-item btn btn-sm">«</a>
+            <div style="display:flex; flex-direction:column; justify-content:center; align-items:stretch; gap:8px; padding:var(--ds-sp-3); border-left:1px solid var(--ds-divider); background:var(--ds-neutral-50);">
+                {% if notif.enlace %}
+                <a href="{{ notif.enlace }}" class="ds-btn ds-btn-sm {% if notif.leida %}ds-btn-ghost{% else %}ds-btn-primary{% endif %}">Ver detalles</a>
                 {% endif %}
-                <button class="join-item btn btn-sm btn-active">Página {{ notificaciones.number }}</button>
-                {% if notificaciones.has_next %}
-                    <a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.next_page_number }}" class="join-item btn btn-sm">»</a>
+                {% if not notif.leida %}
+                <button class="ds-btn ds-btn-sm ds-btn-secondary marcar-leida-btn" data-notif-id="{{ notif.id }}">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Marcar leída
+                </button>
                 {% endif %}
             </div>
-        </div>
-        {% endif %}
+        </article>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    {% if notificaciones.has_other_pages %}
+    <nav aria-label="Paginación" style="display:flex; justify-content:center; gap:8px; margin-top:var(--ds-sp-6);">
+        {% if notificaciones.has_previous %}<a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.previous_page_number }}" class="ds-btn ds-btn-sm ds-btn-secondary" aria-label="Página anterior">‹ Anterior</a>{% endif %}
+        <span class="ds-btn ds-btn-sm ds-btn-ghost ds-tabular" aria-current="page">Página {{ notificaciones.number }} de {{ notificaciones.paginator.num_pages }}</span>
+        {% if notificaciones.has_next %}<a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.next_page_number }}" class="ds-btn ds-btn-sm ds-btn-secondary" aria-label="Página siguiente">Siguiente ›</a>{% endif %}
+    </nav>
+    {% endif %}
 
     {% else %}
-        <div class="alert">
-            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 text-base-content/40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-            </svg>
-            <span class="text-base-content/50">No tienes notificaciones en esta categoría.</span>
-        </div>
+    <div class="ds-empty">
+        <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+        <h3 class="ds-h3">Sin notificaciones en esta categoría</h3>
+        <p class="ds-empty-desc">Cuando un vuelo genere duplicados, casos especiales o errores, aparecerán aquí.</p>
+        <a href="{% url 'upload_excel' %}" class="ds-btn ds-btn-primary">Subir Excel</a>
+    </div>
     {% endif %}
 </div>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Auto-dismiss notificaciones de carga exitosa
-    const exitosasContainer = document.getElementById('exitosas-container');
-    if (exitosasContainer) {
-        const cards = exitosasContainer.querySelectorAll('.notif-exitosa');
-
-        setTimeout(() => {
-            cards.forEach((card, i) => {
-                setTimeout(() => {
-                    card.style.opacity = '0';
-                    card.style.transform = 'translateX(20px)';
-                    card.style.maxHeight = card.offsetHeight + 'px';
-
-                    setTimeout(() => {
-                        card.style.maxHeight = '0';
-                        card.style.marginBottom = '0';
-                        card.style.overflow = 'hidden';
-                    }, 600);
+document.addEventListener('DOMContentLoaded', function () {
+    // Auto-dismiss cargas exitosas
+    var cont = document.getElementById('exitosas-container');
+    if (cont) {
+        var cards = cont.querySelectorAll('.notif-exitosa');
+        setTimeout(function () {
+            cards.forEach(function (c, i) {
+                setTimeout(function () {
+                    c.style.opacity = '0'; c.style.transform = 'translateX(20px)';
+                    c.style.maxHeight = c.offsetHeight + 'px';
+                    setTimeout(function () { c.style.maxHeight = '0'; c.style.marginBottom = '0'; c.style.overflow = 'hidden'; c.style.padding = '0'; }, 600);
                 }, i * 120);
             });
-
-            setTimeout(() => {
-                exitosasContainer.style.opacity = '0';
-                setTimeout(() => exitosasContainer.remove(), 400);
-            }, cards.length * 120 + 700);
+            setTimeout(function () { cont.style.opacity = '0'; setTimeout(function () { cont.remove(); }, 400); }, cards.length * 120 + 700);
         }, 2000);
     }
-
-    // Marcar notificación como leída
-    document.querySelectorAll('.marcar-leida-btn').forEach(btn => {
-        btn.addEventListener('click', async function() {
-            const notifId = this.dataset.notifId;
-            const card = this.closest('.group');
-
-            // Feedback visual inmediato
-            card.style.opacity = '0.5';
-            card.style.pointerEvents = 'none';
-
+    // Marcar como leída (conserva endpoint y flujo)
+    document.querySelectorAll('.marcar-leida-btn').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            var id = this.dataset.notifId, card = this.closest('.group');
+            card.style.opacity = '0.5'; card.style.pointerEvents = 'none';
             try {
-                const url = "{% url 'marcar_notificacion_leida' 0 %}".replace('0', notifId);
-
-                const response = await fetch(url, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': '{{ csrf_token }}',
-                        'Content-Type': 'application/json'
-                    }
-                });
-
-                const data = await response.json();
-
-                if (data.success) {
-                    location.reload();
-                } else {
-                    card.style.opacity = '1';
-                    card.style.pointerEvents = 'auto';
-                }
-            } catch (error) {
-                console.error('Error al marcar como leída:', error);
-                card.style.opacity = '1';
-                card.style.pointerEvents = 'auto';
-            }
+                var url = "{% url 'marcar_notificacion_leida' 0 %}".replace('0', id);
+                var r = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' } });
+                var data = await r.json();
+                if (data.success) { if (window.dsToast) dsToast('Notificación marcada como leída', 'success'); location.reload(); }
+                else { card.style.opacity = '1'; card.style.pointerEvents = 'auto'; }
+            } catch (e) { card.style.opacity = '1'; card.style.pointerEvents = 'auto'; if (window.dsToast) dsToast('No se pudo actualizar', 'danger'); }
         });
     });
 });
