@@ -1,53 +1,148 @@
 {% extends 'uploader/base_ds.html' %}
 {# ====================================================================
-   FASE 20 · REDACCIONES — SUBIR (PR 24) · CERO COMPONENTES NUEVOS
-   ⚠ SUPUESTO: redacciones/subir.html aún no se subió. context (form,
-   categorias) es propuesta.
-   Reutiliza la Dropzone de F4 (.ds-dropzone + .ds-steps + .ds-progress)
-   + metadatos mínimos (título, categoría). Backend: 0 cambios previstos.
+   FASE 20 · REDACCIONES — SUBIR (PR 24)
+   Port del diseño ds- sobre el backend REAL (vista redacciones.views.subir):
+     context: form (RedaccionForm: titulo, resolucion, tema, pais, archivo),
+              temas (para el datalist). Solo SuperUser/Aeropuerto (vista
+              gated). En éxito redirige a redacciones:detalle.
+     archivo: .doc/.docx/.pdf, máx 20 MB (validado en el servidor).
+     urls namespaced: redacciones:subir, redacciones:biblioteca.
+   Reutiliza la Dropzone ds- (.ds-dropzone) con JS propio mínimo (este flujo
+   es un POST síncrono de UN archivo; NO usa upload.js, que es del Excel).
+   Los widgets del form traen clases DaisyUI; como base_ds no carga DaisyUI,
+   los campos se renderizan manualmente con clases ds- (name/id conservados).
+   Backend: 0 cambios. Comentario multilínea sin sintaxis de tags (ver F13).
    ==================================================================== #}
 {% block title %}Subir documento · Redacciones · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="ds-container-form" style="max-width: 720px;">
+<div class="ds-container-form" style="max-width:720px; display:flex; flex-direction:column; gap:var(--ds-sp-5);">
 
-    {% include 'uploader/_page_header.html' with titulo='Subir documento' subtitulo='Agrega un documento a la biblioteca de Redacciones.' %}
+    {% include 'uploader/_page_header.html' with titulo='Subir documento' subtitulo='Se aceptan .doc, .docx y .pdf (máx. 20 MB).' %}
 
-    <form method="post" action="{% url 'redacciones_subir' %}" enctype="multipart/form-data" class="ds-card" style="padding:var(--ds-sp-6); display:flex; flex-direction:column; gap:var(--ds-sp-4);">
-        {% csrf_token %}
+    <div style="display:flex; justify-content:flex-start;">
+        <a href="{% url 'redacciones:biblioteca' %}" class="ds-btn ds-btn-secondary">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Volver a la biblioteca
+        </a>
+    </div>
 
-        {# Dropzone reutilizada de F4 #}
-        <label class="ds-dropzone" id="dz-redaccion">
-            <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-            <strong style="font-size:var(--ds-text-base);">Arrastra el documento aquí</strong>
-            <span class="ds-small">o haz clic para seleccionar · PDF, DOCX · máx 10 MB</span>
-            <input type="file" class="ds-sr-only" name="archivo" accept=".pdf,.doc,.docx" required>
-        </label>
+    <form method="post" action="{% url 'redacciones:subir' %}" enctype="multipart/form-data" class="ds-card" id="form-redaccion">
+        <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            {% csrf_token %}
 
-        {# Etapas + progreso (visibles durante la subida — el JS las alterna) #}
-        <ol class="ds-steps" id="dz-steps" hidden><li class="ds-step-current">Subiendo…</li><li>Procesando</li><li>Listo</li></ol>
-        <div id="dz-progress-wrap" hidden>
-            <div class="ds-progress" role="progressbar" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100" aria-label="Progreso de subida"><div class="ds-progress-bar" id="dz-bar" style="width:0%;"></div></div>
-        </div>
-
-        {# Metadatos mínimos #}
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-4);">
-            <div class="ds-field" style="grid-column:span 2;">
-                <label class="ds-label" for="titulo">Título <span class="ds-req" aria-hidden="true">*</span></label>
-                <input class="ds-input" id="titulo" name="titulo" type="text" required value="{{ form.titulo.value|default:'' }}">
+            {% if form.non_field_errors %}
+            <div class="ds-alert ds-alert-danger">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                <div>{{ form.non_field_errors|striptags }}</div>
             </div>
+            {% endif %}
+
+            {# ---------- Dropzone (archivo) ---------- #}
             <div class="ds-field">
-                <label class="ds-label" for="categoria">Categoría</label>
-                <select class="ds-select" id="categoria" name="categoria">
-                    {% for cat in categorias %}<option value="{{ cat.slug }}">{{ cat.nombre }}</option>{% endfor %}
-                </select>
+                <span class="ds-label">Documento <span class="ds-req" aria-hidden="true">*</span></span>
+                <label class="ds-dropzone" id="dz-redaccion" for="id_archivo">
+                    <div id="dz-content" style="display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-2);">
+                        <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                        <strong style="font-size:var(--ds-text-lg);">Arrastra tu documento aquí</strong>
+                        <span class="ds-small">o haz clic para seleccionar · .doc, .docx, .pdf · máx 20 MB</span>
+                    </div>
+                    <input type="file" id="id_archivo" name="archivo" accept=".doc,.docx,.pdf" required class="ds-sr-only">
+                </label>
+                {% if form.archivo.errors %}<p class="ds-error-text">{{ form.archivo.errors|striptags }}</p>{% endif %}
             </div>
-        </div>
 
-        <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end;">
-            <a href="{% url 'redacciones_biblioteca' %}" class="ds-btn ds-btn-secondary">Cancelar</a>
-            <button type="submit" class="ds-btn ds-btn-primary">Subir documento</button>
+            {# ---------- Metadatos ---------- #}
+            <div class="ds-field">
+                <label class="ds-label" for="id_titulo">Título <span class="ds-req" aria-hidden="true">*</span></label>
+                <input class="ds-input" type="text" id="id_titulo" name="titulo" required placeholder="Título del documento"
+                       value="{{ form.titulo.value|default:'' }}"
+                       {% if form.titulo.errors %}aria-invalid="true" aria-describedby="titulo-err"{% endif %}>
+                {% if form.titulo.errors %}<p class="ds-error-text" id="titulo-err">{{ form.titulo.errors|striptags }}</p>{% endif %}
+            </div>
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-4);">
+                <div class="ds-field">
+                    <label class="ds-label" for="id_resolucion">Resolución <span class="ds-req" aria-hidden="true">*</span></label>
+                    <select class="ds-select" id="id_resolucion" name="resolucion" required>
+                        {% for value, label in form.resolucion.field.choices %}
+                        <option value="{{ value }}" {% if form.resolucion.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.resolucion.errors %}<p class="ds-error-text">{{ form.resolucion.errors|striptags }}</p>{% endif %}
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="id_pais">País <span class="ds-req" aria-hidden="true">*</span></label>
+                    <select class="ds-select" id="id_pais" name="pais" required>
+                        <option value="">Selecciona un país</option>
+                        {% for p in form.pais.field.queryset %}
+                        <option value="{{ p.pk }}" {% if form.pais.value|stringformat:'s' == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.pais.errors %}<p class="ds-error-text">{{ form.pais.errors|striptags }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="ds-field">
+                <label class="ds-label" for="id_tema">Tema <span class="ds-req" aria-hidden="true">*</span></label>
+                <input class="ds-input" type="text" id="id_tema" name="tema" required list="temas-existentes" autocomplete="off"
+                       placeholder="Ej. DOCUMENTACIÓN FALSA" value="{{ form.tema.value|default:'' }}"
+                       {% if form.tema.errors %}aria-invalid="true" aria-describedby="tema-err"{% endif %}>
+                <datalist id="temas-existentes">{% for t in temas %}<option value="{{ t }}">{% endfor %}</datalist>
+                {% if form.tema.errors %}<p class="ds-error-text" id="tema-err">{{ form.tema.errors|striptags }}</p>{% endif %}
+            </div>
+
+            <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end; margin-top:var(--ds-sp-2);">
+                <a href="{% url 'redacciones:biblioteca' %}" class="ds-btn ds-btn-ghost">Cancelar</a>
+                <button type="submit" class="ds-btn ds-btn-primary">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                    Subir documento
+                </button>
+            </div>
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const dz = document.getElementById('dz-redaccion');
+    const input = document.getElementById('id_archivo');
+    const content = document.getElementById('dz-content');
+    if (!dz || !input) return;
+
+    const prompt = content.innerHTML;
+
+    function mostrarArchivo(file) {
+        if (!file) { content.innerHTML = prompt; return; }
+        const mb = (file.size / (1024 * 1024)).toFixed(1);
+        content.innerHTML =
+            '<svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-success);">'
+            + '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>'
+            + '<strong style="font-size:var(--ds-text-lg); word-break:break-all;"></strong>'
+            + '<span class="ds-small"></span>';
+        content.querySelector('strong').textContent = file.name;
+        content.querySelector('.ds-small').textContent = mb + ' MB · haz clic para cambiar';
+    }
+
+    input.addEventListener('change', function () {
+        mostrarArchivo(input.files && input.files[0]);
+    });
+
+    // Estado visual de arrastre; como respaldo, un borde de énfasis inline.
+    ['dragenter', 'dragover'].forEach(function (ev) {
+        dz.addEventListener(ev, function (e) { e.preventDefault(); dz.style.borderColor = 'var(--ds-primary)'; });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+        dz.addEventListener(ev, function (e) { e.preventDefault(); dz.style.borderColor = ''; });
+    });
+    dz.addEventListener('drop', function (e) {
+        if (e.dataTransfer && e.dataTransfer.files.length) {
+            input.files = e.dataTransfer.files;
+            mostrarArchivo(input.files[0]);
+        }
+    });
+})();
+</script>
 {% endblock %}
