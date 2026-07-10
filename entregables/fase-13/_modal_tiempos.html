@@ -1,21 +1,3 @@
-{# ====================================================================
-   FASE 13 · FRAGMENTO — MODAL CAPTURA DE TIEMPOS DE ATENCIÓN (PR 08)
-   Extraído de admin_list.html a un partial reutilizable. Se incluye con la
-   etiqueta include de uploader/_modal_tiempos.html dentro del bloque content
-   de admin_list.html (único host; inadmitidos_report.html NO lo usa).
-   OJO: los comentarios multilínea {# #} de Django NO protegen etiquetas
-   internas, por eso aquí no se escriben con la sintaxis de llaves-porcentaje.
-
-   CONTRATO con static/js/admin_list.js — NO renombrar sin tocar el JS:
-     - dialog #modalTiemposAtencion (showModal/close, abre con #btnAbrirTiempos)
-     - #tiemposFecha (name=fecha), #tiemposEstado (aria-live de prellenado)
-     - input[name=hora_inicio] / input[name=hora_fin]
-     - por rubro: contenedor [data-rubro=key] con [data-hora] y [data-hint]
-     - #rsHoraInicio, #rsHoraFin, #rsHint  · #fmaPersonas
-   Backend: guarda por FECHA vía la url capturar_tiempos_atencion
-   (update_or_create) y prellena vía obtener_tiempos_atencion. Context
-   requerido en el host: tiempos_rubros. Backend/JS: 0 cambios.
-   ==================================================================== #}
 <dialog id="modalTiemposAtencion" class="ds-modal" aria-labelledby="mtitTiempos">
     <div class="ds-modal-box">
         <form method="post" action="{% url 'capturar_tiempos_atencion' %}">
