@@ -1,10 +1,12 @@
 <!DOCTYPE html>
-{% load static %}
 {# ====================================================================
    FASE 23 · ERROR 500 (PR 27) — AUTOCONTENIDA
-   ⚠ CLAVE: la 500 se sirve cuando algo falló, posiblemente la carga de
-   estáticos. Por eso NO extiende base_ds.html y NO usa {% static %}:
-   todo el CSS crítico va INLINE. Solo tokens y colores literales.
+   CLAVE: la 500 se sirve cuando algo falló (posiblemente la carga de
+   estáticos, o el propio render de base_ds). Por eso NO extiende
+   base_ds.html, NO usa context processors, ni etiquetas static/url: todo
+   el CSS crítico va INLINE y el enlace es a la raíz "/". (Nota: los
+   comentarios multilínea de Django no protegen etiquetas internas, así que
+   aquí no se escriben con la sintaxis de llaves-porcentaje.)
    Conserva handler500 de Django. Backend: 0 cambios.
    ==================================================================== #}
 <html lang="es">

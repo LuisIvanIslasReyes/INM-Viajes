@@ -1,12 +1,13 @@
 {% extends 'uploader/base_ds.html' %}
 {# ====================================================================
    FASE 23 · ERROR 400 (PR 27) · Solicitud inválida. Conserva handler400.
+   URL raíz = 'admin_list' (no existe 'home'). Backend: 0 cambios.
    ==================================================================== #}
 {% block title %}Solicitud inválida · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="ds-container" style="max-width: 560px; padding-block: var(--ds-sp-16);">
-    <div class="ds-empty" style="padding-block: var(--ds-sp-8);">
+<div class="ds-container" style="max-width:560px; padding-block:var(--ds-sp-16);">
+    <div class="ds-empty" style="padding-block:var(--ds-sp-8);">
         <div class="ds-empty-icon" style="width:72px; height:72px;">
             <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24" style="width:34px; height:34px;"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
         </div>
@@ -14,7 +15,7 @@
         <h1 class="ds-h1" tabindex="-1" id="error-title" style="margin-top:var(--ds-sp-2);">No pudimos procesar la solicitud</h1>
         <p class="ds-empty-desc">Algo en la solicitud no se entendió correctamente. Vuelve a intentarlo; si el problema continúa, reporta la incidencia.</p>
         <div style="display:flex; gap:var(--ds-sp-2); flex-wrap:wrap; justify-content:center;">
-            <a href="{% url 'home' %}" class="ds-btn ds-btn-primary">Ir al inicio</a>
+            <a href="{% url 'admin_list' %}" class="ds-btn ds-btn-primary">Ir al inicio</a>
             <a href="javascript:location.reload()" class="ds-btn ds-btn-secondary">Reintentar</a>
         </div>
     </div>
