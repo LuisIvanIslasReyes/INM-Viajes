@@ -1,108 +1,155 @@
-{% extends 'uploader/base.html' %}
-
-{% block title %}Nueva empresa | Directorio{% endblock %}
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 16 · DIRECTORIO — CREAR (PR 20) · patrón de formulario del sistema
+   Port del diseño ds- sobre el backend REAL (vista directorio.views.crear):
+     context: form (EmpresaDirectorioForm), coincidencias (queryset),
+              requiere_confirmacion (bool).
+     Campos del form: empresa (id_empresa), domicilio, estado (FK Select),
+              ciudad, firma_encargado, telefono, tentativa_resolucion (Select
+              opcional con opción vacía).
+     Anti-duplicados: exacto -> se bloquea (solo coincidencias); misma empresa
+              con datos distintos -> requiere_confirmacion (hidden confirmar=1).
+     Búsqueda en vivo: AJAX a directorio:buscar_coincidencias (?empresa=q),
+              JSON {resultados:[{url,empresa,encargado,telefono,resolucion}]}.
+   Los widgets del form traen clases DaisyUI; como base_ds no carga DaisyUI,
+   los campos se renderizan manualmente con clases ds- (name/id conservados).
+   Backend: 0 cambios. Comentario multilínea sin sintaxis de tags (ver F13).
+   ==================================================================== #}
+{% block title %}Nueva empresa · Directorio · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="max-w-3xl mx-auto">
-    <div class="flex items-center gap-3 mb-6">
-        <a href="{% url 'directorio:listado' %}" class="btn btn-ghost btn-sm btn-circle"><i class="fas fa-arrow-left"></i></a>
-        <div>
-            <h1 class="text-3xl font-bold">Nueva empresa</h1>
-            <p class="text-base-content/60">Antes de registrar, revisa si la empresa ya existe.</p>
-        </div>
-    </div>
+<div class="ds-container-form" style="max-width:720px; display:flex; flex-direction:column; gap:var(--ds-sp-5);">
 
-    <!-- Coincidencias detectadas por el servidor (bloqueo/confirmación) -->
+    {% include 'uploader/_page_header.html' with titulo='Nueva empresa' subtitulo='Antes de registrar, revisa si la empresa ya existe.' %}
+
+    {# ---------- Coincidencias detectadas por el servidor ---------- #}
     {% if coincidencias %}
-    <div class="card bg-base-100 shadow-md border-l-4 border-warning mb-6">
-        <div class="card-body">
-            <h2 class="card-title text-warning"><i class="fas fa-triangle-exclamation"></i> Coincidencias existentes</h2>
-            <div class="overflow-x-auto">
-                <table class="table table-sm">
-                    <thead><tr><th>Empresa</th><th>Encargado</th><th>Teléfono</th><th>Resolución</th><th></th></tr></thead>
+    <section class="ds-card" style="border-left:4px solid var(--ds-warning);">
+        <div class="ds-card-body">
+            <h2 class="ds-h3" style="margin:0 0 var(--ds-sp-3); color:var(--ds-warning); display:flex; align-items:center; gap:8px;">
+                <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                Coincidencias existentes
+            </h2>
+            <div class="ds-table-wrap" tabindex="0" role="region" aria-label="Coincidencias existentes" style="border:0;">
+                <table class="ds-table ds-table-compact">
+                    <thead><tr><th scope="col">Empresa</th><th scope="col">Encargado</th><th scope="col">Teléfono</th><th scope="col">Resolución</th><th scope="col"></th></tr></thead>
                     <tbody>
                         {% for c in coincidencias %}
                         <tr>
-                            <td class="font-semibold">{{ c.empresa }}</td>
+                            <td style="font-weight:600;">{{ c.empresa }}</td>
                             <td>{{ c.firma_encargado }}</td>
-                            <td>{{ c.telefono|default:"—" }}</td>
-                            <td>{{ c.get_tentativa_resolucion_display }}</td>
-                            <td><a href="{% url 'directorio:detalle' c.pk %}" class="link link-primary">Ver</a></td>
+                            <td class="ds-tabular">{{ c.telefono|default:"—" }}</td>
+                            <td>{{ c.get_tentativa_resolucion_display|default:"—" }}</td>
+                            <td style="text-align:right;"><a href="{% url 'directorio:detalle' c.pk %}" class="ds-btn ds-btn-sm ds-btn-ghost">Ver</a></td>
                         </tr>
                         {% endfor %}
                     </tbody>
                 </table>
             </div>
         </div>
-    </div>
+    </section>
     {% endif %}
 
-    <!-- Búsqueda previa en vivo -->
-    <div id="coincidencias-live" class="mb-6 hidden">
-        <div class="card bg-base-100 shadow-md border-l-4 border-info">
-            <div class="card-body py-4">
-                <h3 class="font-semibold text-info flex items-center gap-2"><i class="fas fa-magnifying-glass"></i> Ya registradas con este nombre</h3>
-                <ul id="coincidencias-live-list" class="mt-2 space-y-1 text-sm"></ul>
+    {# ---------- Búsqueda previa en vivo (poblada por JS) ---------- #}
+    <section class="ds-card hidden" id="coincidencias-live" style="border-left:4px solid var(--ds-info);">
+        <div class="ds-card-body">
+            <h3 class="ds-h3" style="margin:0; color:var(--ds-info); display:flex; align-items:center; gap:8px;">
+                <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                Ya registradas con este nombre
+            </h3>
+            <ul id="coincidencias-live-list" style="list-style:none; margin:var(--ds-sp-3) 0 0; padding:0; display:flex; flex-direction:column; gap:2px;"></ul>
+        </div>
+    </section>
+
+    {# ---------- Formulario ---------- #}
+    <form method="post" novalidate class="ds-card">
+        <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            {% csrf_token %}
+            {% if requiere_confirmacion %}<input type="hidden" name="confirmar" value="1">{% endif %}
+
+            {% if form.non_field_errors %}
+            <div class="ds-alert ds-alert-danger">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                <div>{{ form.non_field_errors|striptags }}</div>
+            </div>
+            {% endif %}
+
+            {% if requiere_confirmacion %}
+            <div class="ds-alert ds-alert-warning">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                <div>Ya existen registros con este nombre y distinto encargado o teléfono. Revisa las coincidencias de arriba y confirma para registrar de todos modos.</div>
+            </div>
+            {% endif %}
+
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-4);">
+                <div class="ds-field" style="grid-column:1 / -1;">
+                    <label class="ds-label" for="id_empresa">Empresa <span class="ds-req" aria-hidden="true">*</span></label>
+                    <input class="ds-input" type="text" id="id_empresa" name="empresa" required autocomplete="off"
+                           value="{{ form.empresa.value|default:'' }}"
+                           {% if form.empresa.errors %}aria-invalid="true" aria-describedby="empresa-err"{% endif %}>
+                    {% if form.empresa.errors %}<p class="ds-error-text" id="empresa-err">{{ form.empresa.errors|striptags }}</p>{% endif %}
+                </div>
+
+                <div class="ds-field" style="grid-column:1 / -1;">
+                    <label class="ds-label" for="id_domicilio">Domicilio</label>
+                    <input class="ds-input" type="text" id="id_domicilio" name="domicilio" placeholder="Calle, número, colonia"
+                           value="{{ form.domicilio.value|default:'' }}">
+                    {% if form.domicilio.errors %}<p class="ds-error-text">{{ form.domicilio.errors|striptags }}</p>{% endif %}
+                </div>
+
+                <div class="ds-field">
+                    <label class="ds-label" for="id_estado">Estado</label>
+                    <select class="ds-select" id="id_estado" name="estado">
+                        <option value="">Selecciona un estado</option>
+                        {% for e in form.estado.field.queryset %}
+                        <option value="{{ e.pk }}" {% if form.estado.value|stringformat:'s' == e.pk|stringformat:'s' %}selected{% endif %}>{{ e.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.estado.errors %}<p class="ds-error-text">{{ form.estado.errors|striptags }}</p>{% endif %}
+                </div>
+
+                <div class="ds-field">
+                    <label class="ds-label" for="id_ciudad">Ciudad</label>
+                    <input class="ds-input" type="text" id="id_ciudad" name="ciudad" placeholder="Ciudad"
+                           value="{{ form.ciudad.value|default:'' }}">
+                    {% if form.ciudad.errors %}<p class="ds-error-text">{{ form.ciudad.errors|striptags }}</p>{% endif %}
+                </div>
+
+                <div class="ds-field">
+                    <label class="ds-label" for="id_firma_encargado">Firma del encargado <span class="ds-req" aria-hidden="true">*</span></label>
+                    <input class="ds-input" type="text" id="id_firma_encargado" name="firma_encargado" required placeholder="Nombre del encargado"
+                           value="{{ form.firma_encargado.value|default:'' }}"
+                           {% if form.firma_encargado.errors %}aria-invalid="true" aria-describedby="firma-err"{% endif %}>
+                    {% if form.firma_encargado.errors %}<p class="ds-error-text" id="firma-err">{{ form.firma_encargado.errors|striptags }}</p>{% endif %}
+                </div>
+
+                <div class="ds-field">
+                    <label class="ds-label" for="id_telefono">Teléfono</label>
+                    <input class="ds-input" type="text" id="id_telefono" name="telefono" placeholder="Ej. 664 123 4567 ext. 10"
+                           value="{{ form.telefono.value|default:'' }}">
+                    {% if form.telefono.errors %}<p class="ds-error-text">{{ form.telefono.errors|striptags }}</p>{% endif %}
+                </div>
+
+                <div class="ds-field" style="grid-column:1 / -1;">
+                    <label class="ds-label" for="id_tentativa_resolucion">Tentativa de resolución</label>
+                    <select class="ds-select" id="id_tentativa_resolucion" name="tentativa_resolucion">
+                        {% for value, label in form.tentativa_resolucion.field.choices %}
+                        <option value="{{ value }}" {% if form.tentativa_resolucion.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.tentativa_resolucion.errors %}<p class="ds-error-text">{{ form.tentativa_resolucion.errors|striptags }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end; margin-top:var(--ds-sp-2);">
+                <a href="{% url 'directorio:listado' %}" class="ds-btn ds-btn-ghost">Cancelar</a>
+                <button type="submit" class="ds-btn {% if requiere_confirmacion %}ds-btn-danger{% else %}ds-btn-primary{% endif %}">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                    {% if requiere_confirmacion %}Registrar de todos modos{% else %}Guardar{% endif %}
+                </button>
             </div>
         </div>
-    </div>
-
-    <!-- Formulario -->
-    <div class="card bg-base-100 shadow-md">
-        <div class="card-body">
-            <form method="post" novalidate>
-                {% csrf_token %}
-                {% if requiere_confirmacion %}<input type="hidden" name="confirmar" value="1">{% endif %}
-
-                {% if form.non_field_errors %}
-                <div class="alert alert-error mb-4">{{ form.non_field_errors }}</div>
-                {% endif %}
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <div class="form-control md:col-span-2">
-                        <label class="label" for="{{ form.empresa.id_for_label }}"><span class="label-text font-semibold">Empresa *</span></label>
-                        {{ form.empresa }}
-                        {% if form.empresa.errors %}<span class="label-text-alt text-error mt-1">{{ form.empresa.errors|striptags }}</span>{% endif %}
-                    </div>
-                    <div class="form-control md:col-span-2">
-                        <label class="label" for="{{ form.domicilio.id_for_label }}"><span class="label-text font-semibold">Domicilio</span></label>
-                        {{ form.domicilio }}
-                    </div>
-                    <div class="form-control">
-                        <label class="label" for="{{ form.estado.id_for_label }}"><span class="label-text font-semibold">Estado</span></label>
-                        {{ form.estado }}
-                    </div>
-                    <div class="form-control">
-                        <label class="label" for="{{ form.ciudad.id_for_label }}"><span class="label-text font-semibold">Ciudad</span></label>
-                        {{ form.ciudad }}
-                    </div>
-                    <div class="form-control">
-                        <label class="label" for="{{ form.firma_encargado.id_for_label }}"><span class="label-text font-semibold">Firma del Encargado *</span></label>
-                        {{ form.firma_encargado }}
-                        {% if form.firma_encargado.errors %}<span class="label-text-alt text-error mt-1">{{ form.firma_encargado.errors|striptags }}</span>{% endif %}
-                    </div>
-                    <div class="form-control">
-                        <label class="label" for="{{ form.telefono.id_for_label }}"><span class="label-text font-semibold">Teléfono</span></label>
-                        {{ form.telefono }}
-                        {% if form.telefono.errors %}<span class="label-text-alt text-error mt-1">{{ form.telefono.errors|striptags }}</span>{% endif %}
-                    </div>
-                    <div class="form-control md:col-span-2">
-                        <label class="label" for="{{ form.tentativa_resolucion.id_for_label }}"><span class="label-text font-semibold">Tentativa de Resolución</span></label>
-                        {{ form.tentativa_resolucion }}
-                        {% if form.tentativa_resolucion.errors %}<span class="label-text-alt text-error mt-1">{{ form.tentativa_resolucion.errors|striptags }}</span>{% endif %}
-                    </div>
-                </div>
-
-                <div class="card-actions justify-end mt-6 gap-2">
-                    <a href="{% url 'directorio:listado' %}" class="btn btn-ghost">Cancelar</a>
-                    <button type="submit" class="btn {% if requiere_confirmacion %}btn-warning{% else %}btn-primary{% endif %} gap-2">
-                        <i class="fas fa-save"></i>
-                        {% if requiere_confirmacion %}Registrar de todos modos{% else %}Guardar{% endif %}
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
+    </form>
 </div>
 {% endblock %}
 
@@ -114,18 +161,18 @@
     const list = document.getElementById('coincidencias-live-list');
     const url = "{% url 'directorio:buscar_coincidencias' %}";
     let timer = null;
-
     if (!input) return;
 
     function render(resultados) {
         if (!resultados.length) { box.classList.add('hidden'); list.innerHTML = ''; return; }
-        list.innerHTML = resultados.map(r =>
-            `<li class="flex flex-wrap items-center gap-2 border-b border-base-200 pb-1">
-                <a href="${r.url}" class="link link-primary font-semibold">${r.empresa}</a>
-                <span class="text-base-content/60">· ${r.encargado || '—'}</span>
-                <span class="text-base-content/60">· ${r.telefono || '—'}</span>
-                <span class="badge badge-ghost badge-sm">${r.resolucion}</span>
-            </li>`).join('');
+        list.innerHTML = resultados.map(function (r) {
+            return '<li style="display:flex; flex-wrap:wrap; gap:8px; align-items:center; padding:6px 0; border-bottom:1px solid var(--ds-divider);">'
+                + '<a href="' + r.url + '" style="font-weight:600; color:var(--ds-primary); text-decoration:none;">' + r.empresa + '</a>'
+                + '<span class="ds-small" style="margin:0;">· ' + (r.encargado || '—') + '</span>'
+                + '<span class="ds-small" style="margin:0;">· ' + (r.telefono || '—') + '</span>'
+                + '<span class="ds-badge">' + (r.resolucion || 'Sin definir') + '</span>'
+                + '</li>';
+        }).join('');
         box.classList.remove('hidden');
     }
 
@@ -135,9 +182,9 @@
         if (q.length < 2) { box.classList.add('hidden'); return; }
         timer = setTimeout(function () {
             fetch(url + '?empresa=' + encodeURIComponent(q))
-                .then(r => r.json())
-                .then(d => render(d.resultados || []))
-                .catch(() => {});
+                .then(function (r) { return r.json(); })
+                .then(function (d) { render(d.resultados || []); })
+                .catch(function () {});
         }, 300);
     });
 })();
