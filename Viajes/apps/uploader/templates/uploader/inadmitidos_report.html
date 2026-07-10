@@ -1,11 +1,42 @@
-{% extends 'uploader/base.html' %}
+{% extends 'uploader/base_ds.html' %}
 {% load static %}
+{# ====================================================================
+   FASE 8 · REPORTE DE INADMITIDOS (re-skin sobre la vista real)
+   Dashboard cargado por AJAX (inadmitidos_report.js). Se conserva TODO:
+     window.INADMITIDOS_DATA_URL / INADMITIDOS_EXCEL_URL, html2canvas-pro,
+     inadmitidos_report.css (plano → fidelidad de captura), y todos los IDs
+     y onclick que el JS engancha:
+       #fecha_inicio #fecha_fin, generarReporteDelDia/Ayer/generarReporte,
+       descargarExcel/descargarExcelAutoridades, #btn-* ,
+       #loading-spinner #error-msg #error-text #tabla-preview #tabla-capture
+       #tabla-inadmitidos .inadmitidos-* #motivos-section #motivos-capture
+       #motivos-lista .no-capturar #toast-container.
+   Solo cambia el shell (base → base_ds) y el "chrome" exterior a estilo ds.
+   FontAwesome se carga localmente porque el JS inyecta iconos fa-* (toasts,
+   spinners de botón). Backend: 0 cambios.
+   ==================================================================== #}
+{% block title %}Reporte de inadmitidos · INM Viajes{% endblock %}
 
 {% block extra_css %}
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 <link rel="stylesheet" href="{% static 'css/inadmitidos_report.css' %}?v=4">
+<style>
+    /* El JS alterna la clase .hidden por classList; garantizamos que gane
+       sobre cualquier display de ds- (botones, alertas) sin depender del
+       orden de inyección de Tailwind CDN. */
+    .hidden { display: none !important; }
+    /* Shim de toasts: el JS inyecta markup daisy (alert/toast) y base_ds no
+       carga daisy. Damos posición y color con tokens del design system. */
+    #toast-container { position: fixed; bottom: 1rem; right: 1rem; display: flex; flex-direction: column; gap: .5rem; z-index: 60; }
+    #toast-container .alert { display: flex; align-items: center; gap: .5rem; padding: .7rem 1rem; border-radius: 10px; color: #fff; box-shadow: var(--ds-shadow-md); font-weight: 600; max-width: 360px; }
+    #toast-container .alert-success { background: var(--ds-success); }
+    #toast-container .alert-error   { background: var(--ds-danger); }
+    #toast-container .alert-warning { background: var(--ds-warning); color: #241a00; }
+    #toast-container .alert-info    { background: var(--ds-info); }
+</style>
 {% endblock %}
 
 {% block extra_js %}
@@ -18,136 +49,110 @@
 {% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-6">
+<div style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
 
-    <!-- Header -->
-    <div class="mb-6">
-        <h1 class="text-3xl font-bold mb-2">
-            <i class="fas fa-file-alt mr-2" style="color:#700606;"></i>
-            Reporte de Inadmitidos
-        </h1>
-        <p class="text-base-content/70">
-            <i class="fas fa-info-circle mr-1" style="color:#700606;"></i>
-            Selecciona el rango de fechas para generar la tabla y descargar el Excel.
-            El vuelo y origen se detectan automáticamente de las cargas del rango.
-        </p>
-    </div>
+    {% include 'uploader/_page_header.html' with titulo='Reporte de inadmitidos' subtitulo='Selecciona el rango de fechas para generar la tabla y descargar el Excel. El vuelo y el origen se detectan automáticamente de las cargas del rango.' %}
 
-    <!-- Formulario de rango de fechas -->
-    <div class="card bg-white shadow-xl border mb-6" style="border-color:#FED8D8;">
-        <div class="card-body">
-            <h2 class="card-title mb-4">
-                <i class="fas fa-calendar-alt mr-2" style="color:#700606;"></i>
+    {# Rango de fechas + acciones #}
+    <section class="ds-card">
+        <div class="ds-card-body">
+            <h2 class="ds-h3" style="margin:0 0 var(--ds-sp-4); display:flex; align-items:center; gap:8px;">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
                 Rango de fechas
             </h2>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text font-semibold">
-                            <i class="fas fa-calendar-day mr-1"></i>
-                            Fecha Inicio
-                        </span>
-                    </label>
-                    <input
-                        type="date"
-                        id="fecha_inicio"
-                        class="input input-bordered"
-                        min="2026-05-20"
-                        value="2026-05-20"
-                    >
+            <div style="display:grid; grid-template-columns:repeat(auto-fit, minmax(220px, 1fr)); gap:var(--ds-sp-4);">
+                <div class="ds-field">
+                    <label class="ds-label" for="fecha_inicio">Fecha inicio</label>
+                    <input class="ds-input" type="date" id="fecha_inicio" min="2026-05-20" value="2026-05-20">
                 </div>
-
-                <div class="form-control">
-                    <label class="label">
-                        <span class="label-text font-semibold">
-                            <i class="fas fa-calendar-day mr-1"></i>
-                            Fecha Fin
-                        </span>
-                    </label>
-                    <input
-                        type="date"
-                        id="fecha_fin"
-                        class="input input-bordered"
-                        min="2026-05-20"
-                    >
+                <div class="ds-field">
+                    <label class="ds-label" for="fecha_fin">Fecha fin</label>
+                    <input class="ds-input" type="date" id="fecha_fin" min="2026-05-20">
                 </div>
             </div>
 
-            <div class="card-actions justify-end mt-4 gap-3">
-                <button id="btn-reporte-dia" onclick="generarReporteDelDia()" class="btn text-white" style="background-color:#1F8A4C; border-color:#1F8A4C;">
-                    <i class="fas fa-calendar-day mr-1"></i>
+            <div style="display:flex; flex-wrap:wrap; justify-content:flex-end; gap:8px; margin-top:var(--ds-sp-4);">
+                <button id="btn-reporte-dia" onclick="generarReporteDelDia()" class="ds-btn ds-btn-secondary">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/><path d="M12 14v3M10.5 15.5h3"/></svg>
                     Reporte del día
                 </button>
-                <button id="btn-reporte-ayer" onclick="generarReporteAyer()" class="btn text-white" style="background-color:#0F6BB3; border-color:#0F6BB3;">
-                    <i class="fas fa-calendar-week mr-1"></i>
+                <button id="btn-reporte-ayer" onclick="generarReporteAyer()" class="ds-btn ds-btn-secondary">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l3 2"/></svg>
                     Reporte de ayer
                 </button>
-                <button id="btn-generar" onclick="generarReporte()" class="btn text-white" style="background-color:#700606; border-color:#700606;">
-                    <i class="fas fa-table mr-1"></i>
-                    Generar Reporte
+                <button id="btn-generar" onclick="generarReporte()" class="ds-btn ds-btn-primary">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
+                    Generar reporte
                 </button>
-                <button id="btn-excel" onclick="descargarExcel()" class="btn text-white hidden" style="background-color:#1F8A4C; border-color:#1F8A4C;">
-                    <i class="fas fa-file-excel mr-1"></i>
-                    Excel Completo
+                <button id="btn-excel" onclick="descargarExcel()" class="ds-btn ds-btn-secondary hidden">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    Excel completo
                 </button>
-                <button id="btn-excel-autoridades" onclick="descargarExcelAutoridades()" class="btn text-white hidden" style="background-color:#0F6BB3; border-color:#0F6BB3;">
-                    <i class="fas fa-file-excel mr-1"></i>
-                    Excel Autoridades
+                <button id="btn-excel-autoridades" onclick="descargarExcelAutoridades()" class="ds-btn ds-btn-secondary hidden">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                    Excel autoridades
                 </button>
             </div>
         </div>
+    </section>
+
+    {# Spinner de carga #}
+    <div id="loading-spinner" class="hidden" style="text-align:center; padding:var(--ds-sp-8) 0;">
+        <i class="fas fa-spinner fa-spin" style="font-size:2rem; color:var(--ds-brand);" aria-hidden="true"></i>
+        <span class="ds-sr-only">Cargando…</span>
     </div>
 
-    <!-- Spinner de carga -->
-    <div id="loading-spinner" class="hidden flex justify-center py-12">
-        <span class="loading loading-spinner loading-lg" style="color:#700606;"></span>
+    {# Mensaje de error — wrapper neutro para no chocar con display de ds-alert #}
+    <div id="error-msg" class="hidden">
+        <div class="ds-alert ds-alert-danger" role="alert">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+            <span id="error-text"></span>
+        </div>
     </div>
 
-    <!-- Mensaje de error -->
-    <div id="error-msg" class="hidden alert alert-error mb-4">
-        <i class="fas fa-exclamation-circle"></i>
-        <span id="error-text"></span>
-    </div>
-
-    <!-- Previsualización de la tabla -->
+    {# Previsualización de la tabla (la construye el JS) #}
     <div id="tabla-preview" class="hidden">
-        <div class="card bg-white shadow-xl border mb-4" style="border-color:#FED8D8;">
-            <div class="card-body">
-                <div class="flex justify-between items-center mb-4 flex-wrap gap-2">
-                    <h2 class="card-title" style="color:#700606;">
-                        <i class="fas fa-eye mr-2"></i>
+        <section class="ds-card">
+            <div class="ds-card-body">
+                <div style="display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; gap:8px; margin-bottom:var(--ds-sp-4);">
+                    <h2 class="ds-h3" style="margin:0; display:flex; align-items:center; gap:8px;">
+                        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                         Previsualización
                     </h2>
-                    <div class="flex gap-2 flex-wrap">
-                        <button id="btn-copiar-imagen" onclick="copiarImagen()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
-                            <i class="fas fa-image mr-1"></i>
+                    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+                        <button id="btn-copiar-imagen" onclick="copiarImagen()" class="ds-btn ds-btn-sm ds-btn-secondary">
+                            <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
                             Copiar tabla
                         </button>
-                        <button id="btn-copiar-todo" onclick="copiarTodo()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
-                            <i class="fas fa-copy mr-1"></i>
+                        <button id="btn-copiar-todo" onclick="copiarTodo()" class="ds-btn ds-btn-sm ds-btn-secondary">
+                            <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
                             Copiar todo
                         </button>
                     </div>
                 </div>
+
                 <div id="tabla-capture" class="inadmitidos-preview-wrapper">
                     <div class="inadmitidos-table-card">
                         <table class="inadmitidos-preview-table" id="tabla-inadmitidos"></table>
                     </div>
                 </div>
 
-                <!-- Motivos de rechazo -->
+                {# Motivos de rechazo #}
                 <div id="motivos-section" class="mt-6 hidden">
                     <div id="motivos-capture" class="motivos-box">
-                        <div class="flex justify-between items-center mb-2 flex-wrap gap-2">
-                            <h4 class="mb-0"><i class="fas fa-list mr-1"></i> Motivos de rechazo del día:</h4>
-                            <div class="flex gap-2 flex-wrap no-capturar">
-                                <button id="btn-copiar-comentarios" onclick="copiarComentarios()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
-                                    <i class="fas fa-font mr-1"></i>
+                        <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:8px; margin-bottom:8px;">
+                            <h4 style="margin:0; display:flex; align-items:center; gap:6px; font-weight:700;">
+                                <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></svg>
+                                Motivos de rechazo del día:
+                            </h4>
+                            <div class="no-capturar" style="display:flex; gap:8px; flex-wrap:wrap;">
+                                <button id="btn-copiar-comentarios" onclick="copiarComentarios()" class="ds-btn ds-btn-sm ds-btn-secondary">
+                                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
                                     Copiar texto
                                 </button>
-                                <button id="btn-copiar-comentarios-img" onclick="copiarComentariosImagen()" class="btn btn-sm text-white" style="background-color:#700606; border-color:#700606;">
-                                    <i class="fas fa-image mr-1"></i>
+                                <button id="btn-copiar-comentarios-img" onclick="copiarComentariosImagen()" class="ds-btn ds-btn-sm ds-btn-secondary">
+                                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.1-3.1a2 2 0 0 0-2.8 0L6 21"/></svg>
                                     Copiar imagen
                                 </button>
                             </div>
@@ -156,11 +161,10 @@
                     </div>
                 </div>
             </div>
-        </div>
+        </section>
     </div>
 
-    <!-- Toast de notificaciones -->
-    <div id="toast-container" class="toast toast-end z-50"></div>
-
+    {# Toasts (el JS inyecta aquí) #}
+    <div id="toast-container" class="toast toast-end"></div>
 </div>
 {% endblock %}
