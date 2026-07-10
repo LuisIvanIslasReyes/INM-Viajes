@@ -14,7 +14,7 @@ from .casos_especiales import (
     resolver_caso_inadmitir,
     resolver_caso_eliminar
 )
-from .admin import batch_list, delete_batch, create_user
+from .admin import batch_list, delete_batch, create_user, home_admin
 from .menores import crear_menor
 from .tiempos import capturar_tiempos_atencion, obtener_tiempos_atencion
 
@@ -51,6 +51,7 @@ __all__ = [
     'batch_list',
     'delete_batch',
     'create_user',
+    'home_admin',
 
     # Menores
     'crear_menor',

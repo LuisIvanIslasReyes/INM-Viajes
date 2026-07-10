@@ -5,7 +5,7 @@ Estas vistas permiten al superusuario:
 - Listar y eliminar cargas de archivos
 - Crear usuarios estándar
 """
-from datetime import datetime, date, timedelta
+from datetime import datetime, date, time, timedelta
 
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib.auth.models import Group, User
@@ -17,7 +17,7 @@ from django.utils import timezone
 
 from apps.cuentas.roles import flujo_principal_required
 from ..forms import CreateUserForm
-from ..models import UploadBatch
+from ..models import UploadBatch, Registro, CasoEspecial, Notificacion
 
 
 def _parse_date(value):
@@ -162,3 +162,40 @@ def create_user(request):
         'usuarios': usuarios,
     }
     return render(request, 'uploader/create_user.html', context)
+
+
+@login_required
+@user_passes_test(lambda u: u.is_superuser, login_url='admin_list')
+def home_admin(request):
+    """Dashboard de inicio del SuperUser: KPIs del día sobre agregados existentes.
+
+    Fase 24. NO crea modelos ni migraciones; solo count/filter sobre lo actual.
+    El enrutamiento por rol tras login se define en la Fase 25 (aquí la vista
+    queda accesible en su URL propia sin tocar LOGIN_REDIRECT_URL).
+    """
+    hoy = timezone.localdate()
+    # El lookup __date depende de CONVERT_TZ en MySQL (devuelve NULL si el
+    # servidor no tiene las tablas de zonas horarias), así que acotamos "hoy"
+    # con un rango de datetimes con zona, igual que la vista biblioteca.
+    tz = timezone.get_current_timezone()
+    inicio_hoy = datetime.combine(hoy, time.min, tzinfo=tz)
+    fin_hoy = inicio_hoy + timedelta(days=1)
+
+    context = {
+        'hoy': hoy,
+        # Registros cargados hoy.
+        'kpi_registros': Registro.objects.filter(
+            fecha_creacion__gte=inicio_hoy, fecha_creacion__lt=fin_hoy
+        ).count(),
+        # Marcados para Segunda Revisión aún sin resolver (ni rechazo ni internación).
+        'kpi_sr': Registro.objects.filter(
+            segunda_revision=True, rechazado=False, internacion=False
+        ).count(),
+        # Casos especiales pendientes (misma definición que admin_list).
+        'kpi_casos': CasoEspecial.objects.filter(estado='pendiente').count(),
+        # Notificaciones de error de registro sin leer del propio usuario.
+        'kpi_lotes_error': Notificacion.objects.filter(
+            usuario=request.user, categoria='error_registro', leida=False
+        ).count(),
+    }
+    return render(request, 'uploader/home_admin.html', context)

@@ -3,6 +3,7 @@ from apps.uploader import views
 
 urlpatterns = [
     path('', views.admin_list, name='admin_list'),
+    path('home-admin/', views.home_admin, name='home_admin'),
     path('upload/', views.upload_excel, name='upload_excel'),
     path('update/<int:registro_id>/', views.update_registro, name='update_registro'),
     path('batch/delete/<int:batch_id>/', views.delete_batch, name='delete_batch'),
