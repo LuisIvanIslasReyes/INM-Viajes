@@ -330,49 +330,8 @@
     <form method="dialog" class="ds-sr-only"><button>cerrar</button></form>
 </dialog>
 
-<!-- Captura de Tiempos de Atención (se refina en Fase 13 — IDs conservados) -->
-<dialog id="modalTiemposAtencion" class="ds-modal">
-    <div class="ds-modal-box">
-        <form method="post" action="{% url 'capturar_tiempos_atencion' %}">
-            {% csrf_token %}
-            <header class="ds-modal-header"><h2 class="ds-h2" style="font-size:18px;">Capturar tiempos de atención</h2>
-                <button type="button" class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="document.getElementById('modalTiemposAtencion').close()"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
-            </header>
-            <div class="ds-modal-body" style="display:flex; flex-direction:column; gap:12px;">
-                <div class="ds-field"><label class="ds-label" for="tiemposFecha">Fecha <span class="ds-req">*</span></label><input type="date" name="fecha" id="tiemposFecha" required min="2026-05-20" class="ds-input"></div>
-                <div id="tiemposEstado" class="ds-alert ds-alert-info hidden" role="status"></div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                    <div class="ds-field"><label class="ds-label">Hora inicio <span class="ds-req">*</span></label><input type="time" name="hora_inicio" required class="ds-input"></div>
-                    <div class="ds-field"><label class="ds-label">Hora fin <span class="ds-req">*</span></label><input type="time" name="hora_fin" required class="ds-input"></div>
-                </div>
-                <div style="text-align:center; font-size:var(--ds-text-xs); font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ds-text-3); border-top:1px solid var(--ds-divider); padding-top:10px;">Tiempos de atención</div>
-                {% for rubro in tiempos_rubros %}
-                <div class="ds-field" data-rubro="{{ rubro.key }}">
-                    <div style="display:flex; justify-content:space-between; align-items:baseline;"><label class="ds-label">{{ rubro.label }}</label><span class="ds-small ds-tabular" data-hint="{{ rubro.key }}" style="margin:0;">&nbsp;</span></div>
-                    {% if rubro.personas %}
-                    <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
-                        <input type="time" name="{{ rubro.key }}" class="ds-input" data-hora>
-                        <input type="number" name="fma_personas" id="fmaPersonas" min="0" inputmode="numeric" class="ds-input" placeholder="Personas">
-                    </div>
-                    {% else %}
-                    <input type="time" name="{{ rubro.key }}" class="ds-input" data-hora>
-                    {% endif %}
-                </div>
-                {% endfor %}
-                <div style="text-align:center; font-size:var(--ds-text-xs); font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ds-text-3); border-top:1px solid var(--ds-divider); padding-top:10px;">Revisiones secundarias</div>
-                <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
-                    <div class="ds-field"><label class="ds-label">SR hora inicio</label><input type="time" name="rs_hora_inicio" id="rsHoraInicio" class="ds-input"></div>
-                    <div class="ds-field"><div style="display:flex; justify-content:space-between; align-items:baseline;"><label class="ds-label">SR hora fin</label><span class="ds-small ds-tabular" id="rsHint" style="margin:0;">&nbsp;</span></div><input type="time" name="rs_hora_fin" id="rsHoraFin" class="ds-input"></div>
-                </div>
-            </div>
-            <footer class="ds-modal-footer">
-                <button type="button" onclick="document.getElementById('modalTiemposAtencion').close()" class="ds-btn ds-btn-ghost">Cancelar</button>
-                <button type="submit" class="ds-btn ds-btn-primary">Guardar</button>
-            </footer>
-        </form>
-    </div>
-    <form method="dialog" class="ds-sr-only"><button>cerrar</button></form>
-</dialog>
+<!-- Captura de Tiempos de Atención — Fase 13: extraído a partial reutilizable -->
+{% include 'uploader/_modal_tiempos.html' %}
 {% endblock %}
 
 {% block extra_js %}
