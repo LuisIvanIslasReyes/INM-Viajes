@@ -1,0 +1,62 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 16 · DIRECTORIO — CREAR (PR 20) · patrón de formulario del sistema
+   ⚠ SUPUESTO: directorio/crear.html aún no se subió. context (form) es
+   propuesta. Mismo idioma que F12 (create_user): secciones + un CTA.
+   Editar (F17, editar.html) reutiliza este mismo cuerpo + estado
+   "cambios sin guardar". Backend: 0 cambios previstos.
+   ==================================================================== #}
+{% block title %}Agregar empresa · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container-form" style="max-width: 720px;">
+
+    {% include 'uploader/_page_header.html' with titulo='Agregar empresa' subtitulo='Alta de una empresa en el directorio.' %}
+
+    <form method="post" action="{% url 'directorio_crear' %}" id="form-empresa" class="ds-card" style="padding:var(--ds-sp-6); display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+        {% csrf_token %}
+
+        {# --- Identidad --- #}
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <p class="ds-caption" style="margin:0;">Identidad</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-4);">
+                <div class="ds-field">
+                    <label class="ds-label" for="razon">Razón social <span class="ds-req" aria-hidden="true">*</span></label>
+                    <input class="ds-input" id="razon" name="razon_social" type="text" required value="{{ form.razon_social.value|default:'' }}"
+                           {% if form.razon_social.errors %}aria-invalid="true" aria-describedby="razon-err"{% endif %}>
+                    {% if form.razon_social.errors %}<p class="ds-error-text" id="razon-err"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>{{ form.razon_social.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="rfc">RFC <span class="ds-req" aria-hidden="true">*</span></label>
+                    <input class="ds-input" id="rfc" name="rfc" type="text" required autocomplete="off" value="{{ form.rfc.value|default:'' }}">
+                </div>
+            </div>
+            <div class="ds-field">
+                <label class="ds-label" for="giro">Giro</label>
+                <input class="ds-input" id="giro" name="giro" type="text" value="{{ form.giro.value|default:'' }}">
+            </div>
+        </div>
+
+        {# --- Contacto --- #}
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <p class="ds-caption" style="margin:0;">Contacto</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-4);">
+                <div class="ds-field"><label class="ds-label" for="contacto">Responsable</label><input class="ds-input" id="contacto" name="contacto" type="text" value="{{ form.contacto.value|default:'' }}"></div>
+                <div class="ds-field"><label class="ds-label" for="telefono">Teléfono</label><input class="ds-input ds-tabular" id="telefono" name="telefono" type="tel" value="{{ form.telefono.value|default:'' }}"></div>
+                <div class="ds-field" style="grid-column:span 2;"><label class="ds-label" for="correo">Correo</label><input class="ds-input" id="correo" name="correo" type="email" value="{{ form.correo.value|default:'' }}"></div>
+            </div>
+        </div>
+
+        {# --- Dirección --- #}
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <p class="ds-caption" style="margin:0;">Dirección</p>
+            <div class="ds-field"><label class="ds-label" for="direccion">Domicilio</label><textarea class="ds-textarea" id="direccion" name="direccion">{{ form.direccion.value|default:'' }}</textarea></div>
+        </div>
+
+        <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end;">
+            <a href="{% url 'directorio_listado' %}" class="ds-btn ds-btn-secondary">Cancelar</a>
+            <button type="submit" class="ds-btn ds-btn-primary">Guardar empresa</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

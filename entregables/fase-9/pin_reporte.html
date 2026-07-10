@@ -1,0 +1,91 @@
+{% extends 'uploader/base_admin_ds.html' %}
+{# ====================================================================
+   FASE 9 · REPORTE PIN BINACIONAL (PR 16) — CONSISTENCIA PURA
+   Adopta el patrón EXACTO de F7 (date_range_report): rail de filtros +
+   KPIs + tabla + toolbar export. Cero componentes nuevos. Lo único que
+   cambia respecto a F7 es el context que consume (datos PIN) y las
+   etiquetas de columna. Conserva context y url pin_reporte. Backend: 0 cambios.
+   ==================================================================== #}
+{% block title %}Reporte PIN Binacional · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" id="report-root" style="max-width: 1120px;">
+
+    {% include 'uploader/_page_header.html' with titulo='Reporte PIN Binacional' subtitulo='Programa de Internación de Nacionales — resumen del periodo.' %}
+    {% block page_action %}
+    <div style="display:flex; gap:8px; flex-wrap:wrap;">
+        <button id="export-pdf" class="ds-btn ds-btn-sm ds-btn-secondary" type="button">
+            <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg> PDF
+        </button>
+        <button id="export-excel" class="ds-btn ds-btn-sm ds-btn-secondary" type="button">
+            <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18M3 9h18"/></svg> Excel
+        </button>
+    </div>
+    {% endblock %}
+
+    <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--ds-sp-3); margin-bottom:var(--ds-sp-4);">
+        <div class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6);">
+            <div class="ds-caption">Total PIN</div>
+            <div class="ds-tabular" style="font-size:var(--ds-text-4xl); font-weight:800; line-height:1.1;">{{ total_pin|default:0 }}</div>
+        </div>
+        <div class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6); border-left:4px solid var(--ds-info);">
+            <div class="ds-caption">Internados</div>
+            <div class="ds-tabular" style="font-size:var(--ds-text-4xl); font-weight:800; color:var(--ds-info); line-height:1.1;">{{ total_internados|default:0 }}</div>
+        </div>
+        <div class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6); border-left:4px solid var(--ds-success);">
+            <div class="ds-caption">Concluidos</div>
+            <div class="ds-tabular" style="font-size:var(--ds-text-4xl); font-weight:800; color:var(--ds-success); line-height:1.1;">{{ total_concluidos|default:0 }}</div>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:240px 1fr; gap:var(--ds-sp-4); align-items:start;">
+        <aside class="ds-card" style="padding:var(--ds-sp-4); align-self:start;">
+            <form method="get" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+                <p class="ds-caption" style="margin:0;">Filtros</p>
+                <div class="ds-field">
+                    <label class="ds-label" for="fecha_inicio">Desde</label>
+                    <input class="ds-input" type="date" id="fecha_inicio" name="fecha_inicio" value="{{ fecha_inicio|date:'Y-m-d' }}">
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="fecha_fin">Hasta</label>
+                    <input class="ds-input" type="date" id="fecha_fin" name="fecha_fin" value="{{ fecha_fin|date:'Y-m-d' }}">
+                </div>
+                <button type="submit" class="ds-btn ds-btn-primary ds-btn-block ds-btn-sm">Aplicar</button>
+            </form>
+        </aside>
+
+        <div class="ds-table-wrap" tabindex="0" role="region" aria-label="Registros PIN">
+            {% if registros %}
+            <table class="ds-table ds-table-compact">
+                <thead><tr>
+                    <th scope="col">Folio</th><th scope="col">Pasajero</th>
+                    <th scope="col">Nacionalidad</th><th scope="col">Estatus</th>
+                </tr></thead>
+                <tbody>
+                    {% for r in registros %}
+                    <tr>
+                        <td class="ds-tabular" style="font-weight:700;">{{ r.folio }}</td>
+                        <td style="font-weight:600;">{{ r.nombre }}</td>
+                        <td class="ds-tabular">{{ r.nacionalidad }}</td>
+                        <td>
+                            {% if r.concluido %}
+                            <span class="ds-badge ds-badge-success"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Concluido</span>
+                            {% else %}
+                            <span class="ds-badge ds-badge-info"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Internado</span>
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+            {% else %}
+            <div class="ds-empty">
+                <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M8 2v4M16 2v4M3 10h18"/><rect x="3" y="4" width="18" height="18" rx="2"/></svg></div>
+                <h3 class="ds-h3">Sin registros PIN en el periodo</h3>
+                <p class="ds-empty-desc">Ajusta el rango de fechas para ver resultados.</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

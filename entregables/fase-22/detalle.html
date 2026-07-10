@@ -1,0 +1,60 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 22 · REDACCIONES — DETALLE / PREVIEW PDF (PR 26)
+   ⚠ SUPUESTO: redacciones/detalle.html aún no se subió. context (documento,
+   puede_editar) es propuesta. Visor PDF embebido + toolbar (descargar /
+   imprimir / abrir en pestaña) + panel lateral de metadatos.
+   El <iframe> lleva title y hay link de descarga como fallback (WCAG 1.1.1).
+   Backend: 0 cambios previstos.
+   ==================================================================== #}
+{% block title %}{{ documento.titulo }} · Redacciones · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="max-width: 1120px;">
+
+    <nav class="ds-crumbs" aria-label="Ruta de navegación" style="margin-bottom:var(--ds-sp-4);">
+        <ol>
+            <li><a href="{% url 'redacciones_biblioteca' %}">Redacciones</a></li>
+            <li aria-current="page">{{ documento.titulo }}</li>
+        </ol>
+    </nav>
+
+    <div style="border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); overflow:hidden; display:grid; grid-template-columns:1fr 280px;">
+
+        {# Visor + toolbar #}
+        <div style="display:flex; flex-direction:column; background:var(--ds-bg-sunken); min-width:0;">
+            <div style="display:flex; align-items:center; gap:var(--ds-sp-2); padding:var(--ds-sp-2) var(--ds-sp-4); border-bottom:1px solid var(--ds-border); background:var(--ds-bg-surface);">
+                <a href="{{ documento.archivo.url }}" download class="ds-btn ds-btn-sm ds-btn-secondary">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Descargar
+                </a>
+                <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" onclick="document.getElementById('pdf-viewer').contentWindow.print()">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg> Imprimir
+                </button>
+                <a href="{{ documento.archivo.url }}" target="_blank" rel="noopener" class="ds-btn ds-btn-sm ds-btn-ghost" style="margin-left:auto;">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg> Abrir en pestaña
+                </a>
+            </div>
+            <iframe id="pdf-viewer" src="{{ documento.archivo.url }}" title="Vista previa de {{ documento.titulo }}"
+                    style="width:100%; height:640px; border:0; background:var(--ds-bg-sunken);"></iframe>
+            <p class="ds-small" style="padding:var(--ds-sp-2) var(--ds-sp-4); margin:0;">
+                ¿No se muestra el documento? <a href="{{ documento.archivo.url }}" download>Descárgalo aquí</a>.
+            </p>
+        </div>
+
+        {# Panel de metadatos #}
+        <aside style="border-left:1px solid var(--ds-border); background:var(--ds-bg-surface); padding:var(--ds-sp-4);">
+            <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--ds-sp-2); margin-bottom:var(--ds-sp-4);">
+                <div class="ds-caption">Metadatos</div>
+                {% if puede_editar %}<a href="{% url 'redacciones_editar' documento.id %}" class="ds-btn ds-btn-sm ds-btn-ghost">Editar</a>{% endif %}
+            </div>
+            <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4); font-size:var(--ds-text-sm);">
+                <div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Título</div><div style="font-weight:600;">{{ documento.titulo }}</div></div>
+                <div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Categoría</div><span class="ds-badge ds-badge-brand" style="font-size:10px;">{{ documento.categoria }}</span></div>
+                <div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Tamaño</div><div class="ds-tabular">{{ documento.tamano }}</div></div>
+                <div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Subido</div><div class="ds-tabular">{{ documento.fecha_subida|date:'d/m/Y' }} · {{ documento.subido_por }}</div></div>
+                {% if documento.descripcion %}<div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Descripción</div><div style="line-height:1.5; color:var(--ds-text-2);">{{ documento.descripcion }}</div></div>{% endif %}
+            </div>
+        </aside>
+    </div>
+</div>
+{% endblock %}

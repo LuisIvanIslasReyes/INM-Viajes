@@ -1,0 +1,258 @@
+{% extends 'uploader/base_ds.html' %}
+{% load static %}
+{# ====================================================================
+   FASE 6 · CASOS ESPECIALES (PR 12) — split view (lista + detalle)
+   Reemplaza los acordeones anidados por: lista maestra (izq) + panel de
+   detalle (der). Todo el dato ya viaja en el context → el cambio de
+   selección es client-side (selectCaso), sin endpoint nuevo. Backend: 0.
+   Conserva: context (total_pendientes, filtro_estado, casos paginator con
+   caso.id/razon/estado/registro/conflictivos/get_*_display/fecha_resolucion/
+   resuelto_por/notas_admin/documento_original), las urls resolver_caso_*,
+   los confirm() destructivos y los dialog editModal{id}_nuevo / _conf{id}.
+   ==================================================================== #}
+{% block title %}Casos especiales · INM Viajes{% endblock %}
+
+{% block content %}
+<div style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+
+    {% include 'uploader/_page_header.html' with titulo='Casos especiales' subtitulo='Documentos duplicados o faltantes que requieren revisión manual.' %}
+    {% block page_action %}
+    <div style="display:flex; align-items:center; gap:8px;">
+        <span class="ds-badge ds-badge-danger" style="font-size:var(--ds-text-sm); padding:6px 12px;"><span class="ds-tabular">{{ total_pendientes }}</span> pendientes</span>
+    </div>
+    {% endblock %}
+
+    <!-- Tabs de estado (server-side) -->
+    <div class="ds-tabs" role="tablist" aria-label="Filtrar por estado">
+        <a class="ds-tab" role="tab" href="?estado=pendiente" aria-selected="{% if filtro_estado == 'pendiente' %}true{% else %}false{% endif %}">Pendientes <span class="ds-badge ds-badge-count">{{ total_pendientes }}</span></a>
+        <a class="ds-tab" role="tab" href="?estado=aceptado" aria-selected="{% if filtro_estado == 'aceptado' %}true{% else %}false{% endif %}">Aceptados</a>
+        <a class="ds-tab" role="tab" href="?estado=editado" aria-selected="{% if filtro_estado == 'editado' %}true{% else %}false{% endif %}">Editados</a>
+        <a class="ds-tab" role="tab" href="?estado=inadmitido" aria-selected="{% if filtro_estado == 'inadmitido' %}true{% else %}false{% endif %}">Inadmitidos</a>
+        <a class="ds-tab" role="tab" href="?estado=eliminado" aria-selected="{% if filtro_estado == 'eliminado' %}true{% else %}false{% endif %}">Eliminados</a>
+        <a class="ds-tab" role="tab" href="?estado=todos" aria-selected="{% if filtro_estado == 'todos' %}true{% else %}false{% endif %}">Todos</a>
+    </div>
+
+    {% if casos %}
+    <div class="casos-split" style="display:grid; grid-template-columns:340px 1fr; gap:var(--ds-sp-4); align-items:start;">
+
+        <!-- ── LISTA MAESTRA ── -->
+        <aside class="ds-card" style="overflow:hidden; position:sticky; top:76px;">
+            <div class="ds-card-header"><h2 class="ds-h4">Casos ({{ casos.paginator.count }})</h2></div>
+            <div role="listbox" aria-label="Lista de casos" style="max-height:70vh; overflow-y:auto;">
+                {% for caso in casos %}
+                <button type="button" role="option" class="caso-row" data-caso-row="{{ caso.id }}" onclick="selectCaso({{ caso.id }})"
+                        aria-selected="{% if forloop.first %}true{% else %}false{% endif %}"
+                        style="width:100%; text-align:left; display:flex; gap:12px; align-items:center; padding:12px 16px; border:0; border-bottom:1px solid var(--ds-divider); border-left:3px solid {% if caso.razon == 'sin_documento' %}var(--ds-danger){% else %}var(--ds-info){% endif %}; background:transparent; cursor:pointer;">
+                    <span style="flex:none; width:36px; height:36px; border-radius:8px; display:grid; place-items:center; background:{% if caso.razon == 'sin_documento' %}var(--ds-warm-200){% else %}var(--ds-info-container){% endif %}; color:{% if caso.razon == 'sin_documento' %}var(--ds-danger){% else %}var(--ds-info){% endif %};">
+                        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 20h16a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13c0 1.1.9 2 2 2Z"/></svg>
+                    </span>
+                    <span style="min-width:0; flex:1;">
+                        <span style="display:flex; align-items:center; gap:6px;">
+                            <strong style="font-size:var(--ds-text-sm);">Caso #{{ caso.id }}</strong>
+                            {% if caso.razon == 'sin_documento' %}<span class="ds-badge ds-badge-danger" style="font-size:9px; padding:1px 6px;">Urgente</span>{% endif %}
+                        </span>
+                        <span style="display:block; font-size:var(--ds-text-xs); color:var(--ds-text-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">{{ caso.registro.nombre_pasajero }} · {{ caso.registro.vuelo_numero }}</span>
+                    </span>
+                    <span style="flex:none; width:8px; height:8px; border-radius:999px; background:{% if caso.estado == 'pendiente' %}{% if caso.razon == 'sin_documento' %}var(--ds-danger){% else %}var(--ds-info){% endif %}{% elif caso.estado == 'aceptado' %}var(--ds-success){% elif caso.estado == 'editado' %}var(--ds-warning-accent){% else %}var(--ds-neutral-400){% endif %};" title="{{ caso.get_estado_display }}"></span>
+                </button>
+                {% endfor %}
+            </div>
+        </aside>
+
+        <!-- ── PANELES DE DETALLE ── -->
+        <section style="min-width:0;">
+            {% for caso in casos %}
+            <div class="caso-panel" data-caso-panel="{{ caso.id }}" {% if not forloop.first %}hidden{% endif %} style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+
+                <!-- Encabezado del caso -->
+                <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px;">
+                    <div style="display:flex; align-items:center; gap:10px;">
+                        <h2 class="ds-h2">Caso #{{ caso.id }}</h2>
+                        {% if caso.razon == 'sin_documento' %}<span class="ds-badge ds-badge-danger">Urgente</span>{% else %}<span class="ds-badge ds-badge-info">Estándar</span>{% endif %}
+                        <span class="ds-badge">{{ caso.get_estado_display }}</span>
+                    </div>
+                </div>
+
+                <!-- Alerta contextual -->
+                {% if caso.razon == 'sin_documento' %}
+                <div class="ds-alert ds-alert-danger" role="alert">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                    <div><strong>Pasajero sin número de documento.</strong> Debe capturarse el documento antes del vuelo para evitar denegación de embarque.</div>
+                </div>
+                {% else %}
+                <div class="ds-alert ds-alert-warning" role="alert">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                    <div><strong>{{ caso.get_razon_display }}.</strong> Se encontraron {{ caso.conflictivos.count|add:1 }} registro(s) con el mismo documento{% if caso.razon == 'mismo_vuelo_fecha' %} en el vuelo <strong>{{ caso.registro.vuelo_numero }}</strong> del <strong>{{ caso.registro.vuelo_fecha|date:"d/m/Y" }}</strong>{% endif %}.</div>
+                </div>
+                {% endif %}
+
+                {% if caso.razon == 'sin_documento' %}
+                <!-- SIN DOCUMENTO: detalles + resolución -->
+                <div style="display:grid; grid-template-columns:1fr; gap:var(--ds-sp-4);">
+                    <section class="ds-card">
+                        <header class="ds-card-header"><h3 class="ds-h4">Detalles del pasajero</h3></header>
+                        <div class="ds-card-body" style="display:grid; grid-template-columns:repeat(auto-fit,minmax(160px,1fr)); gap:16px;">
+                            <div><div class="ds-caption">Pasajero</div><div style="font-weight:600;">{{ caso.registro.nombre_pasajero }}</div></div>
+                            <div><div class="ds-caption">Documento</div><div style="font-weight:600; color:var(--ds-danger); font-style:italic;">Faltante</div></div>
+                            <div><div class="ds-caption">Vuelo</div><div style="font-weight:700; color:var(--ds-info);">{{ caso.registro.vuelo_numero }}</div></div>
+                            <div><div class="ds-caption">Fecha</div><div style="font-weight:600;">{{ caso.registro.vuelo_fecha|date:"d/m/Y" }}</div></div>
+                            <div><div class="ds-caption">Salida</div><div style="font-weight:600;">{{ caso.registro.aeropuerto_salida }}</div></div>
+                            <div><div class="ds-caption">Llegada</div><div style="font-weight:600;">{{ caso.registro.aeropuerto_llegada }}</div></div>
+                            <div><div class="ds-caption">Asiento</div><div><span class="ds-badge">{{ caso.registro.numero_asiento }}</span></div></div>
+                        </div>
+                    </section>
+                    {% if caso.estado == 'pendiente' %}
+                    <section class="ds-card">
+                        <header class="ds-card-header"><h3 class="ds-h4">Resolución</h3></header>
+                        <div class="ds-card-body" style="display:flex; flex-wrap:wrap; gap:10px;">
+                            <button onclick="editModal{{ caso.id }}_nuevo.showModal()" class="ds-btn ds-btn-primary"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 10h18M7 15h1m4 0h5M2 8a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2z"/></svg>Capturar documento</button>
+                            <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id caso.registro.id %}" onsubmit="return confirm('¿Marcar este registro como INADMITIDO? Se activará SR y R.');" style="margin:0;">
+                                {% csrf_token %}<input type="hidden" name="motivo" value="Sin documento - registro inadmitido">
+                                <button type="submit" class="ds-btn ds-btn-danger-ghost" style="border:1px solid var(--ds-danger);"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg>Rechazar (SR + R)</button>
+                            </form>
+                            <form method="POST" action="{% url 'resolver_caso_eliminar' caso.id caso.registro.id %}" onsubmit="return confirm('¿ELIMINAR permanentemente? No se puede deshacer.');" style="margin:0; margin-left:auto;">
+                                {% csrf_token %}<button type="submit" class="ds-btn ds-btn-ghost"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>Eliminar</button>
+                            </form>
+                        </div>
+                    </section>
+                    {% else %}
+                    <div class="ds-alert ds-alert-success"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg><div>{{ caso.get_estado_display }}{% if caso.fecha_resolucion %} · {{ caso.fecha_resolucion|date:"d/m/Y H:i" }} por <strong>{{ caso.resuelto_por.username }}</strong>{% endif %}</div></div>
+                    {% endif %}
+                </div>
+
+                {% else %}
+                <!-- DUPLICADOS: comparación lado a lado con diff -->
+                <div style="display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); gap:var(--ds-sp-4);">
+                    <!-- Nuevo -->
+                    <section class="ds-card" style="border-color:var(--ds-info);">
+                        <div style="padding:10px 16px; background:var(--ds-info-container); border-bottom:1px solid #B9D2E5;"><h3 class="ds-h4" style="color:var(--ds-on-info); display:flex; align-items:center; gap:8px;"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>Registro nuevo (este caso)</h3></div>
+                        <div class="ds-card-body" style="display:flex; flex-direction:column; gap:14px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                                <div style="background:var(--ds-info-container); border-radius:8px; padding:8px;"><div class="ds-caption">Pasajero</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ caso.registro.nombre_pasajero }}</div></div>
+                                <div style="background:var(--ds-info-container); border-radius:8px; padding:8px;"><div class="ds-caption">Documento</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ caso.registro.numero_documento }}</div></div>
+                                <div><div class="ds-caption">Vuelo</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ caso.registro.vuelo_numero }}</div></div>
+                                <div><div class="ds-caption">Fecha</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ caso.registro.vuelo_fecha|date:"d/m/Y" }}</div></div>
+                                <div><div class="ds-caption">Asiento</div><div><span class="ds-badge">{{ caso.registro.numero_asiento }}</span></div></div>
+                                <div><div class="ds-caption">Ruta</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ caso.registro.aeropuerto_salida }}→{{ caso.registro.aeropuerto_llegada }}</div></div>
+                            </div>
+                            {% if caso.estado == 'pendiente' %}
+                            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--ds-divider); padding-top:12px;">
+                                <button onclick="editModal{{ caso.id }}_nuevo.showModal()" class="ds-btn ds-btn-sm ds-btn-primary">Editar documento</button>
+                                <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id caso.registro.id %}" onsubmit="return confirm('¿Marcar como INADMITIDO? Se activará SR y R.');" style="margin:0;">{% csrf_token %}<input type="hidden" name="motivo" value="Documento duplicado - registro inadmitido"><button type="submit" class="ds-btn ds-btn-sm ds-btn-danger-ghost ds-btn-block" style="border:1px solid var(--ds-danger);">Rechazar (SR + R)</button></form>
+                                <form method="POST" action="{% url 'resolver_caso_eliminar' caso.id caso.registro.id %}" onsubmit="return confirm('¿ELIMINAR permanentemente?');" style="margin:0;">{% csrf_token %}<button type="submit" class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-block">Eliminar</button></form>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </section>
+                    <!-- Previos -->
+                    {% for reg_conf in caso.conflictivos %}
+                    <section class="ds-card" style="border-color:var(--ds-danger);">
+                        <div style="padding:10px 16px; background:var(--ds-danger-container); border-bottom:1px solid #F4B4AE;"><h3 class="ds-h4" style="color:var(--ds-on-danger); display:flex; align-items:center; gap:8px;"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>Registro previo #{{ forloop.counter }}</h3></div>
+                        <div class="ds-card-body" style="display:flex; flex-direction:column; gap:14px;">
+                            <div style="display:grid; grid-template-columns:1fr 1fr; gap:12px;">
+                                <div style="background:var(--ds-danger-container); border-radius:8px; padding:8px;"><div class="ds-caption">Pasajero</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ reg_conf.nombre_pasajero }}</div></div>
+                                <div style="background:var(--ds-danger-container); border-radius:8px; padding:8px;"><div class="ds-caption">Documento</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ reg_conf.numero_documento }}</div></div>
+                                <div><div class="ds-caption">Vuelo</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ reg_conf.vuelo_numero }}</div></div>
+                                <div><div class="ds-caption">Fecha</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ reg_conf.vuelo_fecha|date:"d/m/Y" }}</div></div>
+                                <div><div class="ds-caption">Asiento</div><div><span class="ds-badge">{{ reg_conf.numero_asiento }}</span></div></div>
+                                <div><div class="ds-caption">Ruta</div><div style="font-weight:600; font-size:var(--ds-text-sm);">{{ reg_conf.aeropuerto_salida }}→{{ reg_conf.aeropuerto_llegada }}</div></div>
+                            </div>
+                            {% if caso.estado == 'pendiente' %}
+                            <div style="display:flex; flex-direction:column; gap:8px; border-top:1px solid var(--ds-divider); padding-top:12px;">
+                                <button onclick="editModal{{ caso.id }}_conf{{ reg_conf.id }}.showModal()" class="ds-btn ds-btn-sm ds-btn-secondary">Editar documento</button>
+                                <form method="POST" action="{% url 'resolver_caso_inadmitir' caso.id reg_conf.id %}" onsubmit="return confirm('¿Marcar a {{ reg_conf.nombre_pasajero|escapejs }} como INADMITIDO?');" style="margin:0;">{% csrf_token %}<input type="hidden" name="motivo" value="Documento duplicado - registro inadmitido"><button type="submit" class="ds-btn ds-btn-sm ds-btn-danger-ghost ds-btn-block" style="border:1px solid var(--ds-danger);">Rechazar (SR + R)</button></form>
+                                <form method="POST" action="{% url 'resolver_caso_eliminar' caso.id reg_conf.id %}" onsubmit="return confirm('¿ELIMINAR a {{ reg_conf.nombre_pasajero|escapejs }}?');" style="margin:0;">{% csrf_token %}<button type="submit" class="ds-btn ds-btn-sm ds-btn-ghost ds-btn-block">Eliminar</button></form>
+                            </div>
+                            {% endif %}
+                        </div>
+                        <dialog id="editModal{{ caso.id }}_conf{{ reg_conf.id }}" class="ds-modal">
+                            <div class="ds-modal-box">
+                                <header class="ds-modal-header"><h3 class="ds-h2" style="font-size:18px;">Editar documento</h3><button type="button" class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="editModal{{ caso.id }}_conf{{ reg_conf.id }}.close()"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
+                                <form method="POST" action="{% url 'resolver_caso_editar' caso.id reg_conf.id %}">
+                                    {% csrf_token %}
+                                    <div class="ds-modal-body">
+                                        <p class="ds-small" style="margin-bottom:12px;">Pasajero: <strong>{{ reg_conf.nombre_pasajero }}</strong> · actual: <span class="ds-badge">{{ reg_conf.numero_documento }}</span></p>
+                                        <div class="ds-field"><label class="ds-label">Nuevo número de documento</label><input type="text" name="nuevo_documento" class="ds-input" required value="{{ reg_conf.numero_documento }}" placeholder="Número correcto"></div>
+                                    </div>
+                                    <footer class="ds-modal-footer"><button type="button" onclick="editModal{{ caso.id }}_conf{{ reg_conf.id }}.close()" class="ds-btn ds-btn-ghost">Cancelar</button><button type="submit" class="ds-btn ds-btn-primary">Guardar</button></footer>
+                                </form>
+                            </div>
+                        </dialog>
+                    </section>
+                    {% endfor %}
+                </div>
+
+                {% if caso.estado == 'pendiente' %}
+                <form method="POST" action="{% url 'resolver_caso_aceptar' caso.id %}" onsubmit="return confirm('¿Confirmas que AMBOS registros son válidos? Se activará SR en todos.');" style="margin:0;">
+                    {% csrf_token %}
+                    <button type="submit" class="ds-btn ds-btn-primary ds-btn-block ds-btn-lg"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 7 17l-5-5M22 10l-7.5 7.5L13 16"/></svg>Aceptar ambos como válidos (SR)</button>
+                    <p class="ds-help" style="text-align:center; margin-top:8px;">Úsalo si ambos son correctos (ej. familiares con documento compartido). Se marcará SR en todos.</p>
+                </form>
+                {% endif %}
+                {% endif %}
+
+                {% if caso.notas_admin %}
+                <div class="ds-alert ds-alert-info"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg><div><strong>Notas:</strong> {{ caso.notas_admin }}</div></div>
+                {% endif %}
+
+                <!-- Modal capturar/editar registro nuevo -->
+                <dialog id="editModal{{ caso.id }}_nuevo" class="ds-modal">
+                    <div class="ds-modal-box">
+                        <header class="ds-modal-header"><h3 class="ds-h2" style="font-size:18px;">{% if caso.razon == 'sin_documento' %}Capturar número de documento{% else %}Editar documento{% endif %}</h3><button type="button" class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="editModal{{ caso.id }}_nuevo.close()"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button></header>
+                        <form method="POST" action="{% url 'resolver_caso_editar' caso.id caso.registro.id %}">
+                            {% csrf_token %}
+                            <div class="ds-modal-body">
+                                <p class="ds-small" style="margin-bottom:12px;">Pasajero: <strong>{{ caso.registro.nombre_pasajero }}</strong>{% if caso.razon != 'sin_documento' %} · actual: <span class="ds-badge">{{ caso.documento_original }}</span>{% endif %}</p>
+                                <div class="ds-field"><label class="ds-label">{% if caso.razon == 'sin_documento' %}Número de documento{% else %}Nuevo número de documento{% endif %}</label>
+                                    <input type="text" name="nuevo_documento" class="ds-input" required value="{% if caso.razon != 'sin_documento' %}{{ caso.documento_original }}{% endif %}" placeholder="Número de documento">
+                                </div>
+                            </div>
+                            <footer class="ds-modal-footer"><button type="button" onclick="editModal{{ caso.id }}_nuevo.close()" class="ds-btn ds-btn-ghost">Cancelar</button><button type="submit" class="ds-btn ds-btn-primary">Guardar</button></footer>
+                        </form>
+                    </div>
+                </dialog>
+            </div>
+            {% endfor %}
+        </section>
+    </div>
+
+    {% if casos.has_other_pages %}
+    <nav aria-label="Paginación" style="display:flex; justify-content:center; gap:8px;">
+        {% if casos.has_previous %}<a href="?page={{ casos.previous_page_number }}&estado={{ filtro_estado }}" class="ds-btn ds-btn-sm ds-btn-secondary">‹ Anterior</a>{% endif %}
+        <span class="ds-btn ds-btn-sm ds-btn-ghost ds-tabular" aria-current="page">Página {{ casos.number }}</span>
+        {% if casos.has_next %}<a href="?page={{ casos.next_page_number }}&estado={{ filtro_estado }}" class="ds-btn ds-btn-sm ds-btn-secondary">Siguiente ›</a>{% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="ds-empty">
+        <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></div>
+        <h3 class="ds-h3">No hay casos con estado "{{ filtro_estado }}"</h3>
+        <p class="ds-empty-desc">Cuando una carga genere duplicados o registros sin documento, aparecerán aquí para revisión.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .caso-row[aria-selected="true"] { background:var(--ds-warm-100) !important; }
+    .caso-row:hover { background:var(--ds-hover-bg); }
+    .caso-row:focus-visible { outline:none; box-shadow:inset 0 0 0 2px var(--ds-guinda-600); }
+    @media (max-width: 900px) { .casos-split { grid-template-columns:1fr !important; } .casos-split aside { position:static !important; max-height:none; } }
+</style>
+
+<script>
+function selectCaso(id) {
+    document.querySelectorAll('[data-caso-panel]').forEach(function (p) { p.hidden = String(p.dataset.casoPanel) !== String(id); });
+    document.querySelectorAll('[data-caso-row]').forEach(function (r) { r.setAttribute('aria-selected', String(r.dataset.casoRow) === String(id)); });
+}
+function updateRegistro(registroId, campo, valor) {
+    var fd = new FormData();
+    fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
+    fd.append(campo, valor);
+    fetch((window.URL_PREFIX || '') + '/update-registro/' + registroId + '/', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
+        .then(function (r) { return r.json(); })
+        .then(function (d) { if (d.success) { location.reload(); } else { if (window.dsToast) dsToast('Error al actualizar', 'danger'); location.reload(); } })
+        .catch(function () { if (window.dsToast) dsToast('Error al actualizar', 'danger'); location.reload(); });
+}
+</script>
+{% endblock %}

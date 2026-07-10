@@ -1,0 +1,49 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 21 · REDACCIONES — EDITAR (PR 25)
+   ⚠ SUPUESTO: redacciones/editar.html aún no se subió. context (documento,
+   categorias) es propuesta. Edita SOLO metadatos (el archivo no se re-sube
+   aquí): patrón de formulario estándar (F12/F16). Backend: 0 cambios.
+   ==================================================================== #}
+{% block title %}Editar {{ documento.titulo }} · Redacciones · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container-form" style="max-width: 720px;">
+
+    {% include 'uploader/_page_header.html' with titulo='Editar documento' subtitulo=documento.titulo %}
+
+    <form method="post" action="{% url 'redacciones_editar' documento.id %}" class="ds-card" style="padding:var(--ds-sp-6); display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+        {% csrf_token %}
+
+        {# Archivo actual (solo lectura; para reemplazarlo se sube uno nuevo desde F20) #}
+        <div style="display:flex; align-items:center; gap:var(--ds-sp-3); background:var(--ds-bg-sunken); border:1px solid var(--ds-divider); border-radius:var(--ds-radius-md); padding:var(--ds-sp-3) var(--ds-sp-4);">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            <div style="flex:1;">
+                <div style="font-weight:600; font-size:var(--ds-text-sm);">{{ documento.nombre_archivo }}</div>
+                <div class="ds-small ds-tabular" style="margin:0;">{{ documento.extension|upper }} · {{ documento.tamano }}</div>
+            </div>
+            <a href="{{ documento.archivo.url }}" class="ds-btn ds-btn-sm ds-btn-ghost">Ver</a>
+        </div>
+
+        <div class="ds-field">
+            <label class="ds-label" for="titulo">Título <span class="ds-req" aria-hidden="true">*</span></label>
+            <input class="ds-input" id="titulo" name="titulo" type="text" required value="{{ documento.titulo }}">
+        </div>
+        <div class="ds-field">
+            <label class="ds-label" for="categoria">Categoría</label>
+            <select class="ds-select" id="categoria" name="categoria">
+                {% for cat in categorias %}<option value="{{ cat.slug }}" {% if cat.slug == documento.categoria_slug %}selected{% endif %}>{{ cat.nombre }}</option>{% endfor %}
+            </select>
+        </div>
+        <div class="ds-field">
+            <label class="ds-label" for="descripcion">Descripción</label>
+            <textarea class="ds-textarea" id="descripcion" name="descripcion">{{ documento.descripcion }}</textarea>
+        </div>
+
+        <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end;">
+            <a href="{% url 'redacciones_detalle' documento.id %}" class="ds-btn ds-btn-secondary">Cancelar</a>
+            <button type="submit" class="ds-btn ds-btn-primary">Guardar cambios</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

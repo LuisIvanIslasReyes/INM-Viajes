@@ -1,0 +1,68 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 19 · REDACCIONES — BIBLIOTECA (PR 23)
+   ⚠ SUPUESTO: redacciones/biblioteca.html aún no se subió. context
+   (documentos, categoria_activa, categorias, puede_editar) es propuesta.
+   Grid de tarjetas con tipo/fecha/tamaño + tabs de categoría + búsqueda.
+   Clic abre el detalle con preview (F22). Backend: 0 cambios previstos.
+   ==================================================================== #}
+{% block title %}Redacciones · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="max-width: 1040px;">
+
+    {% include 'uploader/_page_header.html' with titulo='Redacciones' subtitulo='Biblioteca de documentos y plantillas.' %}
+    {% block page_action %}
+    {% if puede_editar %}
+    <a href="{% url 'redacciones_subir' %}" class="ds-btn ds-btn-primary">
+        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg> Subir documento
+    </a>
+    {% endif %}
+    {% endblock %}
+
+    <div style="display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:var(--ds-sp-3); margin-bottom:var(--ds-sp-4);">
+        <div class="ds-tabs" role="tablist" aria-label="Categorías de documento">
+            <a class="ds-tab" role="tab" href="?categoria=todas" aria-selected="{% if categoria_activa == 'todas' or not categoria_activa %}true{% else %}false{% endif %}">Todas</a>
+            {% for cat in categorias %}
+            <a class="ds-tab" role="tab" href="?categoria={{ cat.slug }}" aria-selected="{% if categoria_activa == cat.slug %}true{% else %}false{% endif %}">{{ cat.nombre }}</a>
+            {% endfor %}
+        </div>
+        <form method="get" style="max-width:280px; flex:1; min-width:200px;">
+            {% if categoria_activa %}<input type="hidden" name="categoria" value="{{ categoria_activa }}">{% endif %}
+            <div class="ds-search">
+                <svg class="ds-icon ds-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input class="ds-input" type="search" name="q" value="{{ filtro_q|default:'' }}" placeholder="Buscar documento…" aria-label="Buscar documento">
+            </div>
+        </form>
+    </div>
+
+    {% if documentos %}
+    <div style="display:grid; grid-template-columns:repeat(auto-fill, minmax(220px, 1fr)); gap:var(--ds-sp-3);">
+        {% for doc in documentos %}
+        <a href="{% url 'redacciones_detalle' doc.id %}" class="ds-card ds-card-hover" style="padding:var(--ds-sp-4); display:flex; flex-direction:column; gap:10px; text-decoration:none; color:inherit;">
+            {# Color del icono por tipo: oficio=danger, acta=info, circular=success, otros=neutro #}
+            <div style="width:40px; height:48px; border-radius:var(--ds-radius-sm); display:grid; place-items:center;
+                        {% if doc.categoria_slug == 'oficios' %}background:var(--ds-danger-container); color:var(--ds-danger);
+                        {% elif doc.categoria_slug == 'actas' %}background:var(--ds-info-container); color:var(--ds-info);
+                        {% elif doc.categoria_slug == 'circulares' %}background:var(--ds-success-container); color:var(--ds-success);
+                        {% else %}background:var(--ds-bg-sunken); color:var(--ds-text-3);{% endif %}">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+            </div>
+            <div>
+                <div style="font-weight:700; font-size:var(--ds-text-sm); line-height:1.35;">{{ doc.titulo }}</div>
+                <div class="ds-small ds-tabular" style="margin:2px 0 0;">{{ doc.extension|upper }} · {{ doc.tamano }} · {{ doc.fecha_subida|date:'d/m/Y' }}</div>
+            </div>
+            <span class="ds-badge ds-badge-brand" style="align-self:flex-start; font-size:10px;">{{ doc.categoria }}</span>
+        </a>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="ds-empty">
+        <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20M4 19.5A2.5 2.5 0 0 0 6.5 22H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/></svg></div>
+        <h3 class="ds-h3">Sin documentos en esta categoría</h3>
+        <p class="ds-empty-desc">Sube el primer documento para comenzar la biblioteca.</p>
+        {% if puede_editar %}<a href="{% url 'redacciones_subir' %}" class="ds-btn ds-btn-primary">Subir documento</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

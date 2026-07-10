@@ -1,0 +1,37 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 25 · HOME MÍNIMO — GENERAL (PR 04)
+   ⚠ VISTA NUEVA + mismo dispatcher de redirect por rol que F24.
+   Ley de Hick: el rol General solo consulta Directorio y Redacciones,
+   así que la home ofrece únicamente eso — nada de shell administrativo.
+   Sin context obligatorio; los formularios apuntan a las búsquedas
+   existentes por querystring.
+   ==================================================================== #}
+{% block title %}Inicio · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container-read" style="max-width: 640px; padding-block: var(--ds-sp-12);">
+
+    <div style="text-align:center; margin-bottom:var(--ds-sp-6);">
+        <h1 class="ds-h1" style="font-size:var(--ds-text-2xl);">¿Qué necesitas consultar?</h1>
+        <p class="ds-small" style="margin-top:var(--ds-sp-1);">Directorio de empresas y biblioteca documental.</p>
+    </div>
+
+    <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+        <form method="get" action="{% url 'directorio_listado' %}">
+            <label class="ds-label" for="buscar-dir" style="display:block; margin-bottom:var(--ds-sp-1);">Directorio</label>
+            <div class="ds-search">
+                <svg class="ds-icon ds-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input class="ds-input" type="search" id="buscar-dir" name="q" placeholder="Buscar empresa, giro o contacto…" aria-label="Buscar en el directorio">
+            </div>
+        </form>
+        <form method="get" action="{% url 'redacciones_biblioteca' %}">
+            <label class="ds-label" for="buscar-red" style="display:block; margin-bottom:var(--ds-sp-1);">Redacciones</label>
+            <div class="ds-search">
+                <svg class="ds-icon ds-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                <input class="ds-input" type="search" id="buscar-red" name="q" placeholder="Buscar documento…" aria-label="Buscar en redacciones">
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}

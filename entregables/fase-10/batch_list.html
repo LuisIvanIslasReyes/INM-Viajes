@@ -1,0 +1,129 @@
+{% extends 'uploader/base_admin_ds.html' %}
+{# ====================================================================
+   FASE 10 · GESTIÓN DE LOTES (PR 13)
+   - Estado de lote con badge icono+texto (procesado/con errores/pendiente).
+   - Metadatos visibles: quién cargó, cuándo, cuántos registros.
+   - Borrado destructivo (cascada) con confirmación TIPADA: el botón
+     Eliminar permanece disabled hasta que el usuario escribe el nombre
+     exacto del lote — prevención de errores (Nielsen), fricción proporcional.
+   Conserva: context (lotes), url eliminar_lote, csrf. Backend: 0 cambios.
+   El <dialog> nativo sustituye el modal daisy; sin dependencias JS externas.
+   ==================================================================== #}
+{% block title %}Gestión de lotes · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="max-width: 1040px;">
+
+    {% include 'uploader/_page_header.html' with titulo='Gestión de lotes' subtitulo='Cargas de Excel y su estado de procesamiento.' %}
+
+    {% if lotes %}
+    <div class="ds-table-wrap" tabindex="0" role="region" aria-label="Lotes de carga">
+        <table class="ds-table">
+            <thead><tr>
+                <th scope="col">Lote</th><th scope="col">Estado</th>
+                <th scope="col" style="text-align:right;">Registros</th>
+                <th scope="col" style="text-align:right;">Acciones</th>
+            </tr></thead>
+            <tbody>
+                {% for lote in lotes %}
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">{{ lote.nombre }}</div>
+                        <div class="ds-small" style="margin:0;">{{ lote.creado_por }} · {{ lote.fecha_creacion|date:'d/m H:i' }}</div>
+                    </td>
+                    <td>
+                        {% if lote.estado == 'procesado' %}
+                        <span class="ds-badge ds-badge-success"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>Procesado</span>
+                        {% elif lote.estado == 'con_errores' %}
+                        <span class="ds-badge ds-badge-warning"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>{{ lote.num_errores }} con errores</span>
+                        {% else %}
+                        <span class="ds-badge ds-badge-info"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>Pendiente</span>
+                        {% endif %}
+                    </td>
+                    <td class="ds-tabular" style="text-align:right;">{{ lote.num_registros|default:'—' }}</td>
+                    <td>
+                        <div class="ds-td-actions">
+                            <a href="{% url 'admin_list' %}?lote={{ lote.id }}" class="ds-btn ds-btn-sm ds-btn-ghost">Ver</a>
+                            <button type="button" class="ds-btn ds-btn-sm ds-btn-icon ds-btn-danger-ghost btn-eliminar-lote"
+                                    data-lote-id="{{ lote.id }}" data-lote-nombre="{{ lote.nombre }}"
+                                    data-lote-registros="{{ lote.num_registros|default:0 }}"
+                                    aria-label="Eliminar lote {{ lote.nombre }}">
+                                <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="ds-empty">
+        <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg></div>
+        <h3 class="ds-h3">Aún no hay lotes cargados</h3>
+        <p class="ds-empty-desc">Cada archivo Excel que subas aparecerá aquí con su estado.</p>
+        <a href="{% url 'upload_excel' %}" class="ds-btn ds-btn-primary">Subir Excel</a>
+    </div>
+    {% endif %}
+</div>
+
+{# Confirmación destructiva tipada — <dialog> nativo #}
+<dialog class="ds-modal" id="modal-eliminar-lote" aria-labelledby="mel-title">
+    <form class="ds-modal-box" method="post" id="form-eliminar-lote">
+        {% csrf_token %}
+        <header class="ds-modal-header">
+            <h2 class="ds-h2" id="mel-title" style="color:var(--ds-danger);">Eliminar lote</h2>
+            <button class="ds-btn ds-btn-icon ds-btn-ghost" type="button" aria-label="Cerrar" onclick="document.getElementById('modal-eliminar-lote').close()">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </header>
+        <div class="ds-modal-body">
+            <div class="ds-alert ds-alert-danger" style="margin-bottom:var(--ds-sp-4);">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                <div>Se borrarán <b><span id="mel-registros">0</span> registros</b> en cascada. Esta acción no se puede deshacer.</div>
+            </div>
+            <div class="ds-field">
+                <label class="ds-label" for="mel-input">Escribe <b id="mel-nombre-label"></b> para confirmar</label>
+                <input class="ds-input" type="text" id="mel-input" autocomplete="off" aria-describedby="mel-help">
+                <p class="ds-help" id="mel-help">El botón se habilita cuando el nombre coincide exactamente.</p>
+            </div>
+        </div>
+        <footer class="ds-modal-footer">
+            <button type="button" class="ds-btn ds-btn-secondary" onclick="document.getElementById('modal-eliminar-lote').close()">Cancelar</button>
+            <button type="submit" class="ds-btn ds-btn-danger" id="mel-submit" disabled>Eliminar lote</button>
+        </footer>
+    </form>
+</dialog>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var dialog = document.getElementById('modal-eliminar-lote');
+    var form = document.getElementById('form-eliminar-lote');
+    var input = document.getElementById('mel-input');
+    var submit = document.getElementById('mel-submit');
+    var nombreLabel = document.getElementById('mel-nombre-label');
+    var registros = document.getElementById('mel-registros');
+    var nombreEsperado = '';
+
+    // Plantilla de url con placeholder 0 (conserva el patrón de admin_list.js)
+    var urlTpl = "{% url 'eliminar_lote' 0 %}";
+
+    document.querySelectorAll('.btn-eliminar-lote').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+            nombreEsperado = this.dataset.loteNombre;
+            nombreLabel.textContent = nombreEsperado;
+            registros.textContent = this.dataset.loteRegistros;
+            form.action = urlTpl.replace('0', this.dataset.loteId);
+            input.value = '';
+            submit.disabled = true;
+            dialog.showModal();
+            input.focus();
+        });
+    });
+
+    input.addEventListener('input', function () {
+        submit.disabled = this.value.trim() !== nombreEsperado;
+    });
+});
+</script>
+{% endblock %}

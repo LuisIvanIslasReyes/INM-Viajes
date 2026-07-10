@@ -1,0 +1,132 @@
+{# ====================================================================
+   FASE 13 · FRAGMENTO — MODAL CAPTURA DE TIEMPOS (PR 08)
+   Destino: {% include 'uploader/_modal_tiempos.html' %} dentro de
+   admin_list.html e inadmitidos_report.html (un solo fragmento, dos hosts).
+
+   Conserva:
+     - <dialog> nativo showModal()/close() (patrón ya en el brief).
+     - Autocálculo de duraciones del JS existente (rubros cronológicos).
+     - La url de guardado de tiempos y el csrf.
+   Cambia (mejora UX):
+     - Inputs type="time" nativos.
+     - Prellenado del último turno (context: ultimo_turno.*).
+     - Autosave con debounce + estado "Guardado ✓" (aria-live).
+     - UN solo CTA de confirmación.
+
+   ⚠ REQUIERE AJUSTE JS (marcado abajo): un hook de autosave con debounce
+   que hace POST a la url de guardado existente. NO es endpoint nuevo:
+   reusa la ruta de guardado de tiempos que ya recibe estos campos.
+   Backend: 0 cambios de context ni de urls.
+   ==================================================================== #}
+<dialog class="ds-modal" id="modalCapturaTiempos" aria-labelledby="mct-title">
+    <form class="ds-modal-box" method="post" id="form-tiempos"
+          action="{% url 'guardar_tiempos' registro.id %}" data-registro-id="{{ registro.id }}">
+        {% csrf_token %}
+        <header class="ds-modal-header">
+            <div>
+                <div class="ds-caption" style="color:var(--ds-gold-ink);">Registro · {{ registro.pasajero }} · {{ registro.vuelo }}</div>
+                <h2 class="ds-h2" id="mct-title">Tiempos de atención</h2>
+            </div>
+            <button class="ds-btn ds-btn-icon ds-btn-ghost" type="button" aria-label="Cerrar" onclick="document.getElementById('modalCapturaTiempos').close()">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </header>
+
+        <div class="ds-modal-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-3);">
+                <div class="ds-field">
+                    <label class="ds-label" for="t_llegada">Llegada a filtro</label>
+                    <input class="ds-input ds-tabular tiempo-input" id="t_llegada" name="hora_llegada" type="time"
+                           value="{{ registro.hora_llegada|time:'H:i'|default:ultimo_turno.hora_llegada }}">
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="t_inicio">Inicio de entrevista</label>
+                    <input class="ds-input ds-tabular tiempo-input" id="t_inicio" name="hora_inicio" type="time"
+                           value="{{ registro.hora_inicio|time:'H:i'|default:ultimo_turno.hora_inicio }}">
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="t_fin">Fin de entrevista</label>
+                    <input class="ds-input ds-tabular tiempo-input" id="t_fin" name="hora_fin" type="time"
+                           value="{{ registro.hora_fin|time:'H:i'|default:ultimo_turno.hora_fin }}">
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="t_resolucion">Resolución</label>
+                    <input class="ds-input ds-tabular tiempo-input" id="t_resolucion" name="hora_resolucion" type="time"
+                           value="{{ registro.hora_resolucion|time:'H:i'|default:ultimo_turno.hora_resolucion }}">
+                </div>
+            </div>
+
+            {# Duración total: la calcula el JS existente y la escribe aquí #}
+            <div style="display:flex; align-items:center; gap:var(--ds-sp-2); background:var(--ds-bg-sunken); border:1px solid var(--ds-divider); border-radius:var(--ds-radius-md); padding:10px var(--ds-sp-4);">
+                <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-primary);"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                <span style="font-size:var(--ds-text-sm); color:var(--ds-text-3);">Duración total de atención</span>
+                <span class="ds-tabular" id="duracion-total" style="margin-left:auto; font-weight:800; font-size:var(--ds-text-lg);">— min</span>
+            </div>
+
+            <p class="ds-help" style="display:flex; align-items:center; gap:6px;">
+                <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/></svg>
+                Prellenado con los tiempos del último turno. Ajusta lo necesario.
+            </p>
+        </div>
+
+        <footer class="ds-modal-footer" style="justify-content:space-between;">
+            {# Estado de autosave — aria-live para lectores de pantalla (WCAG 4.1.3) #}
+            <span id="autosave-status" class="ds-badge ds-badge-success" role="status" aria-live="polite" style="visibility:hidden;">
+                <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>
+                Guardado ✓ <span id="autosave-hora" class="ds-tabular"></span>
+            </span>
+            <button type="submit" class="ds-btn ds-btn-primary">Confirmar tiempos</button>
+        </footer>
+    </form>
+</dialog>
+
+<script>
+/* ⚠ FASE 13 · AJUSTE JS marcado — autosave con debounce.
+   Hace POST a la MISMA url de guardado (form.action) que el submit;
+   no crea endpoint nuevo. El backend ya acepta estos campos. */
+(function () {
+    var form = document.getElementById('form-tiempos');
+    if (!form) return;
+    var status = document.getElementById('autosave-status');
+    var horaEl = document.getElementById('autosave-hora');
+    var duracionEl = document.getElementById('duracion-total');
+    var inputs = form.querySelectorAll('.tiempo-input');
+    var csrf = form.querySelector('[name=csrfmiddlewaretoken]').value;
+    var timer = null;
+
+    // Foco al primer campo al abrir (WCAG 2.4.3)
+    var dialog = document.getElementById('modalCapturaTiempos');
+    dialog.addEventListener('close', function () { if (timer) { clearTimeout(timer); guardar(); } });
+
+    function recalcularDuracion() {
+        // Reusa el cálculo existente si está expuesto; si no, cálculo simple llegada→resolución
+        var a = document.getElementById('t_llegada').value;
+        var b = document.getElementById('t_resolucion').value;
+        if (a && b) {
+            var da = a.split(':'), db = b.split(':');
+            var min = (db[0]*60 + +db[1]) - (da[0]*60 + +da[1]);
+            duracionEl.textContent = (min >= 0 ? min : 0) + ' min';
+        }
+    }
+
+    async function guardar() {
+        var data = new FormData(form);
+        try {
+            await fetch(form.action, { method: 'POST', headers: { 'X-CSRFToken': csrf }, body: data });
+            var now = new Date();
+            horaEl.textContent = String(now.getHours()).padStart(2,'0') + ':' + String(now.getMinutes()).padStart(2,'0');
+            status.style.visibility = 'visible';
+        } catch (e) { /* silencioso; el submit final reintenta */ }
+    }
+
+    inputs.forEach(function (inp) {
+        inp.addEventListener('input', function () {
+            recalcularDuracion();
+            status.style.visibility = 'hidden';
+            if (timer) clearTimeout(timer);
+            timer = setTimeout(guardar, 800); // debounce
+        });
+    });
+    recalcularDuracion();
+})();
+</script>

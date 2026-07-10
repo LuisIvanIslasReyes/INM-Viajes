@@ -1,0 +1,69 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 17 · DIRECTORIO — EDITAR (PR 21)
+   ⚠ SUPUESTO: directorio/editar.html aún no se subió. context (empresa, form)
+   es propuesta. Mismo cuerpo que crear.html (F16) + estado "cambios sin
+   guardar": badge visible + beforeunload al salir con cambios pendientes.
+   Backend: 0 cambios previstos.
+   ==================================================================== #}
+{% block title %}Editar {{ empresa.razon_social }} · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container-form" style="max-width: 720px;">
+
+    {% include 'uploader/_page_header.html' with titulo='Editar empresa' subtitulo=empresa.razon_social %}
+    {% block page_action %}
+    <span id="estado-cambios" class="ds-badge ds-badge-warning" role="status" aria-live="polite" style="visibility:hidden;">
+        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg> Cambios sin guardar
+    </span>
+    {% endblock %}
+
+    <form method="post" action="{% url 'directorio_editar' empresa.id %}" id="form-empresa" class="ds-card" style="padding:var(--ds-sp-6); display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+        {% csrf_token %}
+
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <p class="ds-caption" style="margin:0;">Identidad</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-4);">
+                <div class="ds-field"><label class="ds-label" for="razon">Razón social <span class="ds-req" aria-hidden="true">*</span></label><input class="ds-input" id="razon" name="razon_social" type="text" required value="{{ empresa.razon_social }}"></div>
+                <div class="ds-field"><label class="ds-label" for="rfc">RFC <span class="ds-req" aria-hidden="true">*</span></label><input class="ds-input" id="rfc" name="rfc" type="text" required autocomplete="off" value="{{ empresa.rfc }}"></div>
+            </div>
+            <div class="ds-field"><label class="ds-label" for="giro">Giro</label><input class="ds-input" id="giro" name="giro" type="text" value="{{ empresa.giro }}"></div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <p class="ds-caption" style="margin:0;">Contacto</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-4);">
+                <div class="ds-field"><label class="ds-label" for="contacto">Responsable</label><input class="ds-input" id="contacto" name="contacto" type="text" value="{{ empresa.contacto }}"></div>
+                <div class="ds-field"><label class="ds-label" for="telefono">Teléfono</label><input class="ds-input ds-tabular" id="telefono" name="telefono" type="tel" value="{{ empresa.telefono }}"></div>
+                <div class="ds-field" style="grid-column:span 2;"><label class="ds-label" for="correo">Correo</label><input class="ds-input" id="correo" name="correo" type="email" value="{{ empresa.correo }}"></div>
+            </div>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <p class="ds-caption" style="margin:0;">Dirección</p>
+            <div class="ds-field"><label class="ds-label" for="direccion">Domicilio</label><textarea class="ds-textarea" id="direccion" name="direccion">{{ empresa.direccion }}</textarea></div>
+        </div>
+
+        <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end;">
+            <a href="{% url 'directorio_detalle' empresa.id %}" class="ds-btn ds-btn-secondary" id="btn-cancelar">Descartar</a>
+            <button type="submit" class="ds-btn ds-btn-primary">Guardar cambios</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Estado "cambios sin guardar" + aviso al salir
+    var form = document.getElementById('form-empresa');
+    var badge = document.getElementById('estado-cambios');
+    var sucio = false, enviando = false;
+    form.addEventListener('input', function () {
+        if (!sucio) { sucio = true; badge.style.visibility = 'visible'; }
+    });
+    form.addEventListener('submit', function () { enviando = true; });
+    window.addEventListener('beforeunload', function (e) {
+        if (sucio && !enviando) { e.preventDefault(); e.returnValue = ''; }
+    });
+});
+</script>
+{% endblock %}

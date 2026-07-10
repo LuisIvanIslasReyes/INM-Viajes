@@ -1,0 +1,176 @@
+{# ====================================================================
+   FASE 14 · FRAGMENTO — MODAL CAPTURA DE MENORES (PR 09)
+   Destino: {% include 'uploader/_modal_menor.html' %} dentro de admin_list.html.
+
+   Conserva:
+     - <dialog> nativo showModal()/close().
+     - Campos del form y la url de captura de menor + csrf.
+   Cambia (mejora UX):
+     - Secciones colapsables con <details> nativo (Datos / Documento / Vuelo).
+     - Validación inline en tiempo real (fecha de nacimiento no futura, documento).
+     - Resumen de confirmación; CTA deshabilitado hasta que las 3 secciones validan.
+
+   ⚠ REQUIERE AJUSTE JS (marcado abajo): validadores inline por campo.
+   Backend: 0 cambios de context ni de urls; la validación de servidor
+   permanece como red de seguridad.
+   ==================================================================== #}
+<dialog class="ds-modal" id="modalCapturaMenor" aria-labelledby="mcm-title">
+    <form class="ds-modal-box" method="post" id="form-menor" action="{% url 'capturar_menor' registro.id %}">
+        {% csrf_token %}
+        <header class="ds-modal-header">
+            <div>
+                <div class="ds-caption" style="color:var(--ds-gold-ink);">Vuelo {{ registro.vuelo }} · captura manual</div>
+                <h2 class="ds-h2" id="mcm-title">Registrar menor de edad</h2>
+            </div>
+            <button class="ds-btn ds-btn-icon ds-btn-ghost" type="button" aria-label="Cerrar" onclick="document.getElementById('modalCapturaMenor').close()">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </header>
+
+        <div class="ds-modal-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+
+            {# --- Sección 1: Datos personales --- #}
+            <details class="ds-acc" open>
+                <summary class="ds-acc-summary">
+                    <span style="display:flex; align-items:center; gap:var(--ds-sp-2);">
+                        <span class="paso-num" data-paso="1">1</span>Datos personales
+                    </span>
+                    <svg class="ds-icon ds-acc-chev" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="ds-acc-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                    <div class="ds-field">
+                        <label class="ds-label" for="menor_nombre">Nombre completo <span class="ds-req" aria-hidden="true">*</span></label>
+                        <input class="ds-input" id="menor_nombre" name="nombre" type="text" required data-validar="texto">
+                        <p class="ds-error-text" data-error-for="menor_nombre" hidden><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span></span></p>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label" for="menor_nacimiento">Fecha de nacimiento <span class="ds-req" aria-hidden="true">*</span></label>
+                        <input class="ds-input ds-tabular" id="menor_nacimiento" name="fecha_nacimiento" type="date" required data-validar="nacimiento" aria-describedby="menor_nacimiento-err">
+                        <p class="ds-error-text" id="menor_nacimiento-err" data-error-for="menor_nacimiento" hidden><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span></span></p>
+                    </div>
+                </div>
+            </details>
+
+            {# --- Sección 2: Documento --- #}
+            <details class="ds-acc">
+                <summary class="ds-acc-summary">
+                    <span style="display:flex; align-items:center; gap:var(--ds-sp-2);">
+                        <span class="paso-num" data-paso="2">2</span>Documento
+                    </span>
+                    <svg class="ds-icon ds-acc-chev" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="ds-acc-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                    <div class="ds-field">
+                        <label class="ds-label" for="menor_doc">Número de documento <span class="ds-req" aria-hidden="true">*</span></label>
+                        <input class="ds-input" id="menor_doc" name="documento" type="text" required data-validar="documento" autocomplete="off">
+                        <p class="ds-error-text" data-error-for="menor_doc" hidden><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg><span></span></p>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label" for="menor_tipo_doc">Tipo</label>
+                        <select class="ds-select" id="menor_tipo_doc" name="tipo_documento">
+                            <option value="pasaporte">Pasaporte</option>
+                            <option value="acta">Acta de nacimiento</option>
+                        </select>
+                    </div>
+                </div>
+            </details>
+
+            {# --- Sección 3: Vuelo --- #}
+            <details class="ds-acc">
+                <summary class="ds-acc-summary">
+                    <span style="display:flex; align-items:center; gap:var(--ds-sp-2);">
+                        <span class="paso-num" data-paso="3">3</span>Vuelo
+                    </span>
+                    <svg class="ds-icon ds-acc-chev" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="ds-acc-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                    <div class="ds-field">
+                        <label class="ds-label" for="menor_vuelo">Vuelo</label>
+                        <input class="ds-input" id="menor_vuelo" name="vuelo" type="text" value="{{ registro.vuelo }}" readonly>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label" for="menor_acompanante">Acompañante (adulto responsable)</label>
+                        <input class="ds-input" id="menor_acompanante" name="acompanante" type="text">
+                    </div>
+                </div>
+            </details>
+
+            <div class="ds-alert ds-alert-info" style="margin-top:var(--ds-sp-2);">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+                <div><strong>Antes de enviar:</strong> revisa que nombre, fecha de nacimiento y documento coincidan con el pasaporte del menor.</div>
+            </div>
+        </div>
+
+        <footer class="ds-modal-footer">
+            <button type="button" class="ds-btn ds-btn-secondary" onclick="document.getElementById('modalCapturaMenor').close()">Cancelar</button>
+            <button type="submit" class="ds-btn ds-btn-primary" id="menor-submit" disabled>Registrar menor</button>
+        </footer>
+    </form>
+</dialog>
+
+<style>
+    /* Indicador de paso en el summary del acordeón (fase 14) */
+    #form-menor .paso-num { width:22px; height:22px; border-radius:999px; background:var(--ds-neutral-200); color:var(--ds-text-3); display:grid; place-items:center; font-size:11px; font-weight:800; }
+    #form-menor .paso-num.paso-ok { background:var(--ds-success); color:#fff; }
+    #form-menor .paso-num.paso-actual { background:var(--ds-primary); color:#fff; }
+</style>
+
+<script>
+/* ⚠ FASE 14 · AJUSTE JS marcado — validación inline en tiempo real.
+   Valida por campo al escribir; marca el paso del acordeón como OK;
+   habilita el submit solo cuando las 3 secciones son válidas.
+   La validación de servidor permanece como red de seguridad. */
+(function () {
+    var form = document.getElementById('form-menor');
+    if (!form) return;
+    var submit = document.getElementById('menor-submit');
+
+    function mostrarError(input, msg) {
+        var p = form.querySelector('[data-error-for="' + input.id + '"]');
+        input.setAttribute('aria-invalid', 'true');
+        if (p) { p.querySelector('span').textContent = msg; p.hidden = false; }
+    }
+    function limpiarError(input) {
+        var p = form.querySelector('[data-error-for="' + input.id + '"]');
+        input.removeAttribute('aria-invalid');
+        if (p) p.hidden = true;
+    }
+
+    function validarCampo(input) {
+        var tipo = input.dataset.validar, v = input.value.trim();
+        if (input.required && !v) { mostrarError(input, 'Este campo es obligatorio.'); return false; }
+        if (tipo === 'nacimiento' && v) {
+            var hoy = new Date().toISOString().slice(0,10);
+            if (v > hoy) { mostrarError(input, 'La fecha no puede ser futura. Verifica el año.'); return false; }
+        }
+        if (tipo === 'documento' && v && v.length < 5) { mostrarError(input, 'El documento parece incompleto.'); return false; }
+        limpiarError(input);
+        return true;
+    }
+
+    function seccionValida(details) {
+        return Array.prototype.every.call(details.querySelectorAll('[data-validar]'), validarCampo);
+    }
+
+    function actualizar() {
+        var secciones = form.querySelectorAll('.ds-acc');
+        var todasOk = true;
+        secciones.forEach(function (sec) {
+            var num = sec.querySelector('.paso-num');
+            var tiene = sec.querySelectorAll('[data-validar]').length > 0;
+            var ok = !tiene || Array.prototype.every.call(sec.querySelectorAll('[data-validar]'), function (i) {
+                return i.value.trim() && !i.getAttribute('aria-invalid');
+            });
+            if (num) { num.classList.toggle('paso-ok', ok && tiene); }
+            if (tiene && !ok) todasOk = false;
+        });
+        submit.disabled = !todasOk;
+    }
+
+    form.querySelectorAll('[data-validar]').forEach(function (input) {
+        input.addEventListener('input', function () { validarCampo(input); actualizar(); });
+        input.addEventListener('blur', function () { validarCampo(input); actualizar(); });
+    });
+    actualizar();
+})();
+</script>

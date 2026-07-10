@@ -1,0 +1,82 @@
+{% extends 'uploader/base_admin_ds.html' %}
+{# ====================================================================
+   FASE 24 · HOME SUPERUSER — DASHBOARD (PR 05)
+   ⚠ VISTA NUEVA + AJUSTE MÍNIMO DE BACKEND (justificado):
+     - Nueva url 'home_admin' + vista que arma el context de KPIs.
+     - Dispatcher de redirect por rol tras login (compartido con F25):
+         LOGIN_REDIRECT_URL → view que redirige a home_admin / home_aeropuerto
+         / home_general según request.user.
+   Los KPIs consultan AGREGADOS existentes (count/filter sobre modelos
+   actuales); NO se crean modelos ni migraciones. context: propuesta.
+   ==================================================================== #}
+{% block title %}Inicio · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="max-width: 1120px;">
+
+    <div style="margin-bottom:var(--ds-sp-4);">
+        <div class="ds-caption" style="color:var(--ds-gold-ink);">Buenos días, {{ request.user.get_short_name|default:request.user.username }}</div>
+        <h1 class="ds-h1" style="font-size:var(--ds-text-2xl);">Resumen de hoy · {{ hoy|date:'j M Y' }}</h1>
+    </div>
+
+    {# KPIs del día — agregados existentes #}
+    <div style="display:grid; grid-template-columns:repeat(4, 1fr); gap:var(--ds-sp-3); margin-bottom:var(--ds-sp-4);">
+        <div class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6);">
+            <div class="ds-caption">Registros hoy</div>
+            <div class="ds-tabular" style="font-size:var(--ds-text-3xl); font-weight:800; line-height:1.1;">{{ kpi_registros|default:0 }}</div>
+        </div>
+        <div class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6); border-left:4px solid var(--ds-success);">
+            <div class="ds-caption">SR pendientes</div>
+            <div class="ds-tabular" style="font-size:var(--ds-text-3xl); font-weight:800; color:var(--ds-success); line-height:1.1;">{{ kpi_sr|default:0 }}</div>
+        </div>
+        <div class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6); border-left:4px solid var(--ds-danger);">
+            <div class="ds-caption">Casos críticos</div>
+            <div class="ds-tabular" style="font-size:var(--ds-text-3xl); font-weight:800; color:var(--ds-danger); line-height:1.1;">{{ kpi_casos|default:0 }}</div>
+        </div>
+        <div class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6); border-left:4px solid var(--ds-warning);">
+            <div class="ds-caption">Lotes con errores</div>
+            <div class="ds-tabular" style="font-size:var(--ds-text-3xl); font-weight:800; color:var(--ds-warning); line-height:1.1;">{{ kpi_lotes_error|default:0 }}</div>
+        </div>
+    </div>
+
+    <div style="display:grid; grid-template-columns:1.3fr 1fr; gap:var(--ds-sp-3); align-items:start;">
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+            {% if kpi_casos %}
+            <div class="ds-alert ds-alert-danger" role="alert">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                <div style="flex:1;"><strong>{{ kpi_casos }} caso{{ kpi_casos|pluralize:"s" }} especial{{ kpi_casos|pluralize:"es" }} sin resolver.</strong></div>
+                <a href="{% url 'casos_especiales_list' %}" class="ds-btn ds-btn-sm ds-btn-secondary">Revisar</a>
+            </div>
+            {% endif %}
+            <section class="ds-card" style="padding:0;">
+                <header style="padding:var(--ds-sp-3) var(--ds-sp-4); border-bottom:1px solid var(--ds-divider);"><span class="ds-caption">Actividad reciente</span></header>
+                <ul style="margin:0; padding:0; list-style:none;">
+                    {% for act in actividad %}
+                    <li style="display:flex; gap:var(--ds-sp-3); padding:var(--ds-sp-3) var(--ds-sp-4); border-top:1px solid var(--ds-divider); font-size:var(--ds-text-sm);">
+                        <span class="ds-tabular" style="color:var(--ds-text-muted); flex:none;">{{ act.hora|time:'H:i' }}</span>
+                        <span>{{ act.descripcion }}</span>
+                    </li>
+                    {% empty %}
+                    <li style="padding:var(--ds-sp-4); font-size:var(--ds-text-sm); color:var(--ds-text-3);">Sin actividad registrada hoy.</li>
+                    {% endfor %}
+                </ul>
+            </section>
+        </div>
+
+        <section class="ds-card" style="padding:var(--ds-sp-4);">
+            <div class="ds-caption" style="margin-bottom:var(--ds-sp-3);">Accesos rápidos</div>
+            <div style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+                <a href="{% url 'date_range_report' %}" class="ds-btn ds-btn-secondary ds-btn-block" style="justify-content:flex-start;">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>Reporte por fechas
+                </a>
+                <a href="{% url 'batch_list' %}" class="ds-btn ds-btn-secondary ds-btn-block" style="justify-content:flex-start;">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 8v13H3V8M1 3h22v5H1zM10 12h4"/></svg>Gestión de lotes
+                </a>
+                <a href="{% url 'create_user' %}" class="ds-btn ds-btn-secondary ds-btn-block" style="justify-content:flex-start;">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="7" r="4"/><path d="M6 21v-2a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v2"/></svg>Crear usuario
+                </a>
+            </div>
+        </section>
+    </div>
+</div>
+{% endblock %}

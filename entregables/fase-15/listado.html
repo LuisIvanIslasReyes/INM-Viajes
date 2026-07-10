@@ -1,0 +1,98 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 15 · DIRECTORIO — LISTADO (PR 19) · vista principal del rol General
+   ⚠ SUPUESTO: directorio/listado.html aún no se subió. Los nombres de
+   context (empresas, filtro_q, puede_editar) son propuesta y se afinan
+   contra el código real. Backend: 0 cambios previstos.
+   Buscador debounce+clear (patrón F5·bis). Jerarquía nombre→giro→contacto.
+   CTA "Agregar" y acciones de fila solo con permiso (puede_editar).
+   ==================================================================== #}
+{% block title %}Directorio de empresas · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="max-width: 1040px;">
+
+    {% include 'uploader/_page_header.html' with titulo='Directorio de empresas' subtitulo='Empresas y contactos registrados.' %}
+    {% block page_action %}
+    {% if puede_editar %}
+    <a href="{% url 'directorio_crear' %}" class="ds-btn ds-btn-primary">
+        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg> Agregar empresa
+    </a>
+    {% endif %}
+    {% endblock %}
+
+    <form method="get" style="margin-bottom:var(--ds-sp-4); max-width:420px;">
+        <div class="ds-search">
+            <svg class="ds-icon ds-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+            <input class="ds-input" type="search" name="q" id="dir-buscar" value="{{ filtro_q|default:'' }}" placeholder="Buscar empresa, giro o contacto…" aria-label="Buscar empresa">
+            <button class="ds-search-clear" type="button" aria-label="Limpiar búsqueda"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+        </div>
+    </form>
+
+    {% if empresas %}
+    <div class="ds-table-wrap" tabindex="0" role="region" aria-label="Empresas del directorio">
+        <table class="ds-table">
+            <thead><tr>
+                <th scope="col">Empresa</th><th scope="col">Giro</th>
+                <th scope="col">Contacto</th><th scope="col" style="text-align:right;">Acciones</th>
+            </tr></thead>
+            <tbody>
+                {% for empresa in empresas %}
+                <tr>
+                    <td>
+                        <div style="font-weight:700;">{{ empresa.razon_social }}</div>
+                        <div class="ds-small ds-tabular" style="margin:0;">RFC · {{ empresa.rfc }}</div>
+                    </td>
+                    <td>{{ empresa.giro }}</td>
+                    <td>
+                        <div style="font-size:var(--ds-text-sm);">{{ empresa.contacto }}</div>
+                        <div class="ds-small ds-tabular" style="margin:0;">{{ empresa.telefono }}</div>
+                    </td>
+                    <td>
+                        <div class="ds-td-actions">
+                            <a href="{% url 'directorio_detalle' empresa.id %}" class="ds-btn ds-btn-sm ds-btn-ghost">Ver</a>
+                            {% if puede_editar %}
+                            <details class="ds-menu">
+                                <summary class="ds-btn ds-btn-sm ds-btn-icon ds-btn-ghost" aria-label="Más acciones para {{ empresa.razon_social }}">
+                                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="1"/><circle cx="12" cy="5" r="1"/><circle cx="12" cy="19" r="1"/></svg>
+                                </summary>
+                                <div class="ds-menu-list" role="menu">
+                                    <a class="ds-menu-item" role="menuitem" href="{% url 'directorio_editar' empresa.id %}">Editar</a>
+                                    <hr class="ds-menu-sep">
+                                    <a class="ds-menu-item ds-menu-item-danger" role="menuitem" href="{% url 'directorio_eliminar' empresa.id %}">Eliminar…</a>
+                                </div>
+                            </details>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="ds-empty">
+        <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 21h18M5 21V7l8-4v18M19 21V11l-6-4"/></svg></div>
+        <h3 class="ds-h3">{% if filtro_q %}Sin resultados para "{{ filtro_q }}"{% else %}Aún no hay empresas registradas{% endif %}</h3>
+        <p class="ds-empty-desc">{% if filtro_q %}Prueba con otro término de búsqueda.{% else %}Comienza agregando la primera empresa al directorio.{% endif %}</p>
+        {% if puede_editar and not filtro_q %}<a href="{% url 'directorio_crear' %}" class="ds-btn ds-btn-primary">Agregar empresa</a>{% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Buscador con debounce + clear (patrón F5·bis)
+    var input = document.getElementById('dir-buscar');
+    if (!input) return;
+    var form = input.closest('form');
+    var clear = form.querySelector('.ds-search-clear');
+    var timer = null;
+    input.addEventListener('input', function () {
+        if (timer) clearTimeout(timer);
+        timer = setTimeout(function () { form.submit(); }, 350);
+    });
+    if (clear) clear.addEventListener('click', function () { input.value = ''; form.submit(); });
+});
+</script>
+{% endblock %}

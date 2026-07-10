@@ -1,3 +1,18 @@
+<!-- ====================================================================
+  FASE 1 · LOGIN — INM-Viajes (PR 06)
+  Destino:  Viajes/apps/uploader/templates/registration/login.html
+
+  ⚠ SUPUESTO DE CONTEXTO (login.html no venía en el zip):
+     Se asume la vista de autenticación estándar de Django
+     (django.contrib.auth.views.LoginView), que envía:
+       form  → AuthenticationForm con campos .username y .password
+       next  → URL de redirección (request.GET.next)
+     Si tu LoginView usa nombres de campo distintos, ajústalos abajo.
+     NINGÚN cambio en views.py/urls.py: solo se reescribe el template.
+
+  NO extiende base_ds.html: el login es pre-sesión (sin navbar/sidebar).
+  Trae su propio <head> con los mismos estáticos del sistema.
+===================================================================== -->
 {% load static %}
 <!DOCTYPE html>
 <html lang="es">

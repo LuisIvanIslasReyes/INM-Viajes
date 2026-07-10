@@ -1,0 +1,55 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 18 · DIRECTORIO — DETALLE (PR 22)
+   ⚠ SUPUESTO: directorio/detalle.html aún no se subió. context (empresa,
+   puede_editar) es propuesta. Encabezado de entidad + datos agrupados
+   (contacto / dirección / notas). Acciones según rol. Backend: 0 cambios.
+   ==================================================================== #}
+{% block title %}{{ empresa.razon_social }} · Directorio · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container-read" style="max-width: 900px;">
+
+    <nav class="ds-crumbs" aria-label="Ruta de navegación" style="margin-bottom:var(--ds-sp-4);">
+        <ol>
+            <li><a href="{% url 'directorio_listado' %}">Directorio</a></li>
+            <li aria-current="page">{{ empresa.razon_social }}</li>
+        </ol>
+    </nav>
+
+    <div style="display:flex; align-items:flex-start; justify-content:space-between; gap:var(--ds-sp-4); margin-bottom:var(--ds-sp-6);">
+        <div style="display:flex; gap:var(--ds-sp-4); align-items:center;">
+            <div style="width:52px; height:52px; border-radius:var(--ds-radius-lg); background:var(--ds-warm-100); color:var(--ds-primary); display:grid; place-items:center; font-weight:800; font-size:20px;">{{ empresa.iniciales|default:empresa.razon_social|slice:':2'|upper }}</div>
+            <div>
+                <h1 class="ds-h1" style="font-size:var(--ds-text-2xl);">{{ empresa.razon_social }}</h1>
+                <div class="ds-small" style="margin:0; display:flex; gap:var(--ds-sp-2); align-items:center;">
+                    {{ empresa.giro }}
+                    {% if empresa.activa %}<span class="ds-badge ds-badge-success" style="font-size:10px;"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Activa</span>{% endif %}
+                </div>
+            </div>
+        </div>
+        {% if puede_editar %}
+        <a href="{% url 'directorio_editar' empresa.id %}" class="ds-btn ds-btn-sm ds-btn-secondary">Editar</a>
+        {% endif %}
+    </div>
+
+    <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-3);">
+        <section class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6);">
+            <div class="ds-caption" style="margin-bottom:var(--ds-sp-3);">Contacto</div>
+            <div style="display:flex; flex-direction:column; gap:var(--ds-sp-2); font-size:var(--ds-text-sm);">
+                <div><span style="color:var(--ds-text-muted);">Responsable:</span> {{ empresa.contacto|default:'—' }}</div>
+                <div class="ds-tabular"><span style="color:var(--ds-text-muted);">Tel:</span> {{ empresa.telefono|default:'—' }}</div>
+                <div><span style="color:var(--ds-text-muted);">Correo:</span> {{ empresa.correo|default:'—' }}</div>
+            </div>
+        </section>
+        <section class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6);">
+            <div class="ds-caption" style="margin-bottom:var(--ds-sp-3);">Dirección</div>
+            <div style="font-size:var(--ds-text-sm); line-height:1.5; color:var(--ds-text-2);">{{ empresa.direccion|default:'Sin domicilio registrado.' }}</div>
+        </section>
+        <section class="ds-card" style="padding:var(--ds-sp-4) var(--ds-sp-6); grid-column:span 2;">
+            <div class="ds-caption" style="margin-bottom:var(--ds-sp-3);">Notas</div>
+            <div style="font-size:var(--ds-text-sm); line-height:1.5; color:var(--ds-text-2);">{{ empresa.notas|default:'Sin notas.' }}</div>
+        </section>
+    </div>
+</div>
+{% endblock %}

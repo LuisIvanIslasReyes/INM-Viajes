@@ -1,0 +1,112 @@
+{% extends 'uploader/base_admin_ds.html' %}
+{# ====================================================================
+   FASE 12 · CREAR USUARIO (PR 18) — extingue la Gen 1 violeta
+   - Form en secciones, validación inline.
+   - Rol como RADIO-CARDS que describen los permisos reales de cada rol
+     (input type=radio real → teclado 2.1.1, grupo etiquetado).
+   - Resumen de acceso vivo antes de crear (prevención de errores).
+   Conserva: campos del form, url create_user, csrf. Backend: 0 cambios.
+   Elimina la dependencia de .btn/.form-control y el gradiente violeta de
+   styles.css — ninguna otra vista dependía de la Gen 1.
+   ==================================================================== #}
+{% block title %}Crear usuario · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container-form" style="max-width: 720px;">
+
+    {% include 'uploader/_page_header.html' with titulo='Crear usuario' subtitulo='Alta de una nueva cuenta de acceso al sistema.' %}
+
+    <form method="post" action="{% url 'create_user' %}" class="ds-card" style="padding:var(--ds-sp-6); display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+        {% csrf_token %}
+
+        {# --- Sección: identidad --- #}
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <p class="ds-caption" style="margin:0;">Datos de la cuenta</p>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-4);">
+                <div class="ds-field">
+                    <label class="ds-label" for="nombre">Nombre completo <span class="ds-req" aria-hidden="true">*</span></label>
+                    <input class="ds-input" type="text" id="nombre" name="nombre" required
+                           {% if form.nombre.errors %}aria-invalid="true" aria-describedby="nombre-err"{% endif %} value="{{ form.nombre.value|default:'' }}">
+                    {% if form.nombre.errors %}<p class="ds-error-text" id="nombre-err"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>{{ form.nombre.errors.0 }}</p>{% endif %}
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="username">Usuario <span class="ds-req" aria-hidden="true">*</span></label>
+                    <input class="ds-input" type="text" id="username" name="username" required autocomplete="off"
+                           {% if form.username.errors %}aria-invalid="true" aria-describedby="username-err"{% endif %} value="{{ form.username.value|default:'' }}">
+                    {% if form.username.errors %}<p class="ds-error-text" id="username-err"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>{{ form.username.errors.0 }}</p>{% endif %}
+                </div>
+            </div>
+            <div class="ds-field">
+                <label class="ds-label" for="password">Contraseña temporal <span class="ds-req" aria-hidden="true">*</span></label>
+                <input class="ds-input" type="password" id="password" name="password1" required aria-describedby="password-help">
+                <p class="ds-help" id="password-help">Mínimo 8 caracteres. El usuario deberá cambiarla en su primer ingreso.</p>
+            </div>
+        </div>
+
+        {# --- Sección: rol como radio-cards --- #}
+        <fieldset style="border:0; padding:0; margin:0; display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+            <legend class="ds-caption" style="padding:0; margin-bottom:var(--ds-sp-1);">Rol y permisos <span class="ds-req" aria-hidden="true">*</span></legend>
+            <div style="display:grid; grid-template-columns:repeat(3, 1fr); gap:var(--ds-sp-3);">
+                <label class="rol-card" style="display:flex; flex-direction:column; gap:6px; border:1px solid var(--ds-border-strong); border-radius:var(--ds-radius-lg); padding:var(--ds-sp-4); cursor:pointer;">
+                    <span style="display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-weight:700; font-size:var(--ds-text-sm);">SuperUser</span>
+                        <input type="radio" class="ds-radio" name="rol" value="superuser">
+                    </span>
+                    <span class="ds-small" style="margin:0; line-height:1.4;">Reportes, gestión de lotes, usuarios y toda la operación.</span>
+                </label>
+                <label class="rol-card" style="display:flex; flex-direction:column; gap:6px; border:1px solid var(--ds-border-strong); border-radius:var(--ds-radius-lg); padding:var(--ds-sp-4); cursor:pointer;">
+                    <span style="display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-weight:700; font-size:var(--ds-text-sm);">Aeropuerto</span>
+                        <input type="radio" class="ds-radio" name="rol" value="aeropuerto">
+                    </span>
+                    <span class="ds-small" style="margin:0; line-height:1.4;">Subir Excel, registros, notificaciones y casos especiales.</span>
+                </label>
+                <label class="rol-card" style="display:flex; flex-direction:column; gap:6px; border:1px solid var(--ds-border-strong); border-radius:var(--ds-radius-lg); padding:var(--ds-sp-4); cursor:pointer;">
+                    <span style="display:flex; align-items:center; justify-content:space-between;">
+                        <span style="font-weight:700; font-size:var(--ds-text-sm);">General</span>
+                        <input type="radio" class="ds-radio" name="rol" value="general">
+                    </span>
+                    <span class="ds-small" style="margin:0; line-height:1.4;">Solo consulta de Directorio y Redacciones.</span>
+                </label>
+            </div>
+        </fieldset>
+
+        {# --- Resumen de acceso vivo --- #}
+        <div class="ds-alert ds-alert-info" id="resumen-acceso" role="status" style="display:none;">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>
+            <div><strong>Acceso resultante:</strong> <span id="resumen-texto"></span> Podrás cambiar el rol después.</div>
+        </div>
+
+        <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end;">
+            <a href="{% url 'admin_list' %}" class="ds-btn ds-btn-secondary">Cancelar</a>
+            <button type="submit" class="ds-btn ds-btn-primary">Crear usuario</button>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    var resumen = document.getElementById('resumen-acceso');
+    var texto = document.getElementById('resumen-texto');
+    var descripciones = {
+        superuser: 'ver reportes, administrar lotes y crear usuarios.',
+        aeropuerto: 'subir Excel, gestionar registros, notificaciones y casos especiales.',
+        general: 'consultar el Directorio de empresas y las Redacciones.'
+    };
+    document.querySelectorAll('input[name="rol"]').forEach(function (radio) {
+        radio.addEventListener('change', function () {
+            // Resaltar la card seleccionada
+            document.querySelectorAll('.rol-card').forEach(function (c) {
+                var checked = c.querySelector('input[name="rol"]').checked;
+                c.style.borderColor = checked ? 'var(--ds-primary)' : 'var(--ds-border-strong)';
+                c.style.borderWidth = checked ? '1.5px' : '1px';
+                c.style.background = checked ? 'var(--ds-warm-50)' : 'transparent';
+            });
+            var nombre = document.getElementById('nombre').value.trim() || 'El usuario';
+            texto.textContent = nombre + ' podrá ' + descripciones[this.value];
+            resumen.style.display = 'flex';
+        });
+    });
+});
+</script>
+{% endblock %}

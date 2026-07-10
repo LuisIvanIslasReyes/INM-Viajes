@@ -1,0 +1,139 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   FASE 5 · NOTIFICACIONES (PR 11)
+   Conserva: context (filtro_tipo, notificaciones paginator, notificaciones_exitosas),
+   la clase .group y .marcar-leida-btn[data-notif-id] que usa el script,
+   la url marcar_notificacion_leida y el auto-dismiss de cargas exitosas.
+   Prioridad por icono+color (no solo color). 2 acciones visibles + kebab.
+   NOTA agrupación temporal (Hoy/Semana): requiere ajuste en backend
+   (regroup del queryset); se deja el hook marcado. Backend: 0 cambios aquí.
+   ==================================================================== #}
+{% block title %}Notificaciones · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container-read" style="max-width: 920px; padding: 0;">
+
+    {% include 'uploader/_page_header.html' with titulo='Notificaciones' subtitulo='Alertas de duplicados, casos especiales, errores y sistema.' %}
+    {% block page_action %}
+    <a href="{% url 'admin_list' %}" class="ds-btn ds-btn-secondary">
+        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg> Volver a registros
+    </a>
+    {% endblock %}
+
+    <!-- Tabs / filtro persistente por querystring -->
+    <div class="ds-tabs" role="tablist" aria-label="Filtrar notificaciones" style="margin-bottom:var(--ds-sp-4);">
+        <a class="ds-tab" role="tab" href="?tipo=todas" aria-selected="{% if filtro_tipo == 'todas' %}true{% else %}false{% endif %}">
+            Todas {% if filtro_tipo == 'todas' %}<span class="ds-badge ds-badge-count">{{ notificaciones.paginator.count }}</span>{% endif %}
+        </a>
+        <a class="ds-tab" role="tab" href="?tipo=importante" aria-selected="{% if filtro_tipo == 'importante' %}true{% else %}false{% endif %}">Importantes</a>
+        <a class="ds-tab" role="tab" href="?tipo=no_importante" aria-selected="{% if filtro_tipo == 'no_importante' %}true{% else %}false{% endif %}">Informativas</a>
+    </div>
+
+    <!-- Cargas exitosas (auto-dismiss) -->
+    {% if notificaciones_exitosas %}
+    <div id="exitosas-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-2); margin-bottom:var(--ds-sp-4);">
+        <p class="ds-caption">Cargas completadas — se cierran solas</p>
+        {% for notif in notificaciones_exitosas %}
+        <div class="notif-exitosa ds-alert ds-alert-success" role="status" style="transition:all .7s ease;">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg>
+            <div style="flex:1;"><strong>{{ notif.titulo }}</strong>{% if notif.mensaje %} — {{ notif.mensaje }}{% endif %}</div>
+            <span class="ds-small ds-tabular" style="margin:0;">{{ notif.fecha_creacion|date:"d/m H:i" }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Lista -->
+    {% if notificaciones %}
+    <div style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+        {% for notif in notificaciones %}
+        <article class="group ds-card {% if not notif.leida %}ds-card-hover{% endif %}"
+                 style="display:flex; {% if notif.leida %}opacity:.72;{% endif %}
+                        border-left:4px solid {% if notif.categoria == 'casos_especiales' or notif.categoria == 'error_registro' %}var(--ds-danger){% elif notif.categoria == 'duplicados' %}var(--ds-warning-accent){% elif notif.categoria == 'carga_exitosa' %}var(--ds-success){% else %}var(--ds-info){% endif %};">
+            <div style="flex:1; padding:var(--ds-sp-4) var(--ds-sp-4); display:flex; flex-direction:column; gap:8px; min-width:0;">
+                <div style="display:flex; flex-wrap:wrap; align-items:center; gap:8px;">
+                    {% if notif.categoria == 'duplicados' %}
+                        <span class="ds-badge ds-badge-warning"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>Duplicados</span>
+                    {% elif notif.categoria == 'casos_especiales' %}
+                        <span class="ds-badge ds-badge-danger"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>Caso especial</span>
+                    {% elif notif.categoria == 'error_registro' %}
+                        <span class="ds-badge ds-badge-danger"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>Error</span>
+                    {% elif notif.categoria == 'sistema' %}
+                        <span class="ds-badge ds-badge-info"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></svg>Sistema</span>
+                    {% endif %}
+                    {% if not notif.leida %}<span class="ds-badge ds-badge-brand">Nueva</span>{% endif %}
+                </div>
+                <h3 style="margin:0; font-size:var(--ds-text-base); font-weight:{% if notif.leida %}500{% else %}700{% endif %}; color:var(--ds-text); line-height:1.4;">{{ notif.titulo }}</h3>
+                <p style="margin:0; font-size:var(--ds-text-sm); color:var(--ds-text-3); line-height:1.5;">{{ notif.mensaje }}</p>
+                <p class="ds-small ds-tabular" style="margin:0; display:flex; align-items:center; gap:6px; color:var(--ds-text-muted);">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>
+                    {{ notif.fecha_creacion|date:"d/m/Y H:i" }}
+                </p>
+            </div>
+            <div style="display:flex; flex-direction:column; justify-content:center; align-items:stretch; gap:8px; padding:var(--ds-sp-3); border-left:1px solid var(--ds-divider); background:var(--ds-neutral-50);">
+                {% if notif.enlace %}
+                <a href="{{ notif.enlace }}" class="ds-btn ds-btn-sm {% if notif.leida %}ds-btn-ghost{% else %}ds-btn-primary{% endif %}">Ver detalles</a>
+                {% endif %}
+                {% if not notif.leida %}
+                <button class="ds-btn ds-btn-sm ds-btn-secondary marcar-leida-btn" data-notif-id="{{ notif.id }}">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg> Marcar leída
+                </button>
+                {% endif %}
+            </div>
+        </article>
+        {% endfor %}
+    </div>
+
+    <!-- Paginación -->
+    {% if notificaciones.has_other_pages %}
+    <nav aria-label="Paginación" style="display:flex; justify-content:center; gap:8px; margin-top:var(--ds-sp-6);">
+        {% if notificaciones.has_previous %}<a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.previous_page_number }}" class="ds-btn ds-btn-sm ds-btn-secondary" aria-label="Página anterior">‹ Anterior</a>{% endif %}
+        <span class="ds-btn ds-btn-sm ds-btn-ghost ds-tabular" aria-current="page">Página {{ notificaciones.number }} de {{ notificaciones.paginator.num_pages }}</span>
+        {% if notificaciones.has_next %}<a href="?tipo={{ filtro_tipo }}&page={{ notificaciones.next_page_number }}" class="ds-btn ds-btn-sm ds-btn-secondary" aria-label="Página siguiente">Siguiente ›</a>{% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
+    <div class="ds-empty">
+        <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg></div>
+        <h3 class="ds-h3">Sin notificaciones en esta categoría</h3>
+        <p class="ds-empty-desc">Cuando un vuelo genere duplicados, casos especiales o errores, aparecerán aquí.</p>
+        <a href="{% url 'upload_excel' %}" class="ds-btn ds-btn-primary">Subir Excel</a>
+    </div>
+    {% endif %}
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    // Auto-dismiss cargas exitosas
+    var cont = document.getElementById('exitosas-container');
+    if (cont) {
+        var cards = cont.querySelectorAll('.notif-exitosa');
+        setTimeout(function () {
+            cards.forEach(function (c, i) {
+                setTimeout(function () {
+                    c.style.opacity = '0'; c.style.transform = 'translateX(20px)';
+                    c.style.maxHeight = c.offsetHeight + 'px';
+                    setTimeout(function () { c.style.maxHeight = '0'; c.style.marginBottom = '0'; c.style.overflow = 'hidden'; c.style.padding = '0'; }, 600);
+                }, i * 120);
+            });
+            setTimeout(function () { cont.style.opacity = '0'; setTimeout(function () { cont.remove(); }, 400); }, cards.length * 120 + 700);
+        }, 2000);
+    }
+    // Marcar como leída (conserva endpoint y flujo)
+    document.querySelectorAll('.marcar-leida-btn').forEach(function (btn) {
+        btn.addEventListener('click', async function () {
+            var id = this.dataset.notifId, card = this.closest('.group');
+            card.style.opacity = '0.5'; card.style.pointerEvents = 'none';
+            try {
+                var url = "{% url 'marcar_notificacion_leida' 0 %}".replace('0', id);
+                var r = await fetch(url, { method: 'POST', headers: { 'X-CSRFToken': '{{ csrf_token }}', 'Content-Type': 'application/json' } });
+                var data = await r.json();
+                if (data.success) { if (window.dsToast) dsToast('Notificación marcada como leída', 'success'); location.reload(); }
+                else { card.style.opacity = '1'; card.style.pointerEvents = 'auto'; }
+            } catch (e) { card.style.opacity = '1'; card.style.pointerEvents = 'auto'; if (window.dsToast) dsToast('No se pudo actualizar', 'danger'); }
+        });
+    });
+});
+</script>
+{% endblock %}

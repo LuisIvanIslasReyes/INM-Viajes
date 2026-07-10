@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+{% load static %}
+{# ====================================================================
+   FASE 23 · ERROR 500 (PR 27) — AUTOCONTENIDA
+   ⚠ CLAVE: la 500 se sirve cuando algo falló, posiblemente la carga de
+   estáticos. Por eso NO extiende base_ds.html y NO usa {% static %}:
+   todo el CSS crítico va INLINE. Solo tokens y colores literales.
+   Conserva handler500 de Django. Backend: 0 cambios.
+   ==================================================================== #}
+<html lang="es">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Error del servidor · INM Viajes</title>
+    <style>
+        *{ box-sizing:border-box; }
+        body{ margin:0; min-height:100vh; display:flex; flex-direction:column;
+              font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,'Helvetica Neue',Arial,sans-serif;
+              color:#1A1C1E; background:#F9F9FC; }
+        .bar{ background:#4D060A; border-bottom:2px solid #A57F2C; padding:12px 20px;
+              display:flex; align-items:center; gap:8px; }
+        .mark{ width:24px; height:24px; border:1px solid rgba(255,255,255,.5); border-radius:5px;
+               display:flex; align-items:center; justify-content:center; color:#FFEEED; font-weight:800; font-size:10px; }
+        .brand{ color:#FFEEED; font-size:12px; font-weight:600; letter-spacing:.1em; }
+        main{ flex:1; display:flex; align-items:center; justify-content:center; padding:32px; }
+        .box{ max-width:520px; text-align:center; }
+        .icon{ width:72px; height:72px; border-radius:999px; background:#FFDAD6; color:#B3261E;
+               display:flex; align-items:center; justify-content:center; margin:0 auto 16px; }
+        .code{ font-size:36px; font-weight:800; color:#B3261E; line-height:1; margin-bottom:8px;
+               font-variant-numeric:tabular-nums; }
+        h1{ font-size:24px; font-weight:800; letter-spacing:-.01em; margin:0 0 8px; }
+        p{ font-size:15px; color:#55555C; line-height:1.5; margin:0 0 20px; }
+        .btn{ display:inline-flex; align-items:center; justify-content:center; min-height:44px;
+              padding:0 20px; border-radius:8px; font-size:15px; font-weight:600; text-decoration:none;
+              background:#6B1D1D; color:#fff; }
+        .btn:focus-visible{ outline:none; box-shadow:0 0 0 2px #fff,0 0 0 4px #8E2F2E; }
+    </style>
+</head>
+<body>
+    <div class="bar"><span class="mark">IV</span><span class="brand">INM VIAJES</span></div>
+    <main>
+        <div class="box">
+            <div class="icon">
+                <svg width="34" height="34" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+            </div>
+            <div class="code">500</div>
+            <h1>Tuvimos un problema</h1>
+            <p>Ocurrió un error inesperado en el servidor. El equipo técnico ya fue notificado. Intenta de nuevo en unos minutos.</p>
+            <a href="/" class="btn">Ir al inicio</a>
+        </div>
+    </main>
+</body>
+</html>
