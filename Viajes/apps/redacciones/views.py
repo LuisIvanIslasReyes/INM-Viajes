@@ -143,12 +143,19 @@ def editar(request, pk):
     redaccion = get_object_or_404(Redaccion, pk=pk)
 
     if request.method == 'POST':
+        # form.is_valid() (construct_instance) sustituye redaccion.archivo por el
+        # archivo nuevo subido, así que capturamos AQUÍ la referencia al anterior
+        # para poder borrarlo del storage recién guardado el nuevo.
+        archivo_anterior = redaccion.archivo.name or ''
+        storage_anterior = redaccion.archivo.storage
+
         form = RedaccionForm(request.POST, request.FILES, instance=redaccion)
         form.fields['archivo'].required = False
         if form.is_valid():
             reemplaza_archivo = 'archivo' in request.FILES
             if reemplaza_archivo:
-                redaccion.archivo.delete(save=False)
+                # El preview (archivo_pdf) no está en el form, así que aquí sigue
+                # apuntando al anterior: se puede borrar antes de guardar.
                 if redaccion.archivo_pdf:
                     redaccion.archivo_pdf.delete(save=False)
                 redaccion.archivo_pdf = None
@@ -156,6 +163,9 @@ def editar(request, pk):
             redaccion = form.save()
 
             if reemplaza_archivo:
+                # Ya persistido el nuevo archivo, borramos el anterior del storage.
+                if archivo_anterior and archivo_anterior != redaccion.archivo.name:
+                    storage_anterior.delete(archivo_anterior)
                 if not redaccion.es_pdf and not generar_preview(redaccion):
                     messages.warning(
                         request,

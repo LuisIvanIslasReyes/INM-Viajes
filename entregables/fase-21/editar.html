@@ -1,49 +1,157 @@
 {% extends 'uploader/base_ds.html' %}
 {# ====================================================================
    FASE 21 · REDACCIONES — EDITAR (PR 25)
-   ⚠ SUPUESTO: redacciones/editar.html aún no se subió. context (documento,
-   categorias) es propuesta. Edita SOLO metadatos (el archivo no se re-sube
-   aquí): patrón de formulario estándar (F12/F16). Backend: 0 cambios.
+   Port del diseño ds- sobre el backend REAL (vista redacciones.views.editar):
+     context: form (RedaccionForm bound a la instancia, archivo NO requerido),
+              redaccion (la instancia; NO 'documento'), temas (datalist).
+     Solo SuperUser/Aeropuerto (vista gated). En éxito redirige a detalle.
+     El archivo SÍ se puede reemplazar (opcional): si se sube uno nuevo, el
+     backend borra el anterior + su preview y regenera. Dejar vacío conserva
+     el actual. urls namespaced: redacciones:detalle/descargar/editar.
+   Los widgets del form traen clases DaisyUI; como base_ds no carga DaisyUI,
+   los campos se renderizan manualmente con clases ds- (name/id conservados)
+   y el form bound los prellena con los valores actuales.
+   Backend: 0 cambios. Comentario multilínea sin sintaxis de tags (ver F13).
    ==================================================================== #}
-{% block title %}Editar {{ documento.titulo }} · Redacciones · INM Viajes{% endblock %}
+{% block title %}Editar {{ redaccion.titulo }} · Redacciones · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="ds-container-form" style="max-width: 720px;">
+<div class="ds-container-form" style="max-width:720px; display:flex; flex-direction:column; gap:var(--ds-sp-5);">
 
-    {% include 'uploader/_page_header.html' with titulo='Editar documento' subtitulo=documento.titulo %}
+    {% include 'uploader/_page_header.html' with titulo='Editar documento' subtitulo=redaccion.titulo %}
 
-    <form method="post" action="{% url 'redacciones_editar' documento.id %}" class="ds-card" style="padding:var(--ds-sp-6); display:flex; flex-direction:column; gap:var(--ds-sp-4);">
-        {% csrf_token %}
+    <div style="display:flex; justify-content:flex-start;">
+        <a href="{% url 'redacciones:detalle' redaccion.pk %}" class="ds-btn ds-btn-secondary">
+            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+            Volver al detalle
+        </a>
+    </div>
 
-        {# Archivo actual (solo lectura; para reemplazarlo se sube uno nuevo desde F20) #}
-        <div style="display:flex; align-items:center; gap:var(--ds-sp-3); background:var(--ds-bg-sunken); border:1px solid var(--ds-divider); border-radius:var(--ds-radius-md); padding:var(--ds-sp-3) var(--ds-sp-4);">
-            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-            <div style="flex:1;">
-                <div style="font-weight:600; font-size:var(--ds-text-sm);">{{ documento.nombre_archivo }}</div>
-                <div class="ds-small ds-tabular" style="margin:0;">{{ documento.extension|upper }} · {{ documento.tamano }}</div>
+    <form method="post" action="{% url 'redacciones:editar' redaccion.pk %}" enctype="multipart/form-data" class="ds-card" id="form-redaccion">
+        <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            {% csrf_token %}
+
+            {% if form.non_field_errors %}
+            <div class="ds-alert ds-alert-danger">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+                <div>{{ form.non_field_errors|striptags }}</div>
             </div>
-            <a href="{{ documento.archivo.url }}" class="ds-btn ds-btn-sm ds-btn-ghost">Ver</a>
-        </div>
+            {% endif %}
 
-        <div class="ds-field">
-            <label class="ds-label" for="titulo">Título <span class="ds-req" aria-hidden="true">*</span></label>
-            <input class="ds-input" id="titulo" name="titulo" type="text" required value="{{ documento.titulo }}">
-        </div>
-        <div class="ds-field">
-            <label class="ds-label" for="categoria">Categoría</label>
-            <select class="ds-select" id="categoria" name="categoria">
-                {% for cat in categorias %}<option value="{{ cat.slug }}" {% if cat.slug == documento.categoria_slug %}selected{% endif %}>{{ cat.nombre }}</option>{% endfor %}
-            </select>
-        </div>
-        <div class="ds-field">
-            <label class="ds-label" for="descripcion">Descripción</label>
-            <textarea class="ds-textarea" id="descripcion" name="descripcion">{{ documento.descripcion }}</textarea>
-        </div>
+            {# ---------- Metadatos ---------- #}
+            <div class="ds-field">
+                <label class="ds-label" for="id_titulo">Título <span class="ds-req" aria-hidden="true">*</span></label>
+                <input class="ds-input" type="text" id="id_titulo" name="titulo" required placeholder="Título del documento"
+                       value="{{ form.titulo.value|default:'' }}"
+                       {% if form.titulo.errors %}aria-invalid="true" aria-describedby="titulo-err"{% endif %}>
+                {% if form.titulo.errors %}<p class="ds-error-text" id="titulo-err">{{ form.titulo.errors|striptags }}</p>{% endif %}
+            </div>
 
-        <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end;">
-            <a href="{% url 'redacciones_detalle' documento.id %}" class="ds-btn ds-btn-secondary">Cancelar</a>
-            <button type="submit" class="ds-btn ds-btn-primary">Guardar cambios</button>
+            <div style="display:grid; grid-template-columns:1fr 1fr; gap:var(--ds-sp-4);">
+                <div class="ds-field">
+                    <label class="ds-label" for="id_resolucion">Resolución <span class="ds-req" aria-hidden="true">*</span></label>
+                    <select class="ds-select" id="id_resolucion" name="resolucion" required>
+                        {% for value, label in form.resolucion.field.choices %}
+                        <option value="{{ value }}" {% if form.resolucion.value|stringformat:'s' == value|stringformat:'s' %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.resolucion.errors %}<p class="ds-error-text">{{ form.resolucion.errors|striptags }}</p>{% endif %}
+                </div>
+                <div class="ds-field">
+                    <label class="ds-label" for="id_pais">País <span class="ds-req" aria-hidden="true">*</span></label>
+                    <select class="ds-select" id="id_pais" name="pais" required>
+                        <option value="">Selecciona un país</option>
+                        {% for p in form.pais.field.queryset %}
+                        <option value="{{ p.pk }}" {% if form.pais.value|stringformat:'s' == p.pk|stringformat:'s' %}selected{% endif %}>{{ p.nombre }}</option>
+                        {% endfor %}
+                    </select>
+                    {% if form.pais.errors %}<p class="ds-error-text">{{ form.pais.errors|striptags }}</p>{% endif %}
+                </div>
+            </div>
+
+            <div class="ds-field">
+                <label class="ds-label" for="id_tema">Tema <span class="ds-req" aria-hidden="true">*</span></label>
+                <input class="ds-input" type="text" id="id_tema" name="tema" required list="temas-existentes" autocomplete="off"
+                       placeholder="Ej. DOCUMENTACIÓN FALSA" value="{{ form.tema.value|default:'' }}"
+                       {% if form.tema.errors %}aria-invalid="true" aria-describedby="tema-err"{% endif %}>
+                <datalist id="temas-existentes">{% for t in temas %}<option value="{{ t }}">{% endfor %}</datalist>
+                {% if form.tema.errors %}<p class="ds-error-text" id="tema-err">{{ form.tema.errors|striptags }}</p>{% endif %}
+            </div>
+
+            {# ---------- Archivo actual + reemplazo opcional ---------- #}
+            <div class="ds-field">
+                <span class="ds-label">Documento</span>
+                <div style="display:flex; align-items:center; gap:var(--ds-sp-3); background:var(--ds-bg-sunken); border:1px solid var(--ds-divider); border-radius:var(--ds-radius-md); padding:var(--ds-sp-3) var(--ds-sp-4); margin-bottom:var(--ds-sp-2);">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                    <div style="flex:1; min-width:0;">
+                        <span class="ds-small" style="margin:0;">Archivo actual · <b>{{ redaccion.extension|upper }}</b></span>
+                    </div>
+                    <a href="{% url 'redacciones:descargar' redaccion.pk %}" class="ds-btn ds-btn-sm ds-btn-ghost">
+                        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        Descargar
+                    </a>
+                </div>
+                <label class="ds-dropzone" id="dz-redaccion" for="id_archivo">
+                    <div id="dz-content" style="display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-2);">
+                        <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                        <strong style="font-size:var(--ds-text-lg);">Reemplazar documento (opcional)</strong>
+                        <span class="ds-small">Deja vacío para conservar el actual · .doc, .docx, .pdf · máx 20 MB</span>
+                    </div>
+                    <input type="file" id="id_archivo" name="archivo" accept=".doc,.docx,.pdf" class="ds-sr-only">
+                </label>
+                {% if form.archivo.errors %}<p class="ds-error-text">{{ form.archivo.errors|striptags }}</p>{% endif %}
+            </div>
+
+            <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end; margin-top:var(--ds-sp-2);">
+                <a href="{% url 'redacciones:detalle' redaccion.pk %}" class="ds-btn ds-btn-ghost">Cancelar</a>
+                <button type="submit" class="ds-btn ds-btn-primary">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/></svg>
+                    Guardar cambios
+                </button>
+            </div>
         </div>
     </form>
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const dz = document.getElementById('dz-redaccion');
+    const input = document.getElementById('id_archivo');
+    const content = document.getElementById('dz-content');
+    if (!dz || !input) return;
+
+    const prompt = content.innerHTML;
+
+    function mostrarArchivo(file) {
+        if (!file) { content.innerHTML = prompt; return; }
+        const mb = (file.size / (1024 * 1024)).toFixed(1);
+        content.innerHTML =
+            '<svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-success);">'
+            + '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>'
+            + '<strong style="font-size:var(--ds-text-lg); word-break:break-all;"></strong>'
+            + '<span class="ds-small"></span>';
+        content.querySelector('strong').textContent = file.name;
+        content.querySelector('.ds-small').textContent = 'Reemplazará el actual · ' + mb + ' MB · clic para cambiar';
+    }
+
+    input.addEventListener('change', function () {
+        mostrarArchivo(input.files && input.files[0]);
+    });
+
+    ['dragenter', 'dragover'].forEach(function (ev) {
+        dz.addEventListener(ev, function (e) { e.preventDefault(); dz.style.borderColor = 'var(--ds-primary)'; });
+    });
+    ['dragleave', 'drop'].forEach(function (ev) {
+        dz.addEventListener(ev, function (e) { e.preventDefault(); dz.style.borderColor = ''; });
+    });
+    dz.addEventListener('drop', function (e) {
+        if (e.dataTransfer && e.dataTransfer.files.length) {
+            input.files = e.dataTransfer.files;
+            mostrarArchivo(input.files[0]);
+        }
+    });
+})();
+</script>
 {% endblock %}
