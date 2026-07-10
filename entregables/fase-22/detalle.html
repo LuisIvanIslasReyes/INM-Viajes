@@ -1,60 +1,126 @@
 {% extends 'uploader/base_ds.html' %}
 {# ====================================================================
    FASE 22 · REDACCIONES — DETALLE / PREVIEW PDF (PR 26)
-   ⚠ SUPUESTO: redacciones/detalle.html aún no se subió. context (documento,
-   puede_editar) es propuesta. Visor PDF embebido + toolbar (descargar /
-   imprimir / abrir en pestaña) + panel lateral de metadatos.
-   El <iframe> lleva title y hay link de descarga como fallback (WCAG 1.1.1).
-   Backend: 0 cambios previstos.
+   Port del diseño ds- sobre el backend REAL (vista redacciones.views.detalle):
+     context: redaccion (con select_related pais, subido_por; NO 'documento').
+     Campos: titulo, tema, pais.nombre, extension, resolucion, subido_por,
+             fecha_creacion, preview_url (property).
+     Permiso de editar/eliminar: puede_gestionar_redacciones (context
+             processor), NO 'puede_editar'.
+     urls namespaced: redacciones:biblioteca/preview/descargar/editar/eliminar.
+   El <iframe> lleva title y hay descarga como fallback (WCAG 1.1.1). El modal
+   de borrado usa <dialog> ds- nativo y solo aparece con permiso.
+   Backend: 0 cambios. Comentario multilínea sin sintaxis de tags (ver F13).
    ==================================================================== #}
-{% block title %}{{ documento.titulo }} · Redacciones · INM Viajes{% endblock %}
+{% block title %}{{ redaccion.titulo }} · Redacciones · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="ds-container" style="max-width: 1120px;">
+<div class="ds-container" style="max-width:1120px; display:flex; flex-direction:column; gap:var(--ds-sp-5);">
 
-    <nav class="ds-crumbs" aria-label="Ruta de navegación" style="margin-bottom:var(--ds-sp-4);">
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
         <ol>
-            <li><a href="{% url 'redacciones_biblioteca' %}">Redacciones</a></li>
-            <li aria-current="page">{{ documento.titulo }}</li>
+            <li><a href="{% url 'redacciones:biblioteca' %}">Redacciones</a></li>
+            <li aria-current="page">{{ redaccion.titulo }}</li>
         </ol>
     </nav>
 
-    <div style="border:1px solid var(--ds-border); border-radius:var(--ds-radius-lg); overflow:hidden; display:grid; grid-template-columns:1fr 280px;">
+    <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:var(--ds-sp-3);">
+        <h1 class="ds-h1" style="margin:0;">{{ redaccion.titulo }}</h1>
+        {% if redaccion.resolucion == 'INTERNACION' %}
+        <span class="ds-badge ds-badge-success"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></svg>Internación</span>
+        {% else %}
+        <span class="ds-badge ds-badge-danger"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>Rechazo</span>
+        {% endif %}
+    </div>
 
-        {# Visor + toolbar #}
-        <div style="display:flex; flex-direction:column; background:var(--ds-bg-sunken); min-width:0;">
-            <div style="display:flex; align-items:center; gap:var(--ds-sp-2); padding:var(--ds-sp-2) var(--ds-sp-4); border-bottom:1px solid var(--ds-border); background:var(--ds-bg-surface);">
-                <a href="{{ documento.archivo.url }}" download class="ds-btn ds-btn-sm ds-btn-secondary">
-                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg> Descargar
-                </a>
-                <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" onclick="document.getElementById('pdf-viewer').contentWindow.print()">
-                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2M6 14h12v8H6z"/></svg> Imprimir
-                </button>
-                <a href="{{ documento.archivo.url }}" target="_blank" rel="noopener" class="ds-btn ds-btn-sm ds-btn-ghost" style="margin-left:auto;">
-                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></svg> Abrir en pestaña
-                </a>
-            </div>
-            <iframe id="pdf-viewer" src="{{ documento.archivo.url }}" title="Vista previa de {{ documento.titulo }}"
-                    style="width:100%; height:640px; border:0; background:var(--ds-bg-sunken);"></iframe>
-            <p class="ds-small" style="padding:var(--ds-sp-2) var(--ds-sp-4); margin:0;">
-                ¿No se muestra el documento? <a href="{{ documento.archivo.url }}" download>Descárgalo aquí</a>.
-            </p>
-        </div>
+    <div style="display:grid; grid-template-columns:minmax(240px, 320px) 1fr; gap:var(--ds-sp-5); align-items:start;">
 
-        {# Panel de metadatos #}
-        <aside style="border-left:1px solid var(--ds-border); background:var(--ds-bg-surface); padding:var(--ds-sp-4);">
-            <div style="display:flex; align-items:center; justify-content:space-between; gap:var(--ds-sp-2); margin-bottom:var(--ds-sp-4);">
-                <div class="ds-caption">Metadatos</div>
-                {% if puede_editar %}<a href="{% url 'redacciones_editar' documento.id %}" class="ds-btn ds-btn-sm ds-btn-ghost">Editar</a>{% endif %}
+        {# ---------- Metadatos + acciones ---------- #}
+        <section class="ds-card">
+            <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+                <div style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                    <div>
+                        <p class="ds-small" style="margin:0;">Tema</p>
+                        <p style="margin:2px 0 0; font-weight:600;">{{ redaccion.tema }}</p>
+                    </div>
+                    <div>
+                        <p class="ds-small" style="margin:0;">País</p>
+                        <p style="margin:2px 0 0; font-weight:600;">{{ redaccion.pais.nombre }}</p>
+                    </div>
+                    <div>
+                        <p class="ds-small" style="margin:0;">Archivo</p>
+                        <p style="margin:2px 0 0; font-weight:600;">{{ redaccion.extension|upper }}</p>
+                    </div>
+                    <div>
+                        <p class="ds-small" style="margin:0;">Subido por</p>
+                        <p style="margin:2px 0 0; font-weight:600;">{{ redaccion.subido_por.username|default:"—" }} · {{ redaccion.fecha_creacion|date:"d/m/Y" }}</p>
+                    </div>
+                </div>
+
+                <div style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+                    <a href="{% url 'redacciones:descargar' redaccion.pk %}" class="ds-btn ds-btn-primary" style="justify-content:center;">
+                        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        Descargar original
+                    </a>
+                    {% if puede_gestionar_redacciones %}
+                    <a href="{% url 'redacciones:editar' redaccion.pk %}" class="ds-btn ds-btn-secondary" style="justify-content:center;">
+                        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 20h9M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
+                        Editar
+                    </a>
+                    <button type="button" class="ds-btn ds-btn-danger-ghost" style="justify-content:center;" onclick="document.getElementById('delete_modal').showModal()">
+                        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 6h18M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2m2 0v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                        Eliminar
+                    </button>
+                    {% endif %}
+                </div>
             </div>
-            <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4); font-size:var(--ds-text-sm);">
-                <div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Título</div><div style="font-weight:600;">{{ documento.titulo }}</div></div>
-                <div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Categoría</div><span class="ds-badge ds-badge-brand" style="font-size:10px;">{{ documento.categoria }}</span></div>
-                <div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Tamaño</div><div class="ds-tabular">{{ documento.tamano }}</div></div>
-                <div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Subido</div><div class="ds-tabular">{{ documento.fecha_subida|date:'d/m/Y' }} · {{ documento.subido_por }}</div></div>
-                {% if documento.descripcion %}<div><div class="ds-small" style="margin:0; color:var(--ds-text-muted);">Descripción</div><div style="line-height:1.5; color:var(--ds-text-2);">{{ documento.descripcion }}</div></div>{% endif %}
+        </section>
+
+        {# ---------- Vista previa ---------- #}
+        <section class="ds-card" style="padding:0;">
+            <div class="ds-card-body">
+                <h2 class="ds-h3" style="margin:0 0 var(--ds-sp-3); display:flex; align-items:center; gap:8px;">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Vista previa
+                </h2>
+                {% if redaccion.preview_url %}
+                <iframe src="{% url 'redacciones:preview' redaccion.pk %}" title="Vista previa de {{ redaccion.titulo }}"
+                        style="width:100%; height:70vh; border:1px solid var(--ds-border); border-radius:var(--ds-radius-md); background:var(--ds-bg-sunken);"></iframe>
+                {% else %}
+                <div class="ds-empty">
+                    <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M12 18v-4M10 16h4"/></svg></div>
+                    <h3 class="ds-h3">Vista previa no disponible</h3>
+                    <p class="ds-empty-desc">Descarga el archivo original para consultarlo.</p>
+                    <a href="{% url 'redacciones:descargar' redaccion.pk %}" class="ds-btn ds-btn-secondary">Descargar original</a>
+                </div>
+                {% endif %}
             </div>
-        </aside>
+        </section>
     </div>
 </div>
+
+{% if puede_gestionar_redacciones %}
+<dialog id="delete_modal" class="ds-modal" aria-labelledby="del-title">
+    <form class="ds-modal-box" method="post" action="{% url 'redacciones:eliminar' redaccion.pk %}">
+        {% csrf_token %}
+        <header class="ds-modal-header">
+            <h2 class="ds-h2" id="del-title" style="font-size:18px; color:var(--ds-danger);">Eliminar documento</h2>
+            <button type="button" class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="document.getElementById('delete_modal').close()">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </button>
+        </header>
+        <div class="ds-modal-body">
+            <div class="ds-alert ds-alert-danger">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                <div>Se eliminará <b>{{ redaccion.titulo }}</b>, su archivo y su vista previa. Esta acción no se puede deshacer.</div>
+            </div>
+        </div>
+        <footer class="ds-modal-footer">
+            <button type="button" class="ds-btn ds-btn-ghost" onclick="document.getElementById('delete_modal').close()">Cancelar</button>
+            <button type="submit" class="ds-btn ds-btn-danger">Sí, eliminar</button>
+        </footer>
+    </form>
+    <form method="dialog" class="ds-sr-only"><button>cerrar</button></form>
+</dialog>
+{% endif %}
 {% endblock %}
