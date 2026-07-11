@@ -1,0 +1,16 @@
+/* ====================================================================
+   INM-VIAJES · tailwind.src.css — ENTRADA del build local (Fase 26)
+   --------------------------------------------------------------------
+   Este archivo es la FUENTE que compila tailwind.config.js hacia
+   tailwind.min.css (con purge). No se enlaza directamente en ninguna
+   plantilla; el que se sirve es tailwind.min.css.
+
+   BUILD (desde Viajes/, requiere Node solo en build, no en producción):
+     npx --yes tailwindcss@3 -c tailwind.config.js \
+       -i apps/uploader/static/css/tailwind.src.css \
+       -o apps/uploader/static/css/tailwind.min.css --minify
+   Luego: python manage.py collectstatic --noinput
+   ==================================================================== */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;

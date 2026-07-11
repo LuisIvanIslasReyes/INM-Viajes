@@ -31,11 +31,11 @@
         });
         
         function highlight(e) {
-            dropZone.classList.add('border-secondary', 'bg-base-200', 'scale-105');
+            dropZone.classList.add('ds-dropzone-over');
         }
-        
+
         function unhighlight(e) {
-            dropZone.classList.remove('border-secondary', 'bg-base-200', 'scale-105');
+            dropZone.classList.remove('ds-dropzone-over');
         }
         
         // Manejar archivos soltados
@@ -47,11 +47,14 @@
             handleFiles(files);
         }
         
-        // Botón para seleccionar archivos
-        selectFilesBtn.addEventListener('click', function(e) {
-            e.stopPropagation(); // Evitar que se propague al dropZone
-            fileInput.click();
-        });
+        // Botón para seleccionar archivos (opcional: el dropzone ya es un <label>
+        // asociado a #id_archivo, así que este botón puede no existir en la plantilla)
+        if (selectFilesBtn) {
+            selectFilesBtn.addEventListener('click', function(e) {
+                e.stopPropagation(); // Evitar que se propague al dropZone
+                fileInput.click();
+            });
+        }
         
         // Manejar selección de archivos con click
         fileInput.addEventListener('change', function(e) {
@@ -104,18 +107,15 @@
                     const fileCard = document.createElement('div');
                     fileCard.className = 'flex items-center gap-3 p-3 bg-green-50 border border-green-200 rounded-lg';
                     fileCard.innerHTML = `
-                        <div class="flex-shrink-0">
-                            <i class="fas fa-file-excel text-green-600 text-4xl"></i>
+                        <div class="flex-shrink-0" style="color:var(--ds-success);">
+                            <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg>
                         </div>
                         <div class="flex-1">
                             <p class="font-semibold text-gray-800">${file.name}</p>
-                            <p class="text-sm text-gray-600">
-                                <i class="fas fa-weight-hanging text-xs mr-1"></i>
-                                ${fileSizeMB} MB
-                            </p>
+                            <p class="text-sm text-gray-600">${fileSizeMB} MB</p>
                         </div>
-                        <button type="button" onclick="removeFile(${index})" class="btn btn-circle btn-ghost btn-sm text-error hover:bg-error hover:text-white" title="Eliminar archivo">
-                            <i class="fas fa-times text-lg"></i>
+                        <button type="button" onclick="removeFile(${index})" class="ds-btn ds-btn-icon ds-btn-sm ds-btn-danger-ghost" aria-label="Eliminar archivo" title="Eliminar archivo">
+                            <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
                         </button>
                     `;
                     filesList.appendChild(fileCard);
@@ -126,8 +126,8 @@
                     const addMoreCard = document.createElement('div');
                     addMoreCard.className = 'flex items-center justify-center p-3 border-2 border-dashed border-green-300 rounded-lg bg-green-50 hover:bg-green-100 transition-colors cursor-pointer';
                     addMoreCard.innerHTML = `
-                        <button type="button" class="flex items-center gap-2 text-green-700 font-semibold">
-                            <i class="fas fa-plus-circle text-xl"></i>
+                        <button type="button" class="flex items-center gap-2 text-green-700 font-semibold" style="background:none; border:0; cursor:pointer;">
+                            <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
                             Agregar otro archivo (${selectedFiles.length}/${MAX_FILES})
                         </button>
                     `;
@@ -164,12 +164,9 @@
             updateUI();
         }
         
-        // Hacer clic en la zona para abrir selector (solo si está visible el dropZoneContent)
-        dropZone.addEventListener('click', function(e) {
-            if (!dropZoneContent.classList.contains('hidden')) {
-                fileInput.click();
-            }
-        });
+        // Nota: no llamamos fileInput.click() aquí. El dropzone es un <label for="id_archivo">,
+        // así que el click sobre la zona abre el selector de archivos de forma nativa.
+        // Añadir un fileInput.click() manual provocaría que el diálogo se abriera dos veces.
 
         // Manejar envío del formulario con modal de fecha + indicadores visuales
         const uploadForm = document.getElementById('uploadForm');

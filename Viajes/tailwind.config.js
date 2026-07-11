@@ -1,22 +1,19 @@
 /* ====================================================================
-   INM-VIAJES · tailwind.config.js (preparado en Fase 0, se ACTIVA en Fase 26)
+   INM-VIAJES · tailwind.config.js — ACTIVO desde Fase 26 (kill switch)
    --------------------------------------------------------------------
-   HOY el sistema usa Tailwind por CDN; este archivo deja lista la
-   migración a build local sin Node en producción:
+   Tailwind ya NO se carga por CDN: se compila localmente con purge a
+   apps/uploader/static/css/tailwind.min.css (enlazado en base_ds.html
+   y login.html). El build solo necesita Node en desarrollo, no en prod.
 
-   PLAN DE MIGRACIÓN CDN → BUILD LOCAL (Fase 26):
-   1. Descargar el binario standalone de Tailwind (no requiere Node):
-        tailwindcss-linux-x64 v3.4.x → herramientas/tailwindcss
-   2. Crear static/css/tailwind.src.css con:
-        @tailwind base; @tailwind components; @tailwind utilities;
-   3. Compilar:
-        ./tailwindcss -c tailwind.config.js \
-          -i apps/uploader/static/css/tailwind.src.css \
-          -o apps/uploader/static/css/tailwind.min.css --minify
-   4. En base_ds.html sustituir el <script src="cdn.tailwindcss.com">
-      por <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
-   5. `collectstatic` + smoke test QA por rol (checklist Fase 26).
-   Rollback: revertir el <link> al <script> CDN (1 línea).
+   RE-COMPILAR tras tocar plantillas o JS (desde Viajes/):
+     npx --yes tailwindcss@3 -c tailwind.config.js \
+       -i apps/uploader/static/css/tailwind.src.css \
+       -o apps/uploader/static/css/tailwind.min.css --minify
+     python manage.py collectstatic --noinput   # para despliegue
+
+   Rollback del kill switch: reponer el <script> del CDN de Tailwind en
+   base_ds.html/login.html (1 línea). El purge se controla con `content`
+   y `safelist` de abajo — mantener el safelist sincronizado con los .js.
    ==================================================================== */
 
 /** @type {import('tailwindcss').Config} */

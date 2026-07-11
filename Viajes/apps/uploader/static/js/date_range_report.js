@@ -73,7 +73,7 @@ async function abrirModalPin(fecha, fechaTexto, totalPasajeros, totalSR, totalIn
     const contenido = document.getElementById('contenidoPin');
     
     // Mostrar loading
-    contenido.innerHTML = '<div class="text-center"><span class="loading loading-spinner loading-lg"></span></div>';
+    contenido.innerHTML = '<div style="text-align:center; padding:24px; color:var(--ds-primary);"><span class="ds-btn-spinner" aria-hidden="true" style="width:28px; height:28px; border-width:3px; display:inline-block;"></span><p class="ds-small" style="margin-top:8px;">Cargando…</p></div>';
     modal.showModal();
     
     try {
@@ -191,20 +191,16 @@ Sin otro particular, se envía un cordial saludo.`;
         
         // Mostrar mensaje de error detallado
         contenido.innerHTML = `
-            <div class="alert alert-error shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div class="ds-alert ds-alert-danger" role="alert">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
                 <div>
-                    <h3 class="font-bold">Error al cargar el PIN</h3>
-                    <div class="text-sm">${error.message}</div>
+                    <strong>Error al cargar el PIN</strong>
+                    <p class="ds-small" style="margin:2px 0 0;">${error.message}</p>
                 </div>
             </div>
-            <div class="mt-4 text-center">
-                <button onclick="location.reload()" class="btn btn-primary btn-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                    </svg>
+            <div style="margin-top:16px; text-align:center;">
+                <button onclick="location.reload()" class="ds-btn ds-btn-primary ds-btn-sm">
+                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15"/></svg>
                     Recargar Página
                 </button>
             </div>
@@ -228,7 +224,7 @@ async function abrirModalPinBinacional(fecha, fechaTexto) {
     const modal = document.getElementById('modalPinBinacional');
     const contenido = document.getElementById('contenidoPinBinacional');
 
-    contenido.innerHTML = '<div class="text-center"><span class="loading loading-spinner loading-lg"></span></div>';
+    contenido.innerHTML = '<div style="text-align:center; padding:24px; color:var(--ds-primary);"><span class="ds-btn-spinner" aria-hidden="true" style="width:28px; height:28px; border-width:3px; display:inline-block;"></span><p class="ds-small" style="margin-top:8px;">Cargando…</p></div>';
     modal.showModal();
 
     try {
@@ -290,17 +286,15 @@ Internaciones: <strong>${intStr}</strong>`;
     } catch (error) {
         console.error('Error al cargar el PIN Binacional:', error);
         contenido.innerHTML = `
-            <div class="alert alert-error shadow-lg">
-                <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
+            <div class="ds-alert ds-alert-danger" role="alert">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
                 <div>
-                    <h3 class="font-bold">Error al cargar el PIN Binacional</h3>
-                    <div class="text-sm">${error.message}</div>
+                    <strong>Error al cargar el PIN Binacional</strong>
+                    <p class="ds-small" style="margin:2px 0 0;">${error.message}</p>
                 </div>
             </div>
-            <div class="mt-4 text-center">
-                <button onclick="location.reload()" class="btn btn-primary btn-sm">Recargar Página</button>
+            <div style="margin-top:16px; text-align:center;">
+                <button onclick="location.reload()" class="ds-btn ds-btn-primary ds-btn-sm">Recargar Página</button>
             </div>
         `;
     }
@@ -408,82 +402,39 @@ async function copiarPin(event) {
     }
 }
 
-// Función para mostrar notificaciones toast
+// Notificaciones toast → design system (window.dsToast, definido en base_ds.html)
 function mostrarNotificacion(mensaje, tipo = 'success') {
-    const toast = document.createElement('div');
-    const bgColor = tipo === 'success' ? 'alert-success' : 'alert-error';
-    
-    toast.className = `alert ${bgColor} shadow-lg fixed top-4 right-4 w-auto animate-fade-in`;
-    toast.style.zIndex = '9999';
-    toast.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            ${tipo === 'success' 
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-            }
-        </svg>
-        <span>${mensaje}</span>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Remover la notificación después de 2 segundos
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.5s';
-        setTimeout(() => {
-            if (document.body.contains(toast)) {
-                document.body.removeChild(toast);
-            }
-        }, 500);
-    }, 2000);
+    window.dsToast(mensaje, tipo === 'success' ? 'success' : 'danger', { duration: 2000 });
 }
 
 function mostrarNotificacionExito() {
-    // Crear notificación toast
-    const toast = document.createElement('div');
-    toast.className = 'alert alert-success shadow-lg fixed top-4 right-4 w-auto z-50 animate-bounce';
-    toast.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-        </svg>
-        <span><strong>¡PIN copiado al portapapeles!</strong></span>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Remover la notificación después de 3 segundos
-    setTimeout(() => {
-        toast.style.animation = 'fadeOut 0.5s';
-        setTimeout(() => {
-            document.body.removeChild(toast);
-        }, 500);
-    }, 3000);
+    window.dsToast('¡PIN copiado al portapapeles!', 'success', { duration: 3000 });
 }
 
 function mostrarModalCopiaManual(texto) {
     const contenido = document.getElementById('contenidoPin');
-    
+
     const container = document.createElement('div');
-    container.className = 'space-y-3';
-    
+    container.style.display = 'grid';
+    container.style.gap = 'var(--ds-sp-3)';
+
     const alerta = document.createElement('div');
-    alerta.className = 'alert alert-warning shadow-lg';
+    alerta.className = 'ds-alert ds-alert-warning';
+    alerta.setAttribute('role', 'alert');
     alerta.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
-        </svg>
+        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
         <div>
-            <h3 class="font-bold text-base">⚠️ Copia manual necesaria</h3>
-            <div class="text-sm mt-1">
-                <p>Por favor, selecciona el texto abajo y presiona <kbd class="kbd kbd-sm">Ctrl</kbd> + <kbd class="kbd kbd-sm">C</kbd></p>
-            </div>
+            <strong>Copia manual necesaria</strong>
+            <p class="ds-small" style="margin:4px 0 0;">Selecciona el texto de abajo y presiona <kbd style="padding:0 6px; border:1px solid var(--ds-border); border-radius:4px; font-family:monospace;">Ctrl</kbd> + <kbd style="padding:0 6px; border:1px solid var(--ds-border); border-radius:4px; font-family:monospace;">C</kbd>.</p>
         </div>
     `;
-    
+
     const textarea = document.createElement('textarea');
     textarea.value = texto;
-    textarea.className = 'textarea textarea-bordered w-full h-64 font-mono text-sm';
+    textarea.className = 'ds-textarea';
+    textarea.style.width = '100%';
+    textarea.style.height = '16rem';
+    textarea.style.fontFamily = 'ui-monospace, monospace';
     textarea.readOnly = true;
     
     container.appendChild(alerta);

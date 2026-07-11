@@ -2,9 +2,10 @@
    INM-VIAJES · DESIGN SYSTEM — TOKENS (Fase 0 · PR 01)
    --------------------------------------------------------------------
    Destino en el repo:  Viajes/apps/uploader/static/css/design-system.css
-   Cargar en <head> DESPUÉS de Tailwind y ANTES de components.css:
+   Cargar en <head> DESPUÉS de Tailwind y ANTES de components.css.
+   Desde Fase 26 Tailwind es build local con purge (ya no CDN):
 
-     <script src="https://cdn.tailwindcss.com"></script>
+     <link rel="stylesheet" href="{% static 'css/tailwind.min.css' %}">
      <link rel="stylesheet" href="{% static 'css/design-system.css' %}">
      <link rel="stylesheet" href="{% static 'css/components.css' %}">
 
@@ -206,9 +207,13 @@ body.ds-body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* Enlaces por defecto */
-.ds-body a { color: var(--ds-link); text-decoration: none; }
-.ds-body a:hover { color: var(--ds-link-hover); text-decoration: underline; }
+/* Enlaces de contenido. Especificidad a nivel de elemento (:where) para que
+   cualquier componente-ancla con clase propia (.ds-btn, .ds-nav-brand,
+   .ds-side-link, .ds-tab, .ds-menu-item…) defina su color sin que este default
+   lo pise. Antes «.ds-body a» (0,1,1) le ganaba a «.ds-btn-primary»/«.ds-nav-brand»
+   (0,1,0) y el texto quedaba invisible sobre fondo guinda. */
+:where(.ds-body) a { color: var(--ds-link); text-decoration: none; }
+:where(.ds-body) a:where(:hover) { color: var(--ds-link-hover); text-decoration: underline; }
 
 /* Foco visible universal (teclado) */
 .ds-body :focus-visible {

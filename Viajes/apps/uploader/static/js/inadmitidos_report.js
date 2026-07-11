@@ -568,28 +568,14 @@ function escapeHTML(s) {
 /* --- Helpers UI --- */
 
 function mostrarToast(mensaje, tipo = 'info') {
-    const cont = document.getElementById('toast-container');
-    if (!cont) { alert(mensaje); return; }
-
-    const clases = {
-        success: 'alert-success',
-        error: 'alert-error',
-        warning: 'alert-warning',
-        info: 'alert-info',
-    };
-    const iconos = {
-        success: 'fa-check-circle',
-        error: 'fa-exclamation-circle',
-        warning: 'fa-exclamation-triangle',
-        info: 'fa-info-circle',
-    };
-
-    const div = document.createElement('div');
-    div.className = `alert ${clases[tipo] || clases.info}`;
-    div.innerHTML = `<i class="fas ${iconos[tipo] || iconos.info}"></i><span>${mensaje}</span>`;
-    cont.appendChild(div);
-
-    setTimeout(() => { div.remove(); }, 3500);
+    // Toast del design system (window.dsToast, definido en base_ds.html).
+    // 'error' del API interno mapea a la variante 'danger' del DS.
+    const kind = tipo === 'error' ? 'danger' : tipo; // success | warning | info | danger
+    if (window.dsToast) {
+        window.dsToast(mensaje, kind, { duration: 3500 });
+    } else {
+        alert(mensaje);
+    }
 }
 
 function mostrarSpinner(visible) {

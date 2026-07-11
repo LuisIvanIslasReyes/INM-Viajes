@@ -33,10 +33,10 @@ document.addEventListener('DOMContentLoaded', function() {
                         block: 'center' 
                     });
                     
-                    // Efecto visual temporal (flash amarillo)
-                    registroElement.classList.add('bg-warning', 'bg-opacity-20');
+                    // Efecto visual temporal (resaltado de fila del design system)
+                    registroElement.classList.add('ds-row-selected');
                     setTimeout(() => {
-                        registroElement.classList.remove('bg-warning', 'bg-opacity-20');
+                        registroElement.classList.remove('ds-row-selected');
                     }, 2000);
                 }, 300);
             }
@@ -387,86 +387,40 @@ function actualizarFilaToggle(row, data) {
     if (rInput)  rInput.value  = data.rechazado         ? 'false' : 'true';
     if (iInput)  iInput.value  = data.internacion       ? 'false' : 'true';
 
-    // SR
-    const srBtn = srInput?.closest('form')?.querySelector('button');
-    if (srBtn) srBtn.innerHTML = svgSR(data.segunda_revision);
-
-    // R
-    const rBtn = rInput?.closest('form')?.querySelector('button');
-    if (rBtn) {
-        rBtn.disabled = !data.segunda_revision;
-        rBtn.innerHTML = svgR(data.rechazado);
+    // Refleja el estado en el botón .ds-toggle-cell: clase is-on-* + aria-pressed.
+    // El ícono es estático (ds-icon); el color lo da el CSS del estado, no el JS.
+    function pintar(input, onClass, activo) {
+        const btn = input?.closest('form')?.querySelector('button');
+        if (!btn) return null;
+        btn.classList.toggle(onClass, !!activo);
+        btn.setAttribute('aria-pressed', activo ? 'true' : 'false');
+        return btn;
     }
 
-    // I
-    const iBtn = iInput?.closest('form')?.querySelector('button');
-    if (iBtn) {
-        iBtn.disabled = !data.segunda_revision;
-        iBtn.innerHTML = svgI(data.internacion, data.segunda_revision);
-    }
+    pintar(srInput, 'is-on-sr', data.segunda_revision);
+    const rBtn = pintar(rInput, 'is-on-r', data.rechazado);
+    const iBtn = pintar(iInput, 'is-on-i', data.internacion);
+
+    // R e I dependen de SR: se habilitan solo con SR activo.
+    [rBtn, iBtn].forEach((btn) => {
+        if (!btn) return;
+        btn.disabled = !data.segunda_revision;
+        if (data.segunda_revision) {
+            btn.removeAttribute('data-ds-tip');
+        } else {
+            btn.setAttribute('data-ds-tip', 'Requiere SR activo');
+        }
+    });
 }
 
-function svgSR(activo) {
-    const color = activo ? 'text-success' : 'text-gray-300';
-    const sw    = activo ? '2.5' : '2';
-    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 ${color}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${sw}"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
-}
-
-function svgR(activo) {
-    const color = activo ? 'text-error' : 'text-gray-300';
-    const sw    = activo ? '2.5' : '2';
-    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 ${color}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${sw}"><path stroke-linecap="round" stroke-linejoin="round" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>`;
-}
-
-function svgI(activo, srActivo) {
-    const color = activo ? 'text-info' : (srActivo ? 'text-gray-400' : 'text-gray-200');
-    const sw    = activo ? '2.5' : '2';
-    return `<svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 ${color}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="${sw}"><path stroke-linecap="round" stroke-linejoin="round" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>`;
-}
-
+// Feedback breve de toggles → toast del design system (window.dsToast, definido en base_ds.html)
 function mostrarToastRapido(mensaje, tipo = 'success') {
-    document.querySelectorAll('.toast-rapido').forEach(t => t.remove());
-    const toast = document.createElement('div');
-    const bg    = tipo === 'success' ? 'alert-success' : 'alert-error';
-    toast.className = `toast-rapido alert ${bg} shadow-lg fixed top-4 right-4 w-auto z-50 py-2 px-4`;
-    toast.style.transition = 'opacity 0.3s';
-    toast.innerHTML = `<span>${mensaje}</span>`;
-    document.body.appendChild(toast);
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        setTimeout(() => toast.remove(), 300);
-    }, 1500);
+    window.dsToast(mensaje, tipo === 'success' ? 'success' : 'danger', { duration: 1500 });
 }
 
-// Función para mostrar notificaciones toast en rechazos
+// Notificaciones toast en rechazos → toast del design system
 function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
-    const toast = document.createElement('div');
-    const bgColor = tipo === 'success' ? 'alert-success' : 'alert-error';
-    
-    toast.className = `alert ${bgColor} shadow-lg fixed top-4 right-4 w-auto animate-fade-in`;
-    toast.style.zIndex = '9999';
-    toast.innerHTML = `
-        <svg xmlns="http://www.w3.org/2000/svg" class="stroke-current shrink-0 h-6 w-6" fill="none" viewBox="0 0 24 24">
-            ${tipo === 'success' 
-                ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-                : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 14l2-2m0 0l2-2m-2 2l-2-2m2 2l2 2m7-2a9 9 0 11-18 0 9 9 0 0118 0z" />'
-            }
-        </svg>
-        <span>${mensaje}</span>
-    `;
-    
-    document.body.appendChild(toast);
-    
-    // Remover la notificación después de 4 segundos
-    setTimeout(() => {
-        toast.style.opacity = '0';
-        toast.style.transition = 'opacity 0.5s';
-        setTimeout(() => {
-            if (document.body.contains(toast)) {
-                document.body.removeChild(toast);
-            }
-        }, 500);
-    }, 4000);
+    window.dsToast(mensaje, tipo === 'success' ? 'success' : 'danger', { duration: 4000 });
 }
 
 // =====================================================================
@@ -622,10 +576,10 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
 
     function setEstado(tipo, html) {
         if (!estado) return;
-        estado.classList.remove('hidden', 'alert-info', 'alert-success', 'alert-warning', 'alert-error');
-        if (tipo === 'nuevo') estado.classList.add('alert-info');
-        else if (tipo === 'existe') estado.classList.add('alert-warning');
-        else if (tipo === 'error') estado.classList.add('alert-error');
+        estado.classList.remove('hidden', 'ds-alert-info', 'ds-alert-success', 'ds-alert-warning', 'ds-alert-danger');
+        if (tipo === 'nuevo') estado.classList.add('ds-alert-info');
+        else if (tipo === 'existe') estado.classList.add('ds-alert-warning');
+        else if (tipo === 'error') estado.classList.add('ds-alert-danger');
         estado.innerHTML = html;
     }
 
