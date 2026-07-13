@@ -63,6 +63,32 @@
 .ds-actions-lg .ds-btn         { min-height: 58px; }
 .ds-actions-lg .ds-btn-circle  { width: 58px; min-width: 58px; height: 58px; }
 .ds-actions-lg .ds-icon        { width: 24px; height: 24px; }
+
+/* ====================================================================
+   Barra de scroll horizontal SUPERIOR, sincronizada con la tabla.
+   La tabla es muy ancha y su scroll nativo queda hasta abajo; con teclado
+   y mouse cuesta alcanzarlo (el truco shift+rueda no es evidente). Esta
+   barra duplicada queda pegada arriba de la tabla y siempre visible, para
+   que el usuario la arrastre sin bajar. Se oculta sola si no hay overflow. */
+.ds-table-scrolltop {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  border: 1px solid var(--ds-border);
+  border-bottom: 0;
+  border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
+  background: var(--ds-bg-sunken);
+}
+.ds-table-scrolltop[hidden] { display: none; }
+.ds-table-scrolltop > div { height: 12px; }
+/* Barra más gruesa/visible en navegadores WebKit (Chrome/Edge/Safari). */
+.ds-table-scrolltop::-webkit-scrollbar { height: 12px; }
+.ds-table-scrolltop::-webkit-scrollbar-thumb {
+  background: var(--ds-neutral-300);
+  border-radius: var(--ds-radius-full);
+  border: 3px solid var(--ds-bg-sunken);
+}
+.ds-table-scrolltop::-webkit-scrollbar-thumb:hover { background: var(--ds-text-3); }
 </style>
 {% endblock %}
 
@@ -151,7 +177,9 @@
 
     <!-- Tabla -->
     <section class="ds-card" style="padding:0;">
-        <div class="ds-table-wrap" style="border:0;">
+        <!-- Barra de scroll horizontal superior (sincronizada por JS con la tabla) -->
+        <div class="ds-table-scrolltop" id="tableScrollTop" aria-hidden="true" hidden><div></div></div>
+        <div class="ds-table-wrap" id="registrosTableWrap" style="border:0;">
             <table class="ds-table ds-table-compact" id="registrosTable">
                 <thead>
                     <tr>
@@ -355,4 +383,32 @@
 {% block extra_js %}
 <script>window.URL_PREFIX = {{ is_production|yesno:"'/viajes',''"|safe }};</script>
 <script src="{% static 'js/admin_list.js' %}"></script>
+<script>
+/* Sincroniza la barra de scroll horizontal superior con la tabla. */
+(function () {
+    'use strict';
+    var top = document.getElementById('tableScrollTop');
+    var wrap = document.getElementById('registrosTableWrap');
+    if (!top || !wrap) return;
+    var spacer = top.firstElementChild;
+
+    function refresh() {
+        spacer.style.width = wrap.scrollWidth + 'px';
+        // Oculta la barra superior si la tabla no desborda horizontalmente.
+        top.hidden = wrap.scrollWidth <= wrap.clientWidth + 1;
+    }
+
+    // Reflejo mutuo: comparar antes de asignar evita cualquier bucle de eco.
+    top.addEventListener('scroll', function () {
+        if (wrap.scrollLeft !== top.scrollLeft) wrap.scrollLeft = top.scrollLeft;
+    });
+    wrap.addEventListener('scroll', function () {
+        if (top.scrollLeft !== wrap.scrollLeft) top.scrollLeft = wrap.scrollLeft;
+    });
+
+    refresh();
+    window.addEventListener('resize', refresh);
+    if (window.ResizeObserver) { new ResizeObserver(refresh).observe(wrap); }
+})();
+</script>
 {% endblock %}

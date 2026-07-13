@@ -54,7 +54,7 @@
     <!-- ===================== SIDEBAR =====================
          Misma IA y mismos condicionales de rol que base.html actual.
          La reorganización por dominios llega en Fase 2. -->
-    <aside class="ds-side" id="dsSidebar">
+    <aside class="ds-side ds-side-closed" id="dsSidebar">
         <nav class="ds-side-nav" aria-label="Navegación principal">
             <p class="ds-side-title">Módulos</p>
             <a class="ds-side-link" href="{% url 'directorio:listado' %}"
@@ -158,7 +158,7 @@
     (function () {
         'use strict';
 
-        /* --- Sidebar: persistencia en localStorage --- */
+        /* --- Sidebar: siempre inicia oculta; solo el burger la abre/cierra --- */
         var side = document.getElementById('dsSidebar');
         var toggle = document.getElementById('dsSidebarToggle');
         var overlay = document.getElementById('dsSideOverlay');
@@ -169,12 +169,9 @@
             side.classList.toggle('ds-side-closed', !open);
             if (toggle) toggle.setAttribute('aria-expanded', String(open));
             if (overlay) overlay.hidden = !(open && !mqDesktop.matches);
-            try { localStorage.setItem('ds.sidebar', open ? '1' : '0'); } catch (e) {}
         }
         if (side) {
-            var saved = null;
-            try { saved = localStorage.getItem('ds.sidebar'); } catch (e) {}
-            setSide(saved === null ? mqDesktop.matches : saved === '1');
+            setSide(false);
             if (toggle) toggle.addEventListener('click', function () {
                 setSide(side.classList.contains('ds-side-closed'));
             });
