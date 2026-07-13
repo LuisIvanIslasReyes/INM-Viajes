@@ -232,27 +232,13 @@
     </div>
     {% endif %}
 </div>
+{% endblock %}
 
-<style>
-    .caso-row[aria-selected="true"] { background:var(--ds-warm-100) !important; }
-    .caso-row:hover { background:var(--ds-hover-bg); }
-    .caso-row:focus-visible { outline:none; box-shadow:inset 0 0 0 2px var(--ds-guinda-600); }
-    @media (max-width: 900px) { .casos-split { grid-template-columns:1fr !important; } .casos-split aside { position:static !important; max-height:none; } }
-</style>
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'css/casos_especiales.css' %}">
+{% endblock %}
 
-<script>
-function selectCaso(id) {
-    document.querySelectorAll('[data-caso-panel]').forEach(function (p) { p.hidden = String(p.dataset.casoPanel) !== String(id); });
-    document.querySelectorAll('[data-caso-row]').forEach(function (r) { r.setAttribute('aria-selected', String(r.dataset.casoRow) === String(id)); });
-}
-function updateRegistro(registroId, campo, valor) {
-    var fd = new FormData();
-    fd.append('csrfmiddlewaretoken', '{{ csrf_token }}');
-    fd.append(campo, valor);
-    fetch((window.URL_PREFIX || '') + '/update-registro/' + registroId + '/', { method: 'POST', body: fd, headers: { 'X-Requested-With': 'XMLHttpRequest' } })
-        .then(function (r) { return r.json(); })
-        .then(function (d) { if (d.success) { location.reload(); } else { if (window.dsToast) dsToast('Error al actualizar', 'danger'); location.reload(); } })
-        .catch(function () { if (window.dsToast) dsToast('Error al actualizar', 'danger'); location.reload(); });
-}
-</script>
+{% block extra_js %}
+<script>window.CSRF_TOKEN = "{{ csrf_token }}";</script>
+<script src="{% static 'js/casos_especiales.js' %}"></script>
 {% endblock %}

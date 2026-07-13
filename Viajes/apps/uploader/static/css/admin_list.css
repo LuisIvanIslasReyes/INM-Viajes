@@ -1,240 +1,80 @@
-    /* Estilo para columnas fijas */
-    .sticky {
-        position: sticky;
-    }
-    
-    /* 
-    ===================================
-    🎯 LÓGICA DE ESTADOS (SR, R, PI)
-    ===================================
-    SR (Segunda Revisión): Siempre activo
-    R (Rechazo): Siempre activo, EXCEPTO si PI está activo
-    PI (Punto de Internación): Solo se habilita si SR está activo
-    
-    Regla: R y PI son mutuamente excluyentes
-    ===================================
-    */
-    
-    /* Sombra para separar las columnas fijas de las scrolleables */
-    th.sticky:nth-child(5),
-    td.sticky:nth-child(5) {
-        box-shadow: 2px 0 5px rgba(0,0,0,0.1);
-    }
-    
-    /* Asegurar que el scroll horizontal funcione */
-    .overflow-x-auto {
-        max-width: 100%;
-    }
-    
-    /* Ancho mínimo para columnas fijas de estado (SR, R, PI) */
-    th.sticky:nth-child(1), td.sticky:nth-child(1),
-    th.sticky:nth-child(2), td.sticky:nth-child(2),
-    th.sticky:nth-child(3), td.sticky:nth-child(3) {
-        min-width: 60px;
-        width: 60px;
-        max-width: 60px;
-    }
-    
-    /* Columna de Comentario */
-    th.sticky:nth-child(4), td.sticky:nth-child(4) {
-        min-width: 180px;
-        width: 180px;
-    }
-    
-    /* Columna de Acciones */
-    th.sticky:nth-child(5), td.sticky:nth-child(5) {
-        min-width: 80px;
-        width: 80px;
-    }
-    
-    /* 🔥 TAMAÑO DE FUENTE MÁS GRANDE */
-    .table {
-        font-size: 1.1rem; /* Aumentado de 1rem */
-    }
-    
-    .table thead th {
-        font-size: 1.25rem; /* Aumentado de 1.1rem */
-        font-weight: 700;
-        padding: 1rem 0.75rem;
-    }
-    
-    .table tbody td {
-        font-size: 1.1rem; /* Aumentado de 1rem */
-        padding: 1rem 0.75rem;
-    }
-    
-    /* Badges más grandes */
-    .badge {
-        font-size: 1rem;
-        padding: 0.5rem 0.75rem;
-    }
-    
-    /* Botones más grandes */
-    .btn-md {
-        height: 3rem;
-        min-height: 3rem;
-        padding-left: 1rem;
-        padding-right: 1rem;
-    }
-    
-    .btn-sm {
-        height: 2.5rem;
-        min-height: 2.5rem;
-        font-size: 1rem;
-    }
-    
-    /* Background para columnas sticky - zebra striping */
-    tbody tr:nth-child(even) td.sticky {
-        background-color: oklch(var(--b2));
-    }
-    
-    tbody tr:nth-child(odd) td.sticky {
-        background-color: oklch(var(--b1));
-    }
-    
-    /* Asegurar que los headers tengan el color correcto */
-    thead th.sticky {
-        background-color: hsl(var(--p));
-    }
-    
-    /* Iconos SVG más grandes */
-    .table svg {
-        width: 1.5rem;
-        height: 1.5rem;
-    }
-    
-    /* Efecto de highlight para registro recién actualizado */
-    @keyframes highlight-pulse {
-        0%, 100% { background-color: transparent; }
-        50% { background-color: rgba(250, 204, 21, 0.3); }
-    }
-    
-    .bg-opacity-20 {
-        animation: highlight-pulse 2s ease-in-out;
-    }
+/* ====================================================================
+   Columnas congeladas de la tabla de registros (SR · R · I · Comentario
+   · Acciones). Anchos FIJOS con box-sizing:border-box para que los offsets
+   'left' calcen EXACTOS en <thead> y <tbody>; así la columna de Acciones no
+   se desfasa al hacer scroll horizontal.
+   INVARIANTE: left(n) = Σ ancho(0..n-1)  →  0 · 48 · 96 · 144 · 312
+   ==================================================================== */
+#registrosTable th.ds-stick,
+#registrosTable td.ds-stick {
+  position: sticky;
+  z-index: 1;
+  box-sizing: border-box;
+  background: var(--ds-bg-surface);
+}
+#registrosTable thead th.ds-stick { z-index: 3; background: var(--ds-bg-sunken); }
+#registrosTable tbody tr:hover td.ds-stick { background: var(--ds-hover-bg); }
+#registrosTable .ds-stick-sr  { left: 0;     width: 48px;  min-width: 48px;  max-width: 48px;  padding-inline: 6px; text-align: center; }
+#registrosTable .ds-stick-r   { left: 48px;  width: 48px;  min-width: 48px;  max-width: 48px;  padding-inline: 6px; text-align: center; }
+#registrosTable .ds-stick-i   { left: 96px;  width: 48px;  min-width: 48px;  max-width: 48px;  padding-inline: 6px; text-align: center; }
+#registrosTable .ds-stick-com { left: 144px; width: 168px; min-width: 168px; max-width: 168px; }
+#registrosTable .ds-stick-acc { left: 312px; width: 76px;  min-width: 76px;  max-width: 76px;  padding-inline: 6px; text-align: center; box-shadow: 2px 0 0 var(--ds-border); }
 
-    /*
-    ===================================
-    🕒 Modal Captura de Tiempos de Atención
-    ===================================
-    Diseño compacto para que toda la modal sea visible sin scroll.
-    */
-    .tiempos-box {
-        background: #ffffff;
-        border: 1px solid rgba(219, 192, 190, 0.4);
-    }
+/* ====================================================================
+   Acciones rápidas circulares (restauradas) — la "bolita con icono" a la
+   que el equipo estaba acostumbrado. Se apoyan en ds-btn + ds-btn-icon
+   (44×44, target táctil AA) y solo redondean + colorean. Icon-only, así
+   que cada botón lleva su aria-label/title.
+   ==================================================================== */
+.ds-btn-circle  { border-radius: var(--ds-radius-full); }
+.ds-btn-info    { background: var(--ds-info);    border-color: var(--ds-info);    color: #fff; }
+.ds-btn-info:hover     { background: #1B4766; border-color: #1B4766; color: #fff; }
+.ds-btn-guinda  { background: var(--ds-primary); border-color: var(--ds-primary); color: #fff; }
+.ds-btn-guinda:hover   { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); color: #fff; }
+.ds-btn-success { background: var(--ds-success); border-color: var(--ds-success); color: #fff; }
+.ds-btn-success:hover  { background: #155234; border-color: #155234; color: #fff; }
 
-    .tiempos-section {
-        border-color: #dbc0be;
-    }
+/* El equipo pidió estas acciones "más grandes": TODA la barra a 58px de alto
+   (círculos 58×58 perfectos, icono 24px) sin inflar la tipografía de los botones
+   con texto, para que todo quede a la misma altura. Ajustable con estos 3 valores. */
+.ds-actions-lg .ds-btn         { min-height: 58px; }
+.ds-actions-lg .ds-btn-circle  { width: 58px; min-width: 58px; height: 58px; }
+.ds-actions-lg .ds-icon        { width: 24px; height: 24px; }
 
-    .tiempos-icon {
-        background-color: rgba(77, 6, 10, 0.08);
-        color: #4d060a;
-    }
+/* ====================================================================
+   Barra de scroll horizontal SUPERIOR, sincronizada con la tabla.
+   La tabla es muy ancha y su scroll nativo queda hasta abajo; con teclado
+   y mouse cuesta alcanzarlo (el truco shift+rueda no es evidente). Esta
+   barra duplicada queda pegada arriba de la tabla y siempre visible, para
+   que el usuario la arrastre sin bajar. Se oculta sola si no hay overflow. */
+.ds-table-scrolltop {
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  border: 1px solid var(--ds-border);
+  border-bottom: 0;
+  border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
+  background: var(--ds-bg-sunken);
+}
+.ds-table-scrolltop[hidden] { display: none; }
+.ds-table-scrolltop > div { height: 12px; }
+/* Barra más gruesa/visible en navegadores WebKit (Chrome/Edge/Safari). */
+.ds-table-scrolltop::-webkit-scrollbar { height: 12px; }
+.ds-table-scrolltop::-webkit-scrollbar-thumb {
+  background: var(--ds-neutral-300);
+  border-radius: var(--ds-radius-full);
+  border: 3px solid var(--ds-bg-sunken);
+}
+.ds-table-scrolltop::-webkit-scrollbar-thumb:hover { background: var(--ds-text-3); }
 
-    .tiempos-label {
-        font-size: 11px;
-        font-weight: 700;
-        text-transform: uppercase;
-        letter-spacing: 0.06em;
-        color: #7d2b29;
-    }
-
-    .tiempos-hint-note {
-        font-size: 11px;
-        font-style: italic;
-        color: rgba(85, 66, 65, 0.7);
-    }
-
-    .tiempos-sublabel {
-        font-size: 10px;
-        font-weight: 600;
-        text-transform: uppercase;
-        letter-spacing: 0.05em;
-        color: rgba(85, 66, 65, 0.7);
-    }
-
-    /* Campos (date / time / number) */
-    .tiempos-field {
-        width: 100%;
-        background: #f3f3f6;
-        border: 1px solid #dbc0be;
-        border-radius: 0.5rem;
-        padding: 0.55rem 0.85rem;
-        font-size: 0.9rem;
-        color: #1a1c1e;
-        transition: border-color 0.15s ease, box-shadow 0.15s ease;
-    }
-
-    .tiempos-field:hover {
-        border-color: #887270;
-    }
-
-    .tiempos-field:focus {
-        outline: none;
-        border-color: #4d060a;
-        box-shadow: 0 0 0 1px #ffb3ae;
-    }
-
-    /* Divisor con etiqueta centrada */
-    .tiempos-divider {
-        position: relative;
-        padding: 0.35rem 0;
-    }
-
-    .tiempos-divider::before {
-        content: "";
-        position: absolute;
-        top: 50%;
-        left: 0;
-        right: 0;
-        border-top: 1px solid rgba(219, 192, 190, 0.6);
-    }
-
-    .tiempos-divider span {
-        position: relative;
-        display: inline-block;
-        margin: 0 auto;
-        background: #ffffff;
-        padding: 0 0.75rem;
-        font-size: 12px;
-        font-weight: 700;
-        letter-spacing: 0.04em;
-        text-transform: uppercase;
-        color: #1c2522;
-    }
-
-    .tiempos-duration {
-        font-size: 11px;
-        font-weight: 600;
-    }
-
-    /* Botones del pie */
-    .tiempos-btn-cancel {
-        padding: 0.55rem 1.25rem;
-        border-radius: 0.5rem;
-        font-size: 0.875rem;
-        font-weight: 700;
-        color: #554241;
-        transition: background-color 0.15s ease;
-    }
-
-    .tiempos-btn-cancel:hover {
-        background-color: #e2e2e5;
-    }
-
-    .tiempos-btn-save {
-        padding: 0.55rem 1.75rem;
-        border-radius: 0.5rem;
-        font-size: 0.875rem;
-        font-weight: 700;
-        color: #ffffff;
-        background: #4d060a;
-        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
-        transition: background-color 0.15s ease;
-    }
-
-    .tiempos-btn-save:hover {
-        background: #3d0508;
-    }
+/* ====================================================================
+   Celdas-toggle (SR · R · I) — autocontenido, sin DaisyUI.
+   ==================================================================== */
+.ds-toggle-cell { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid var(--ds-border); border-radius:var(--ds-radius-md); background:var(--ds-bg-surface); color:var(--ds-neutral-300); cursor:pointer; transition:all var(--ds-dur-fast); }
+.ds-toggle-cell:hover:not(:disabled) { border-color:var(--ds-guinda-400); }
+.ds-toggle-cell:focus-visible { outline:none; box-shadow:var(--ds-focus-ring); }
+.ds-toggle-cell:disabled { opacity:.45; cursor:not-allowed; }
+.ds-toggle-cell.is-on-sr { background:var(--ds-success-container); border-color:#BCDCC9; color:var(--ds-success); }
+.ds-toggle-cell.is-on-r  { background:var(--ds-danger-container); border-color:#F4B4AE; color:var(--ds-danger); }
+.ds-toggle-cell.is-on-i  { background:var(--ds-info-container); border-color:#B9D2E5; color:var(--ds-info); }
+#registrosTable tbody tr:hover td[style*="sticky"] { background:var(--ds-hover-bg) !important; }

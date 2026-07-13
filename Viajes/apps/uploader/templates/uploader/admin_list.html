@@ -20,76 +20,7 @@
 {% block title %}{% if is_superuser %}Registros — Admin{% else %}Mis registros{% endif %} · INM Viajes{% endblock %}
 
 {% block extra_css %}
-<style>
-/* ====================================================================
-   Columnas congeladas de la tabla de registros (SR · R · I · Comentario
-   · Acciones). Anchos FIJOS con box-sizing:border-box para que los offsets
-   'left' calcen EXACTOS en <thead> y <tbody>; así la columna de Acciones no
-   se desfasa al hacer scroll horizontal.
-   INVARIANTE: left(n) = Σ ancho(0..n-1)  →  0 · 48 · 96 · 144 · 312
-   ==================================================================== */
-#registrosTable th.ds-stick,
-#registrosTable td.ds-stick {
-  position: sticky;
-  z-index: 1;
-  box-sizing: border-box;
-  background: var(--ds-bg-surface);
-}
-#registrosTable thead th.ds-stick { z-index: 3; background: var(--ds-bg-sunken); }
-#registrosTable tbody tr:hover td.ds-stick { background: var(--ds-hover-bg); }
-#registrosTable .ds-stick-sr  { left: 0;     width: 48px;  min-width: 48px;  max-width: 48px;  padding-inline: 6px; text-align: center; }
-#registrosTable .ds-stick-r   { left: 48px;  width: 48px;  min-width: 48px;  max-width: 48px;  padding-inline: 6px; text-align: center; }
-#registrosTable .ds-stick-i   { left: 96px;  width: 48px;  min-width: 48px;  max-width: 48px;  padding-inline: 6px; text-align: center; }
-#registrosTable .ds-stick-com { left: 144px; width: 168px; min-width: 168px; max-width: 168px; }
-#registrosTable .ds-stick-acc { left: 312px; width: 76px;  min-width: 76px;  max-width: 76px;  padding-inline: 6px; text-align: center; box-shadow: 2px 0 0 var(--ds-border); }
-
-/* ====================================================================
-   Acciones rápidas circulares (restauradas) — la "bolita con icono" a la
-   que el equipo estaba acostumbrado. Se apoyan en ds-btn + ds-btn-icon
-   (44×44, target táctil AA) y solo redondean + colorean. Icon-only, así
-   que cada botón lleva su aria-label/title.
-   ==================================================================== */
-.ds-btn-circle  { border-radius: var(--ds-radius-full); }
-.ds-btn-info    { background: var(--ds-info);    border-color: var(--ds-info);    color: #fff; }
-.ds-btn-info:hover     { background: #1B4766; border-color: #1B4766; color: #fff; }
-.ds-btn-guinda  { background: var(--ds-primary); border-color: var(--ds-primary); color: #fff; }
-.ds-btn-guinda:hover   { background: var(--ds-primary-hover); border-color: var(--ds-primary-hover); color: #fff; }
-.ds-btn-success { background: var(--ds-success); border-color: var(--ds-success); color: #fff; }
-.ds-btn-success:hover  { background: #155234; border-color: #155234; color: #fff; }
-
-/* El equipo pidió estas acciones "más grandes": TODA la barra a 58px de alto
-   (círculos 58×58 perfectos, icono 24px) sin inflar la tipografía de los botones
-   con texto, para que todo quede a la misma altura. Ajustable con estos 3 valores. */
-.ds-actions-lg .ds-btn         { min-height: 58px; }
-.ds-actions-lg .ds-btn-circle  { width: 58px; min-width: 58px; height: 58px; }
-.ds-actions-lg .ds-icon        { width: 24px; height: 24px; }
-
-/* ====================================================================
-   Barra de scroll horizontal SUPERIOR, sincronizada con la tabla.
-   La tabla es muy ancha y su scroll nativo queda hasta abajo; con teclado
-   y mouse cuesta alcanzarlo (el truco shift+rueda no es evidente). Esta
-   barra duplicada queda pegada arriba de la tabla y siempre visible, para
-   que el usuario la arrastre sin bajar. Se oculta sola si no hay overflow. */
-.ds-table-scrolltop {
-  overflow-x: auto;
-  overflow-y: hidden;
-  scrollbar-width: thin;
-  border: 1px solid var(--ds-border);
-  border-bottom: 0;
-  border-radius: var(--ds-radius-lg) var(--ds-radius-lg) 0 0;
-  background: var(--ds-bg-sunken);
-}
-.ds-table-scrolltop[hidden] { display: none; }
-.ds-table-scrolltop > div { height: 12px; }
-/* Barra más gruesa/visible en navegadores WebKit (Chrome/Edge/Safari). */
-.ds-table-scrolltop::-webkit-scrollbar { height: 12px; }
-.ds-table-scrolltop::-webkit-scrollbar-thumb {
-  background: var(--ds-neutral-300);
-  border-radius: var(--ds-radius-full);
-  border: 3px solid var(--ds-bg-sunken);
-}
-.ds-table-scrolltop::-webkit-scrollbar-thumb:hover { background: var(--ds-text-3); }
-</style>
+<link rel="stylesheet" href="{% static 'css/admin_list.css' %}">
 {% endblock %}
 
 {% block content %}
@@ -304,18 +235,6 @@
     {% endif %}
 </div>
 
-<!-- Estilo local para las celdas-toggle (autocontenido, sin DaisyUI) -->
-<style>
-    .ds-toggle-cell { display:inline-flex; align-items:center; justify-content:center; width:36px; height:36px; border:1px solid var(--ds-border); border-radius:var(--ds-radius-md); background:var(--ds-bg-surface); color:var(--ds-neutral-300); cursor:pointer; transition:all var(--ds-dur-fast); }
-    .ds-toggle-cell:hover:not(:disabled) { border-color:var(--ds-guinda-400); }
-    .ds-toggle-cell:focus-visible { outline:none; box-shadow:var(--ds-focus-ring); }
-    .ds-toggle-cell:disabled { opacity:.45; cursor:not-allowed; }
-    .ds-toggle-cell.is-on-sr { background:var(--ds-success-container); border-color:#BCDCC9; color:var(--ds-success); }
-    .ds-toggle-cell.is-on-r  { background:var(--ds-danger-container); border-color:#F4B4AE; color:var(--ds-danger); }
-    .ds-toggle-cell.is-on-i  { background:var(--ds-info-container); border-color:#B9D2E5; color:var(--ds-info); }
-    #registrosTable tbody tr:hover td[style*="sticky"] { background:var(--ds-hover-bg) !important; }
-</style>
-
 <!-- ========================= MODALES ========================= -->
 <!-- Editar comentario -->
 <dialog id="editModal" class="ds-modal">
@@ -383,32 +302,4 @@
 {% block extra_js %}
 <script>window.URL_PREFIX = {{ is_production|yesno:"'/viajes',''"|safe }};</script>
 <script src="{% static 'js/admin_list.js' %}"></script>
-<script>
-/* Sincroniza la barra de scroll horizontal superior con la tabla. */
-(function () {
-    'use strict';
-    var top = document.getElementById('tableScrollTop');
-    var wrap = document.getElementById('registrosTableWrap');
-    if (!top || !wrap) return;
-    var spacer = top.firstElementChild;
-
-    function refresh() {
-        spacer.style.width = wrap.scrollWidth + 'px';
-        // Oculta la barra superior si la tabla no desborda horizontalmente.
-        top.hidden = wrap.scrollWidth <= wrap.clientWidth + 1;
-    }
-
-    // Reflejo mutuo: comparar antes de asignar evita cualquier bucle de eco.
-    top.addEventListener('scroll', function () {
-        if (wrap.scrollLeft !== top.scrollLeft) wrap.scrollLeft = top.scrollLeft;
-    });
-    wrap.addEventListener('scroll', function () {
-        if (top.scrollLeft !== wrap.scrollLeft) top.scrollLeft = wrap.scrollLeft;
-    });
-
-    refresh();
-    window.addEventListener('resize', refresh);
-    if (window.ResizeObserver) { new ResizeObserver(refresh).observe(wrap); }
-})();
-</script>
 {% endblock %}

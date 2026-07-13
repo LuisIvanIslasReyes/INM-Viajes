@@ -628,3 +628,32 @@ function mostrarNotificacionRechazo(mensaje, tipo = 'success') {
     const btnAbrir = document.getElementById('btnAbrirTiempos');
     if (btnAbrir) btnAbrir.addEventListener('click', abrirModal);
 })();
+
+/* ====================================================================
+   Sincroniza la barra de scroll horizontal superior con la tabla.
+   ==================================================================== */
+(function () {
+    'use strict';
+    var top = document.getElementById('tableScrollTop');
+    var wrap = document.getElementById('registrosTableWrap');
+    if (!top || !wrap) return;
+    var spacer = top.firstElementChild;
+
+    function refresh() {
+        spacer.style.width = wrap.scrollWidth + 'px';
+        // Oculta la barra superior si la tabla no desborda horizontalmente.
+        top.hidden = wrap.scrollWidth <= wrap.clientWidth + 1;
+    }
+
+    // Reflejo mutuo: comparar antes de asignar evita cualquier bucle de eco.
+    top.addEventListener('scroll', function () {
+        if (wrap.scrollLeft !== top.scrollLeft) wrap.scrollLeft = top.scrollLeft;
+    });
+    wrap.addEventListener('scroll', function () {
+        if (top.scrollLeft !== wrap.scrollLeft) top.scrollLeft = wrap.scrollLeft;
+    });
+
+    refresh();
+    window.addEventListener('resize', refresh);
+    if (window.ResizeObserver) { new ResizeObserver(refresh).observe(wrap); }
+})();
