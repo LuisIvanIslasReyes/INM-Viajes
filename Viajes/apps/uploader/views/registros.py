@@ -457,7 +457,7 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
 
         t = tiempos_map.get(dia)
         hora_inicio_list.append(t.hora_inicio.strftime('%H:%M') if t else '')
-        hora_fin_list.append(t.hora_fin.strftime('%H:%M') if t else '')
+        hora_fin_list.append(t.hora_fin.strftime('%H:%M') if (t and t.hora_fin) else '')
 
         def _dur_desde(inicio_min, fin_min):
             """Duración en minutos entre dos hitos (con cruce de medianoche)."""

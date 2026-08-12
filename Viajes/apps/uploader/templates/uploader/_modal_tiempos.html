@@ -10,7 +10,7 @@
                 <div id="tiemposEstado" class="ds-alert ds-alert-info hidden" role="status" aria-live="polite"></div>
                 <div style="display:grid; grid-template-columns:1fr 1fr; gap:16px;">
                     <div class="ds-field"><label class="ds-label">Hora inicio <span class="ds-req">*</span></label><input type="time" name="hora_inicio" required class="ds-input"></div>
-                    <div class="ds-field"><label class="ds-label">Hora fin <span class="ds-req">*</span></label><input type="time" name="hora_fin" required class="ds-input"></div>
+                    <div class="ds-field"><label class="ds-label">Hora fin</label><input type="time" name="hora_fin" class="ds-input"></div>
                 </div>
                 <div style="text-align:center; font-size:var(--ds-text-xs); font-weight:700; letter-spacing:.06em; text-transform:uppercase; color:var(--ds-text-3); border-top:1px solid var(--ds-divider); padding-top:10px;">Tiempos de atención</div>
                 {% for rubro in tiempos_rubros %}

@@ -212,7 +212,7 @@ class TiemposAtencion(models.Model):
     """
     fecha = models.DateField(unique=True, verbose_name='Fecha')
     hora_inicio = models.TimeField(verbose_name='Hora Inicio')
-    hora_fin = models.TimeField(verbose_name='Hora Fin')
+    hora_fin = models.TimeField(null=True, blank=True, verbose_name='Hora Fin')
 
     # FMA / Mexicanos / Extranjeros guardan la HORA DE TÉRMINO de su conteo. La
     # duración de cada uno se deriva SIEMPRE desde Hora Inicio (no en cascada).
@@ -252,7 +252,8 @@ class TiemposAtencion(models.Model):
         indexes = [models.Index(fields=['fecha'])]
 
     def __str__(self):
-        return f"Tiempos {self.fecha} ({self.hora_inicio:%H:%M}-{self.hora_fin:%H:%M})"
+        fin = f"{self.hora_fin:%H:%M}" if self.hora_fin else '--:--'
+        return f"Tiempos {self.fecha} ({self.hora_inicio:%H:%M}-{fin})"
 
 
 class Notificacion(models.Model):

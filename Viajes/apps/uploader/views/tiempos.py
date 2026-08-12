@@ -56,14 +56,17 @@ def capturar_tiempos_atencion(request):
 
     fecha_str = request.POST.get('fecha', '').strip()
     hora_inicio_str = request.POST.get('hora_inicio', '').strip()
-    hora_fin_str = request.POST.get('hora_fin', '').strip()
 
     try:
         fecha = datetime.strptime(fecha_str, '%Y-%m-%d').date()
         hora_inicio = datetime.strptime(hora_inicio_str, '%H:%M').time()
-        hora_fin = datetime.strptime(hora_fin_str, '%H:%M').time()
     except ValueError:
         messages.error(request, ' Fecha u hora inválida.')
+        return redirect('admin_list')
+
+    hora_fin = _hora_rubro(request.POST, 'hora_fin')
+    if hora_fin is _HORA_INVALIDA:
+        messages.error(request, ' Hora fin inválida. Usa el formato HH:MM.')
         return redirect('admin_list')
 
     if fecha < FECHA_MINIMA:
@@ -138,7 +141,7 @@ def obtener_tiempos_atencion(request, fecha):
     return JsonResponse({
         'existe': True,
         'hora_inicio': t.hora_inicio.strftime('%H:%M'),
-        'hora_fin': t.hora_fin.strftime('%H:%M'),
+        'hora_fin': _hhmm(t.hora_fin),
         'fma': _hhmm(t.tiempo_fma),
         'fma_personas': t.fma_personas if t.fma_personas is not None else '',
         'mexicanos': _hhmm(t.tiempo_mexicanos),
