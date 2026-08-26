@@ -19,6 +19,8 @@ MAX_CARACTERES = 300_000
 
 def extraer_texto(redaccion):
     """Devuelve el texto plano del documento (str, puede ser '')."""
+    if not redaccion.es_archivo:
+        return ''
     if redaccion.es_pdf and redaccion.archivo:
         archivo = redaccion.archivo
     elif redaccion.archivo_pdf:
@@ -39,7 +41,14 @@ def extraer_texto(redaccion):
 
 
 def actualizar_texto(redaccion):
-    """Extrae y persiste el texto del documento. Devuelve True si quedó texto."""
+    """Extrae y persiste el texto del documento. Devuelve True si quedó texto.
+
+    No-op para redacciones de texto pegado: su `texto_contenido` ya se
+    sincroniza en `Redaccion.save()` a partir de `texto_crudo`, y llamar aquí
+    lo pisaría con '' (no hay PDF del que extraer nada).
+    """
+    if not redaccion.es_archivo:
+        return bool(redaccion.texto_contenido)
     redaccion.texto_contenido = extraer_texto(redaccion)
     redaccion.save(update_fields=['texto_contenido'])
     return bool(redaccion.texto_contenido)

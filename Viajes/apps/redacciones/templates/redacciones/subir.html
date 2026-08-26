@@ -18,7 +18,7 @@
 {% block content %}
 <div class="ds-container-form" style="max-width:720px; display:flex; flex-direction:column; gap:var(--ds-sp-5);">
 
-    {% include 'uploader/_page_header.html' with titulo='Subir documento' subtitulo='Se aceptan .doc, .docx y .pdf (máx. 20 MB).' %}
+    {% include 'uploader/_page_header.html' with titulo='Subir documento' subtitulo='Sube un archivo (.doc, .docx, .pdf · máx. 20 MB) o pega el texto directamente.' %}
 
     <div style="display:flex; justify-content:flex-start;">
         <a href="{% url 'redacciones:biblioteca' %}" class="ds-btn ds-btn-secondary">
@@ -38,18 +38,35 @@
             </div>
             {% endif %}
 
+            {# ---------- Selector de modo (archivo / texto pegado) ---------- #}
+            <div class="ds-tabs" role="tablist" aria-label="Modo de carga" style="margin-bottom:var(--ds-sp-2);">
+                <button type="button" class="ds-tab" id="tab-archivo" role="tab" aria-selected="true">Subir archivo</button>
+                <button type="button" class="ds-tab" id="tab-texto" role="tab" aria-selected="false">Pegar texto</button>
+            </div>
+            <input type="hidden" name="tipo_contenido" id="id_tipo_contenido" value="{{ form.tipo_contenido.value|default:'ARCHIVO' }}">
+
             {# ---------- Dropzone (archivo) ---------- #}
-            <div class="ds-field">
-                <span class="ds-label">Documento <span class="ds-req" aria-hidden="true">*</span></span>
-                <label class="ds-dropzone" id="dz-redaccion" for="id_archivo">
-                    <div id="dz-content" style="display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-2);">
-                        <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                        <strong style="font-size:var(--ds-text-lg);">Arrastra tu documento aquí</strong>
-                        <span class="ds-small">o haz clic para seleccionar · .doc, .docx, .pdf · máx 20 MB</span>
-                    </div>
-                    <input type="file" id="id_archivo" name="archivo" accept=".doc,.docx,.pdf" required class="ds-sr-only">
-                </label>
-                {% if form.archivo.errors %}<p class="ds-error-text">{{ form.archivo.errors|striptags }}</p>{% endif %}
+            <div id="modo-archivo">
+                <div class="ds-field">
+                    <span class="ds-label">Documento <span class="ds-req" aria-hidden="true">*</span></span>
+                    <label class="ds-dropzone" id="dz-redaccion" for="id_archivo">
+                        <div id="dz-content" style="display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-2);">
+                            <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                            <strong style="font-size:var(--ds-text-lg);">Arrastra tu documento aquí</strong>
+                            <span class="ds-small">o haz clic para seleccionar · .doc, .docx, .pdf · máx 20 MB</span>
+                        </div>
+                        <input type="file" id="id_archivo" name="archivo" accept=".doc,.docx,.pdf" required class="ds-sr-only">
+                    </label>
+                    {% if form.archivo.errors %}<p class="ds-error-text">{{ form.archivo.errors|striptags }}</p>{% endif %}
+                </div>
+            </div>
+
+            {# ---------- Texto pegado ---------- #}
+            <div id="modo-texto" class="ds-field" hidden>
+                <label class="ds-label" for="id_texto_crudo">Texto de la redacción <span class="ds-req" aria-hidden="true">*</span></label>
+                <textarea class="ds-textarea" id="id_texto_crudo" name="texto_crudo" rows="14"
+                          placeholder="Pega aquí el texto completo de la redacción…">{{ form.texto_crudo.value|default:'' }}</textarea>
+                {% if form.texto_crudo.errors %}<p class="ds-error-text">{{ form.texto_crudo.errors|striptags }}</p>{% endif %}
             </div>
 
             {# ---------- Metadatos ---------- #}
@@ -143,6 +160,44 @@
             mostrarArchivo(input.files[0]);
         }
     });
+})();
+</script>
+<script>
+(function () {
+    const tabArchivo = document.getElementById('tab-archivo');
+    const tabTexto = document.getElementById('tab-texto');
+    const modoArchivo = document.getElementById('modo-archivo');
+    const modoTexto = document.getElementById('modo-texto');
+    const tipoContenido = document.getElementById('id_tipo_contenido');
+    const inputArchivo = document.getElementById('id_archivo');
+    const inputTexto = document.getElementById('id_texto_crudo');
+    if (!tabArchivo || !tabTexto) return;
+
+    function activar(modo) {
+        const esTexto = modo === 'TEXTO';
+        modoArchivo.hidden = esTexto;
+        modoTexto.hidden = !esTexto;
+        tabArchivo.setAttribute('aria-selected', String(!esTexto));
+        tabTexto.setAttribute('aria-selected', String(esTexto));
+        inputArchivo.required = !esTexto;
+        inputTexto.required = esTexto;
+        tipoContenido.value = modo;
+    }
+
+    tabArchivo.addEventListener('click', function () {
+        if (inputTexto.value) inputTexto.value = '';
+        activar('ARCHIVO');
+    });
+    tabTexto.addEventListener('click', function () {
+        if (inputArchivo.value) {
+            inputArchivo.value = '';
+            inputArchivo.dispatchEvent(new Event('change'));  // resetea el preview del dropzone
+        }
+        activar('TEXTO');
+    });
+
+    // Si el form vuelve con errores en modo texto, no rebotar a modo archivo.
+    activar(tipoContenido.value === 'TEXTO' ? 'TEXTO' : 'ARCHIVO');
 })();
 </script>
 {% endblock %}

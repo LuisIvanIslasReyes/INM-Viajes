@@ -1,6 +1,6 @@
 from django import forms
 
-from .models import Redaccion
+from .models import Redaccion, TEXTO_CRUDO_MAX_CARACTERES, TipoContenidoChoices
 
 EXT_PERMITIDAS = ('.doc', '.docx', '.pdf')
 TAM_MAX = 20 * 1024 * 1024  # 20 MB
@@ -12,7 +12,7 @@ SELECT = 'select select-bordered w-full'
 class RedaccionForm(forms.ModelForm):
     class Meta:
         model = Redaccion
-        fields = ['titulo', 'resolucion', 'tema', 'pais', 'archivo']
+        fields = ['titulo', 'resolucion', 'tema', 'pais', 'tipo_contenido', 'archivo', 'texto_crudo']
         widgets = {
             'titulo': forms.TextInput(attrs={'class': INPUT, 'placeholder': 'Título del documento'}),
             'resolucion': forms.Select(attrs={'class': SELECT}),
@@ -21,15 +21,24 @@ class RedaccionForm(forms.ModelForm):
                 'list': 'temas-existentes', 'autocomplete': 'off',
             }),
             'pais': forms.Select(attrs={'class': SELECT}),
+            'tipo_contenido': forms.HiddenInput(),
             'archivo': forms.FileInput(attrs={
                 'class': 'file-input file-input-bordered w-full',
                 'accept': '.doc,.docx,.pdf',
+            }),
+            'texto_crudo': forms.Textarea(attrs={
+                'class': 'ds-textarea',
+                'rows': 14,
+                'placeholder': 'Pega aquí el texto completo de la redacción…',
             }),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.fields['pais'].empty_label = 'Selecciona un país'
+        self.fields['tipo_contenido'].required = False
+        self.fields['archivo'].required = False
+        self.fields['texto_crudo'].required = False
 
     def clean_archivo(self):
         archivo = self.cleaned_data.get('archivo')
@@ -42,3 +51,33 @@ class RedaccionForm(forms.ModelForm):
                     f'El archivo es muy grande ({mb:.1f} MB). El tamaño máximo es 20 MB.'
                 )
         return archivo
+
+    def clean_texto_crudo(self):
+        texto = self.cleaned_data.get('texto_crudo') or ''
+        if len(texto) > TEXTO_CRUDO_MAX_CARACTERES:
+            raise forms.ValidationError(
+                f'El texto es muy largo ({len(texto)} caracteres). '
+                f'El máximo es {TEXTO_CRUDO_MAX_CARACTERES} caracteres.'
+            )
+        return texto
+
+    def clean(self):
+        cleaned_data = super().clean()
+        if self.instance.pk:
+            # El tipo no se puede cambiar al editar, sin importar qué venga en el POST.
+            tipo = self.instance.tipo_contenido
+        else:
+            tipo = cleaned_data.get('tipo_contenido') or TipoContenidoChoices.ARCHIVO
+        cleaned_data['tipo_contenido'] = tipo
+
+        archivo = cleaned_data.get('archivo')
+        texto_crudo = cleaned_data.get('texto_crudo')
+
+        if archivo and texto_crudo:
+            raise forms.ValidationError('Elige un solo método: sube un archivo o pega el texto, no ambos.')
+        if tipo == TipoContenidoChoices.ARCHIVO and not archivo:
+            self.add_error('archivo', 'Debes subir un documento.')
+        elif tipo == TipoContenidoChoices.TEXTO and not texto_crudo:
+            self.add_error('texto_crudo', 'Debes pegar el texto de la redacción.')
+
+        return cleaned_data

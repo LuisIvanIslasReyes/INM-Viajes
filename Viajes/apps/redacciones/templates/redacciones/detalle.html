@@ -49,7 +49,7 @@
                     </div>
                     <div>
                         <p class="ds-small" style="margin:0;">Archivo</p>
-                        <p style="margin:2px 0 0; font-weight:600;">{{ redaccion.extension|upper }}</p>
+                        <p style="margin:2px 0 0; font-weight:600;">{% if redaccion.es_texto %}Texto pegado{% else %}{{ redaccion.extension|upper }}{% endif %}</p>
                     </div>
                     <div>
                         <p class="ds-small" style="margin:0;">Subido por</p>
@@ -60,7 +60,7 @@
                 <div style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
                     <a href="{% url 'redacciones:descargar' redaccion.pk %}" class="ds-btn ds-btn-primary" style="justify-content:center;">
                         <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                        Descargar original
+                        {% if redaccion.es_texto %}Descargar .txt{% else %}Descargar original{% endif %}
                     </a>
                     {% if puede_gestionar_redacciones %}
                     <a href="{% url 'redacciones:editar' redaccion.pk %}" class="ds-btn ds-btn-secondary" style="justify-content:center;">
@@ -79,11 +79,21 @@
         {# ---------- Vista previa ---------- #}
         <section class="ds-card" style="padding:0;">
             <div class="ds-card-body">
-                <h2 class="ds-h3" style="margin:0 0 var(--ds-sp-3); display:flex; align-items:center; gap:8px;">
-                    <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                    Vista previa
-                </h2>
-                {% if redaccion.preview_url %}
+                <div style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:8px; margin:0 0 var(--ds-sp-3);">
+                    <h2 class="ds-h3" style="margin:0; display:flex; align-items:center; gap:8px;">
+                        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        Vista previa
+                    </h2>
+                    {% if redaccion.es_texto %}
+                    <button type="button" id="btn-copiar-texto" class="ds-btn ds-btn-sm ds-btn-secondary">
+                        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></svg>
+                        <span id="btn-copiar-texto-label">Copiar texto</span>
+                    </button>
+                    {% endif %}
+                </div>
+                {% if redaccion.es_texto %}
+                <div id="texto-crudo-preview" style="white-space:pre-wrap; overflow-wrap:break-word; max-height:70vh; overflow:auto; padding:var(--ds-sp-4); background:var(--ds-bg-sunken); border:1px solid var(--ds-border); border-radius:var(--ds-radius-md); font-size:var(--ds-text-sm); line-height:1.6; user-select:text;">{{ redaccion.texto_crudo }}</div>
+                {% elif redaccion.preview_url %}
                 <iframe src="{% url 'redacciones:preview' redaccion.pk %}" title="Vista previa de {{ redaccion.titulo }}"
                         style="width:100%; height:70vh; border:1px solid var(--ds-border); border-radius:var(--ds-radius-md); background:var(--ds-bg-sunken);"></iframe>
                 {% else %}
@@ -123,4 +133,52 @@
     <form method="dialog" class="ds-sr-only"><button>cerrar</button></form>
 </dialog>
 {% endif %}
+{% endblock %}
+
+{% block extra_js %}
+<script>
+(function () {
+    const btn = document.getElementById('btn-copiar-texto');
+    const contenido = document.getElementById('texto-crudo-preview');
+    if (!btn || !contenido) return;
+
+    const label = document.getElementById('btn-copiar-texto-label');
+    const textoOriginal = label.textContent;
+
+    function avisar(mensaje) {
+        label.textContent = mensaje;
+        setTimeout(function () { label.textContent = textoOriginal; }, 2000);
+    }
+
+    function copiarConFallback(texto) {
+        const textarea = document.createElement('textarea');
+        textarea.value = texto;
+        textarea.style.position = 'fixed';
+        textarea.style.opacity = '0';
+        document.body.appendChild(textarea);
+        textarea.focus();
+        textarea.select();
+        try {
+            document.execCommand('copy');
+            avisar('¡Copiado!');
+        } catch (e) {
+            avisar('No se pudo copiar');
+        }
+        document.body.removeChild(textarea);
+    }
+
+    btn.addEventListener('click', function () {
+        const texto = contenido.textContent;
+        if (navigator.clipboard && window.isSecureContext) {
+            navigator.clipboard.writeText(texto).then(function () {
+                avisar('¡Copiado!');
+            }).catch(function () {
+                copiarConFallback(texto);
+            });
+        } else {
+            copiarConFallback(texto);
+        }
+    });
+})();
+</script>
 {% endblock %}

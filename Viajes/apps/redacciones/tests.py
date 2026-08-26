@@ -7,7 +7,7 @@ from django.test import TestCase, override_settings
 from django.urls import reverse
 
 from apps.cuentas.roles import GRUPO_AEROPUERTO, GRUPO_GENERAL
-from .models import Pais, Redaccion, ResolucionChoices
+from .models import Pais, Redaccion, ResolucionChoices, TipoContenidoChoices
 
 MEDIA = tempfile.mkdtemp()
 
@@ -33,6 +33,18 @@ class RedaccionesPermisosTests(TestCase):
             'tema': 'Documentación falsa',
             'pais': self.pais.id,
             'archivo': _pdf(),
+        }
+        data.update(over)
+        return data
+
+    def _payload_texto(self, **over):
+        data = {
+            'titulo': 'Acta de texto',
+            'resolucion': ResolucionChoices.RECHAZO,
+            'tema': 'Documentación falsa',
+            'pais': self.pais.id,
+            'tipo_contenido': TipoContenidoChoices.TEXTO,
+            'texto_crudo': 'Contenido de prueba con la palabra distintiva ZANAHORIA en el texto.',
         }
         data.update(over)
         return data
@@ -92,6 +104,98 @@ class RedaccionesPermisosTests(TestCase):
         self.assertFalse(doc.es_pdf)
         self.assertFalse(bool(doc.archivo_pdf))
         self.assertIsNone(doc.preview_url)
+
+    def test_aeropuerto_ve_formulario_subir(self):
+        self.client.force_login(self.aeropuerto)
+        resp = self.client.get(reverse('redacciones:subir'))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'Pegar texto')
+
+    def test_editar_texto_pegado_muestra_formulario(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        doc = Redaccion.objects.first()
+        resp = self.client.get(reverse('redacciones:editar', args=[doc.pk]))
+        self.assertEqual(resp.status_code, 200)
+        self.assertContains(resp, 'ZANAHORIA')
+
+    def test_aeropuerto_sube_texto_pegado(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        self.assertEqual(Redaccion.objects.count(), 1)
+        doc = Redaccion.objects.first()
+        self.assertTrue(doc.es_texto)
+        self.assertFalse(bool(doc.archivo))
+        self.assertFalse(bool(doc.archivo_pdf))
+        self.assertIsNone(doc.preview_url)
+        self.assertIn('ZANAHORIA', doc.texto_contenido)
+
+    def test_general_no_puede_subir_texto(self):
+        self.client.force_login(self.general)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        self.assertEqual(Redaccion.objects.count(), 0)
+
+    def test_texto_pegado_no_llama_libreoffice(self):
+        self.client.force_login(self.aeropuerto)
+        with mock.patch('apps.redacciones.views.generar_preview') as mock_generar:
+            self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        mock_generar.assert_not_called()
+
+    def test_detalle_muestra_texto_pegado(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        doc = Redaccion.objects.first()
+        resp = self.client.get(reverse('redacciones:detalle', args=[doc.pk]))
+        self.assertContains(resp, 'ZANAHORIA')
+
+    def test_descargar_texto_devuelve_txt(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        doc = Redaccion.objects.first()
+        resp = self.client.get(reverse('redacciones:descargar', args=[doc.pk]))
+        self.assertTrue(resp['Content-Type'].startswith('text/plain'))
+        self.assertIn('.txt', resp['Content-Disposition'])
+        self.assertIn('attachment', resp['Content-Disposition'])
+        self.assertEqual(resp.content.decode('utf-8'), doc.texto_crudo)
+
+    def test_busqueda_encuentra_texto_pegado(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        resp = self.client.get(reverse('redacciones:biblioteca'), {'q': 'ZANAHORIA'})
+        self.assertEqual(resp.context['total'], 1)
+
+    def test_editar_texto_pegado_actualiza_busqueda(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        doc = Redaccion.objects.first()
+        self.client.post(
+            reverse('redacciones:editar', args=[doc.pk]),
+            self._payload_texto(texto_crudo='Texto actualizado con PEPINO en vez de la anterior.'),
+        )
+        doc.refresh_from_db()
+        self.assertIn('PEPINO', doc.texto_contenido)
+        resp = self.client.get(reverse('redacciones:biblioteca'), {'q': 'PEPINO'})
+        self.assertEqual(resp.context['total'], 1)
+
+    def test_editar_no_permite_cambiar_tipo(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload())
+        doc = Redaccion.objects.first()
+        self.assertTrue(doc.es_archivo)
+        self.client.post(reverse('redacciones:editar', args=[doc.pk]), self._payload_texto(titulo=doc.titulo))
+        doc.refresh_from_db()
+        self.assertTrue(doc.es_archivo)
+
+    def test_form_rechaza_sin_archivo_ni_texto(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto(texto_crudo=''))
+        self.assertEqual(Redaccion.objects.count(), 0)
+
+    def test_form_rechaza_archivo_y_texto_juntos(self):
+        self.client.force_login(self.aeropuerto)
+        payload = self._payload_texto(archivo=_pdf(), tipo_contenido=TipoContenidoChoices.ARCHIVO)
+        self.client.post(reverse('redacciones:subir'), payload)
+        self.assertEqual(Redaccion.objects.count(), 0)
 
 
 @override_settings(MEDIA_ROOT=MEDIA)

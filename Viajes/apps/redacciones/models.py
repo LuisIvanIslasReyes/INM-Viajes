@@ -10,6 +10,15 @@ class ResolucionChoices(models.TextChoices):
     RECHAZO = 'RECHAZO', 'Rechazo'
 
 
+class TipoContenidoChoices(models.TextChoices):
+    """Origen del contenido de la redacción: archivo subido o texto pegado."""
+    ARCHIVO = 'ARCHIVO', 'Archivo'
+    TEXTO = 'TEXTO', 'Texto pegado'
+
+
+TEXTO_CRUDO_MAX_CARACTERES = 300_000  # tope defensivo; la validación real vive en el form
+
+
 class Pais(models.Model):
     """Catálogo de países (sembrado desde context/paises.json)."""
     codigo = models.CharField(max_length=3, unique=True)  # ISO alfa-3
@@ -40,7 +49,11 @@ class Redaccion(models.Model):
     pais = models.ForeignKey(
         Pais, on_delete=models.PROTECT, related_name='redacciones', verbose_name='País',
     )
-    archivo = models.FileField(upload_to='redacciones/%Y/%m/', verbose_name='Documento')
+    tipo_contenido = models.CharField(
+        max_length=10, choices=TipoContenidoChoices.choices,
+        default=TipoContenidoChoices.ARCHIVO, verbose_name='Tipo de contenido',
+    )
+    archivo = models.FileField(upload_to='redacciones/%Y/%m/', blank=True, verbose_name='Documento')
     archivo_pdf = models.FileField(
         upload_to='redacciones/pdf/%Y/%m/', null=True, blank=True,
         verbose_name='PDF para vista previa',
@@ -52,6 +65,10 @@ class Redaccion(models.Model):
         blank=True, default='', editable=False,
         verbose_name='Texto extraído del documento',
         help_text='Texto plano extraído del PDF para el buscador de palabras.',
+    )
+    texto_crudo = models.TextField(
+        blank=True, default='', verbose_name='Texto pegado',
+        help_text='Contenido de la redacción pegado directamente (sin archivo).',
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
     fecha_modificacion = models.DateTimeField(auto_now=True)
@@ -69,8 +86,16 @@ class Redaccion(models.Model):
         return self.titulo
 
     @property
+    def es_archivo(self):
+        return self.tipo_contenido == TipoContenidoChoices.ARCHIVO
+
+    @property
+    def es_texto(self):
+        return self.tipo_contenido == TipoContenidoChoices.TEXTO
+
+    @property
     def extension(self):
-        return os.path.splitext(self.archivo.name)[1].lower().lstrip('.')
+        return os.path.splitext(self.archivo.name)[1].lower().lstrip('.') if self.archivo else ''
 
     @property
     def es_pdf(self):
@@ -79,6 +104,8 @@ class Redaccion(models.Model):
     @property
     def preview_url(self):
         """URL del PDF para vista previa, o None si no hay preview disponible."""
+        if self.es_texto:
+            return None
         if self.es_pdf and self.archivo:
             return self.archivo.url
         if self.archivo_pdf:
@@ -89,4 +116,9 @@ class Redaccion(models.Model):
         # Normaliza el tema (trim + colapsa espacios + mayúsculas) de cara al
         # futuro catálogo y para consistencia en los filtros.
         self.tema = ' '.join((self.tema or '').split()).upper()
+        if self.tipo_contenido == TipoContenidoChoices.TEXTO:
+            # El texto pegado ES el documento: se sincroniza como el campo de
+            # búsqueda para que el buscador de palabras funcione igual que con
+            # el texto extraído de un PDF, sin tocar la lógica de búsqueda.
+            self.texto_contenido = ' '.join((self.texto_crudo or '').split())[:TEXTO_CRUDO_MAX_CARACTERES]
         super().save(*args, **kwargs)

@@ -12,10 +12,11 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import FileResponse, Http404
+from django.http import FileResponse, Http404, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.utils.dateparse import parse_date
+from django.utils.text import slugify
 from django.views.decorators.clickjacking import xframe_options_sameorigin
 from django.views.decorators.http import require_POST
 
@@ -119,15 +120,16 @@ def subir(request):
             redaccion.subido_por = request.user
             redaccion.save()
 
-            # Vista previa: los PDF se muestran directo; los Word se convierten.
-            if not redaccion.es_pdf:
-                if not generar_preview(redaccion):
-                    messages.warning(
-                        request,
-                        'El documento se guardó, pero no se pudo generar la vista previa. '
-                        'Estará disponible para descarga.'
-                    )
-            actualizar_texto(redaccion)
+            if redaccion.es_archivo:
+                # Vista previa: los PDF se muestran directo; los Word se convierten.
+                if not redaccion.es_pdf:
+                    if not generar_preview(redaccion):
+                        messages.warning(
+                            request,
+                            'El documento se guardó, pero no se pudo generar la vista previa. '
+                            'Estará disponible para descarga.'
+                        )
+                actualizar_texto(redaccion)
             messages.success(request, f'Documento "{redaccion.titulo}" agregado a la biblioteca.')
             return redirect('redacciones:detalle', pk=redaccion.pk)
     else:
@@ -150,7 +152,6 @@ def editar(request, pk):
         storage_anterior = redaccion.archivo.storage
 
         form = RedaccionForm(request.POST, request.FILES, instance=redaccion)
-        form.fields['archivo'].required = False
         if form.is_valid():
             reemplaza_archivo = 'archivo' in request.FILES
             if reemplaza_archivo:
@@ -166,18 +167,18 @@ def editar(request, pk):
                 # Ya persistido el nuevo archivo, borramos el anterior del storage.
                 if archivo_anterior and archivo_anterior != redaccion.archivo.name:
                     storage_anterior.delete(archivo_anterior)
-                if not redaccion.es_pdf and not generar_preview(redaccion):
-                    messages.warning(
-                        request,
-                        'El documento se actualizó, pero no se pudo generar la vista previa. '
-                        'Estará disponible para descarga.'
-                    )
-                actualizar_texto(redaccion)
+                if redaccion.es_archivo:
+                    if not redaccion.es_pdf and not generar_preview(redaccion):
+                        messages.warning(
+                            request,
+                            'El documento se actualizó, pero no se pudo generar la vista previa. '
+                            'Estará disponible para descarga.'
+                        )
+                    actualizar_texto(redaccion)
             messages.success(request, f'Documento "{redaccion.titulo}" actualizado.')
             return redirect('redacciones:detalle', pk=redaccion.pk)
     else:
         form = RedaccionForm(instance=redaccion)
-        form.fields['archivo'].required = False
 
     temas = Redaccion.objects.order_by('tema').values_list('tema', flat=True).distinct()
     return render(request, 'redacciones/editar.html', {
@@ -231,8 +232,13 @@ def preview(request, pk):
 
 @login_required
 def descargar(request, pk):
-    """Descarga del archivo original."""
+    """Descarga del archivo original, o un .txt generado al vuelo si es texto pegado."""
     redaccion = get_object_or_404(Redaccion, pk=pk)
+    if redaccion.es_texto:
+        nombre = slugify(redaccion.titulo) or f'redaccion-{redaccion.pk}'
+        response = HttpResponse(redaccion.texto_crudo, content_type='text/plain; charset=utf-8')
+        response['Content-Disposition'] = f'attachment; filename="{nombre}.txt"'
+        return response
     return FileResponse(
         redaccion.archivo.open('rb'),
         as_attachment=True,

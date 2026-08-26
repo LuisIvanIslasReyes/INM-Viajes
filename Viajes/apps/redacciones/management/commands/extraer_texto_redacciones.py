@@ -11,7 +11,7 @@ la extracción).
 """
 from django.core.management.base import BaseCommand
 
-from apps.redacciones.models import Redaccion
+from apps.redacciones.models import Redaccion, TipoContenidoChoices
 from apps.redacciones.utils.extraccion import actualizar_texto
 
 
@@ -25,7 +25,7 @@ class Command(BaseCommand):
         )
 
     def handle(self, *args, **options):
-        qs = Redaccion.objects.all()
+        qs = Redaccion.objects.filter(tipo_contenido=TipoContenidoChoices.ARCHIVO)
         if not options['forzar']:
             qs = qs.filter(texto_contenido='')
 

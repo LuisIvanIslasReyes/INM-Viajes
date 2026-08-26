@@ -78,6 +78,9 @@
                 {% if form.tema.errors %}<p class="ds-error-text" id="tema-err">{{ form.tema.errors|striptags }}</p>{% endif %}
             </div>
 
+            <input type="hidden" name="tipo_contenido" value="{{ redaccion.tipo_contenido }}">
+
+            {% if redaccion.es_archivo %}
             {# ---------- Archivo actual + reemplazo opcional ---------- #}
             <div class="ds-field">
                 <span class="ds-label">Documento</span>
@@ -101,6 +104,14 @@
                 </label>
                 {% if form.archivo.errors %}<p class="ds-error-text">{{ form.archivo.errors|striptags }}</p>{% endif %}
             </div>
+            {% else %}
+            {# ---------- Texto pegado ---------- #}
+            <div class="ds-field">
+                <label class="ds-label" for="id_texto_crudo">Texto de la redacción <span class="ds-req" aria-hidden="true">*</span></label>
+                <textarea class="ds-textarea" id="id_texto_crudo" name="texto_crudo" rows="14" required>{{ form.texto_crudo.value|default:'' }}</textarea>
+                {% if form.texto_crudo.errors %}<p class="ds-error-text">{{ form.texto_crudo.errors|striptags }}</p>{% endif %}
+            </div>
+            {% endif %}
 
             <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end; margin-top:var(--ds-sp-2);">
                 <a href="{% url 'redacciones:detalle' redaccion.pk %}" class="ds-btn ds-btn-ghost">Cancelar</a>

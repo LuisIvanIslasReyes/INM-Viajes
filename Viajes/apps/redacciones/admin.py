@@ -12,8 +12,8 @@ class PaisAdmin(admin.ModelAdmin):
 
 @admin.register(Redaccion)
 class RedaccionAdmin(admin.ModelAdmin):
-    list_display = ('titulo', 'resolucion', 'tema', 'pais', 'subido_por', 'fecha_creacion')
-    list_filter = ('resolucion', 'pais')
+    list_display = ('titulo', 'tipo_contenido', 'resolucion', 'tema', 'pais', 'subido_por', 'fecha_creacion')
+    list_filter = ('tipo_contenido', 'resolucion', 'pais')
     search_fields = ('titulo', 'tema')
     autocomplete_fields = ('pais',)
     readonly_fields = ('archivo_pdf', 'subido_por', 'fecha_creacion', 'fecha_modificacion')
