@@ -2,12 +2,16 @@
 {# ====================================================================
    FASE 21 · REDACCIONES — EDITAR (PR 25)
    Port del diseño ds- sobre el backend REAL (vista redacciones.views.editar):
-     context: form (RedaccionForm bound a la instancia, archivo NO requerido),
-              redaccion (la instancia; NO 'documento'), temas (datalist).
-     Solo SuperUser/Aeropuerto (vista gated). En éxito redirige a detalle.
-     El archivo SÍ se puede reemplazar (opcional): si se sube uno nuevo, el
-     backend borra el anterior + su preview y regenera. Dejar vacío conserva
-     el actual. urls namespaced: redacciones:detalle/descargar/editar.
+     context: form (RedaccionForm bound a la instancia, archivo/texto_crudo NO
+              requeridos), redaccion (la instancia; NO 'documento'), temas
+              (datalist). Solo SuperUser/Aeropuerto (vista gated). En éxito
+              redirige a detalle.
+     El tipo de contenido (archivo / texto pegado) se puede cambiar libremente
+     vía el selector de tabs: dejar vacío el lado activo original conserva lo
+     que ya había (archivo sin reemplazar, o texto sin editar); cambiar de tab
+     y guardar DESCARTA el lado abandonado (archivo + su preview se borran del
+     storage, o el texto pegado se pierde) — ver RedaccionForm.clean() y
+     views.editar(). urls namespaced: redacciones:detalle/descargar/editar.
    Los widgets del form traen clases DaisyUI; como base_ds no carga DaisyUI,
    los campos se renderizan manualmente con clases ds- (name/id conservados)
    y el form bound los prellena con los valores actuales.
@@ -78,40 +82,69 @@
                 {% if form.tema.errors %}<p class="ds-error-text" id="tema-err">{{ form.tema.errors|striptags }}</p>{% endif %}
             </div>
 
-            <input type="hidden" name="tipo_contenido" value="{{ redaccion.tipo_contenido }}">
+            <input type="hidden" name="tipo_contenido" id="id_tipo_contenido" value="{{ form.tipo_contenido.value|default:redaccion.tipo_contenido }}">
 
-            {% if redaccion.es_archivo %}
-            {# ---------- Archivo actual + reemplazo opcional ---------- #}
-            <div class="ds-field">
-                <span class="ds-label">Documento</span>
-                <div style="display:flex; align-items:center; gap:var(--ds-sp-3); background:var(--ds-bg-sunken); border:1px solid var(--ds-divider); border-radius:var(--ds-radius-md); padding:var(--ds-sp-3) var(--ds-sp-4); margin-bottom:var(--ds-sp-2);">
-                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
-                    <div style="flex:1; min-width:0;">
-                        <span class="ds-small" style="margin:0;">Archivo actual · <b>{{ redaccion.extension|upper }}</b></span>
-                    </div>
-                    <a href="{% url 'redacciones:descargar' redaccion.pk %}" class="ds-btn ds-btn-sm ds-btn-ghost">
-                        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
-                        Descargar
-                    </a>
-                </div>
-                <label class="ds-dropzone" id="dz-redaccion" for="id_archivo">
-                    <div id="dz-content" style="display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-2);">
-                        <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
-                        <strong style="font-size:var(--ds-text-lg);">Reemplazar documento (opcional)</strong>
-                        <span class="ds-small">Deja vacío para conservar el actual · .doc, .docx, .pdf · máx 20 MB</span>
-                    </div>
-                    <input type="file" id="id_archivo" name="archivo" accept=".doc,.docx,.pdf" class="ds-sr-only">
-                </label>
-                {% if form.archivo.errors %}<p class="ds-error-text">{{ form.archivo.errors|striptags }}</p>{% endif %}
+            {# ---------- Selector de modo (archivo / texto pegado) ---------- #}
+            <div class="ds-tabs" role="tablist" aria-label="Modo de contenido" style="margin-bottom:var(--ds-sp-2);">
+                <button type="button" class="ds-tab" id="tab-archivo" role="tab" aria-selected="{% if redaccion.es_archivo %}true{% else %}false{% endif %}">Archivo</button>
+                <button type="button" class="ds-tab" id="tab-texto" role="tab" aria-selected="{% if redaccion.es_texto %}true{% else %}false{% endif %}">Texto pegado</button>
             </div>
-            {% else %}
+
+            {# ---------- Archivo ---------- #}
+            <div id="modo-archivo" {% if redaccion.es_texto %}hidden{% endif %}>
+                <div class="ds-field">
+                    {% if redaccion.es_archivo %}
+                    <span class="ds-label">Documento</span>
+                    <div style="display:flex; align-items:center; gap:var(--ds-sp-3); background:var(--ds-bg-sunken); border:1px solid var(--ds-divider); border-radius:var(--ds-radius-md); padding:var(--ds-sp-3) var(--ds-sp-4); margin-bottom:var(--ds-sp-2);">
+                        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-primary);"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg>
+                        <div style="flex:1; min-width:0;">
+                            <span class="ds-small" style="margin:0;">Archivo actual · <b>{{ redaccion.extension|upper }}</b></span>
+                        </div>
+                        <a href="{% url 'redacciones:descargar' redaccion.pk %}" class="ds-btn ds-btn-sm ds-btn-ghost">
+                            <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                            Descargar
+                        </a>
+                    </div>
+                    <label class="ds-dropzone" id="dz-redaccion" for="id_archivo">
+                        <div id="dz-content" style="display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-2);">
+                            <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                            <strong style="font-size:var(--ds-text-lg);">Reemplazar documento (opcional)</strong>
+                            <span class="ds-small">Deja vacío para conservar el actual · .doc, .docx, .pdf · máx 20 MB</span>
+                        </div>
+                        <input type="file" id="id_archivo" name="archivo" accept=".doc,.docx,.pdf" class="ds-sr-only">
+                    </label>
+                    {% else %}
+                    <span class="ds-label">Documento <span class="ds-req" aria-hidden="true">*</span></span>
+                    <div class="ds-alert ds-alert-warning" style="margin-bottom:var(--ds-sp-2);">
+                        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                        <div>Si guardas en este modo, se elimina el texto pegado actual.</div>
+                    </div>
+                    <label class="ds-dropzone" id="dz-redaccion" for="id_archivo">
+                        <div id="dz-content" style="display:flex; flex-direction:column; align-items:center; gap:var(--ds-sp-2);">
+                            <svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>
+                            <strong style="font-size:var(--ds-text-lg);">Arrastra tu documento aquí</strong>
+                            <span class="ds-small">o haz clic para seleccionar · .doc, .docx, .pdf · máx 20 MB</span>
+                        </div>
+                        <input type="file" id="id_archivo" name="archivo" accept=".doc,.docx,.pdf" class="ds-sr-only">
+                    </label>
+                    {% endif %}
+                    {% if form.archivo.errors %}<p class="ds-error-text">{{ form.archivo.errors|striptags }}</p>{% endif %}
+                </div>
+            </div>
+
             {# ---------- Texto pegado ---------- #}
-            <div class="ds-field">
+            <div id="modo-texto" class="ds-field" {% if redaccion.es_archivo %}hidden{% endif %}>
+                {% if redaccion.es_archivo %}
+                <div class="ds-alert ds-alert-warning" style="margin-bottom:var(--ds-sp-2);">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+                    <div>Si guardas en este modo, se elimina el archivo actual (irreversible).</div>
+                </div>
+                {% endif %}
                 <label class="ds-label" for="id_texto_crudo">Texto de la redacción <span class="ds-req" aria-hidden="true">*</span></label>
-                <textarea class="ds-textarea" id="id_texto_crudo" name="texto_crudo" rows="14" required>{{ form.texto_crudo.value|default:'' }}</textarea>
+                <textarea class="ds-textarea" id="id_texto_crudo" name="texto_crudo" rows="14"
+                          placeholder="Pega aquí el texto completo de la redacción…">{{ form.texto_crudo.value|default:'' }}</textarea>
                 {% if form.texto_crudo.errors %}<p class="ds-error-text">{{ form.texto_crudo.errors|striptags }}</p>{% endif %}
             </div>
-            {% endif %}
 
             <div style="display:flex; gap:var(--ds-sp-2); justify-content:flex-end; margin-top:var(--ds-sp-2);">
                 <a href="{% url 'redacciones:detalle' redaccion.pk %}" class="ds-btn ds-btn-ghost">Cancelar</a>
@@ -163,6 +196,48 @@
             mostrarArchivo(input.files[0]);
         }
     });
+})();
+</script>
+<script>
+(function () {
+    const tabArchivo = document.getElementById('tab-archivo');
+    const tabTexto = document.getElementById('tab-texto');
+    const modoArchivo = document.getElementById('modo-archivo');
+    const modoTexto = document.getElementById('modo-texto');
+    const tipoContenido = document.getElementById('id_tipo_contenido');
+    const inputArchivo = document.getElementById('id_archivo');
+    const inputTexto = document.getElementById('id_texto_crudo');
+    if (!tabArchivo || !tabTexto) return;
+
+    // Si la redacción ya tenía un archivo, dejarlo vacío en modo archivo
+    // conserva el actual (no hace falta subir uno nuevo para guardar).
+    const teniaArchivo = {{ redaccion.es_archivo|yesno:'true,false' }};
+
+    function activar(modo) {
+        const esTexto = modo === 'TEXTO';
+        modoArchivo.hidden = esTexto;
+        modoTexto.hidden = !esTexto;
+        tabArchivo.setAttribute('aria-selected', String(!esTexto));
+        tabTexto.setAttribute('aria-selected', String(esTexto));
+        inputArchivo.required = !esTexto && !teniaArchivo;
+        inputTexto.required = esTexto;
+        tipoContenido.value = modo;
+    }
+
+    tabArchivo.addEventListener('click', function () {
+        if (inputTexto.value) inputTexto.value = '';
+        activar('ARCHIVO');
+    });
+    tabTexto.addEventListener('click', function () {
+        if (inputArchivo.value) {
+            inputArchivo.value = '';
+            inputArchivo.dispatchEvent(new Event('change'));  // resetea el preview del dropzone
+        }
+        activar('TEXTO');
+    });
+
+    // Si el form vuelve con errores, no rebotar al tab por el que entró.
+    activar(tipoContenido.value === 'TEXTO' ? 'TEXTO' : 'ARCHIVO');
 })();
 </script>
 {% endblock %}

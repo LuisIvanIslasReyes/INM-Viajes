@@ -1,3 +1,4 @@
+import os
 import tempfile
 from unittest import mock
 
@@ -177,14 +178,50 @@ class RedaccionesPermisosTests(TestCase):
         resp = self.client.get(reverse('redacciones:biblioteca'), {'q': 'PEPINO'})
         self.assertEqual(resp.context['total'], 1)
 
-    def test_editar_no_permite_cambiar_tipo(self):
+    def test_editar_cambia_de_archivo_a_texto(self):
         self.client.force_login(self.aeropuerto)
         self.client.post(reverse('redacciones:subir'), self._payload())
         doc = Redaccion.objects.first()
         self.assertTrue(doc.es_archivo)
-        self.client.post(reverse('redacciones:editar', args=[doc.pk]), self._payload_texto(titulo=doc.titulo))
+        archivo_path = doc.archivo.path
+
+        self.client.post(
+            reverse('redacciones:editar', args=[doc.pk]),
+            self._payload_texto(titulo=doc.titulo),
+        )
+        doc.refresh_from_db()
+        self.assertTrue(doc.es_texto)
+        self.assertFalse(bool(doc.archivo))
+        self.assertFalse(bool(doc.archivo_pdf))
+        self.assertIsNone(doc.preview_url)
+        self.assertIn('ZANAHORIA', doc.texto_contenido)
+        self.assertFalse(os.path.exists(archivo_path))  # el archivo anterior se borra del storage
+
+    def test_editar_cambia_de_texto_a_archivo(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        doc = Redaccion.objects.first()
+        self.assertTrue(doc.es_texto)
+
+        self.client.post(
+            reverse('redacciones:editar', args=[doc.pk]),
+            self._payload(titulo=doc.titulo),
+        )
         doc.refresh_from_db()
         self.assertTrue(doc.es_archivo)
+        self.assertEqual(doc.texto_crudo, '')
+        self.assertTrue(doc.es_pdf)
+        self.assertIsNotNone(doc.preview_url)
+
+    def test_editar_a_archivo_sin_archivo_nuevo_rechazado(self):
+        self.client.force_login(self.aeropuerto)
+        self.client.post(reverse('redacciones:subir'), self._payload_texto())
+        doc = Redaccion.objects.first()
+        payload = self._payload_texto(titulo=doc.titulo, tipo_contenido=TipoContenidoChoices.ARCHIVO)
+        payload.pop('texto_crudo')
+        self.client.post(reverse('redacciones:editar', args=[doc.pk]), payload)
+        doc.refresh_from_db()
+        self.assertTrue(doc.es_texto)  # sin archivo nuevo ni texto: el form lo rechaza, no hay cambios
 
     def test_form_rechaza_sin_archivo_ni_texto(self):
         self.client.force_login(self.aeropuerto)

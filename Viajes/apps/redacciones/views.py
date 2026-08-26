@@ -22,7 +22,7 @@ from django.views.decorators.http import require_POST
 
 from apps.cuentas.roles import puede_gestionar_redacciones_required
 from .forms import RedaccionForm
-from .models import Pais, Redaccion, ResolucionChoices
+from .models import Pais, Redaccion, ResolucionChoices, TipoContenidoChoices
 from .utils.busqueda import extraer_palabras, resaltar, snippet
 from .utils.conversion import generar_preview
 from .utils.extraccion import actualizar_texto
@@ -141,40 +141,57 @@ def subir(request):
 
 @puede_gestionar_redacciones_required
 def editar(request, pk):
-    """Edición de metadatos y, opcionalmente, reemplazo del archivo (solo SuperUser/Aeropuerto)."""
+    """Edición de metadatos y del contenido: archivo o texto pegado (solo SuperUser/Aeropuerto).
+
+    El tipo de contenido se puede cambiar libremente (archivo <-> texto pegado);
+    ver RedaccionForm.clean() para cómo se descarta el lado que se abandona.
+    """
     redaccion = get_object_or_404(Redaccion, pk=pk)
 
     if request.method == 'POST':
+        tipo_anterior = redaccion.tipo_contenido
         # form.is_valid() (construct_instance) sustituye redaccion.archivo por el
-        # archivo nuevo subido, así que capturamos AQUÍ la referencia al anterior
-        # para poder borrarlo del storage recién guardado el nuevo.
+        # archivo nuevo subido (o lo vacía si se cambia a texto), así que
+        # capturamos AQUÍ la referencia al anterior para poder borrarlo del
+        # storage una vez guardado el nuevo estado.
         archivo_anterior = redaccion.archivo.name or ''
         storage_anterior = redaccion.archivo.storage
 
         form = RedaccionForm(request.POST, request.FILES, instance=redaccion)
         if form.is_valid():
-            reemplaza_archivo = 'archivo' in request.FILES
-            if reemplaza_archivo:
+            sube_archivo_nuevo = 'archivo' in request.FILES
+            redaccion = form.save(commit=False)
+
+            # Se abandona el archivo anterior si se reemplaza por uno nuevo o si
+            # se cambia a texto pegado.
+            abandona_archivo = tipo_anterior == TipoContenidoChoices.ARCHIVO and (
+                sube_archivo_nuevo or redaccion.es_texto
+            )
+            if abandona_archivo:
                 # El preview (archivo_pdf) no está en el form, así que aquí sigue
                 # apuntando al anterior: se puede borrar antes de guardar.
                 if redaccion.archivo_pdf:
                     redaccion.archivo_pdf.delete(save=False)
                 redaccion.archivo_pdf = None
 
-            redaccion = form.save()
+            redaccion.save()
 
-            if reemplaza_archivo:
-                # Ya persistido el nuevo archivo, borramos el anterior del storage.
-                if archivo_anterior and archivo_anterior != redaccion.archivo.name:
-                    storage_anterior.delete(archivo_anterior)
-                if redaccion.es_archivo:
-                    if not redaccion.es_pdf and not generar_preview(redaccion):
-                        messages.warning(
-                            request,
-                            'El documento se actualizó, pero no se pudo generar la vista previa. '
-                            'Estará disponible para descarga.'
-                        )
-                    actualizar_texto(redaccion)
+            if abandona_archivo and archivo_anterior:
+                storage_anterior.delete(archivo_anterior)
+
+            # Hay un archivo que (re)procesar si se subió uno nuevo, o si se
+            # acaba de cambiar de texto pegado a archivo.
+            gana_archivo_nuevo = redaccion.es_archivo and (
+                sube_archivo_nuevo or tipo_anterior != TipoContenidoChoices.ARCHIVO
+            )
+            if gana_archivo_nuevo:
+                if not redaccion.es_pdf and not generar_preview(redaccion):
+                    messages.warning(
+                        request,
+                        'El documento se actualizó, pero no se pudo generar la vista previa. '
+                        'Estará disponible para descarga.'
+                    )
+                actualizar_texto(redaccion)
             messages.success(request, f'Documento "{redaccion.titulo}" actualizado.')
             return redirect('redacciones:detalle', pk=redaccion.pk)
     else:

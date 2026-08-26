@@ -63,21 +63,28 @@ class RedaccionForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        if self.instance.pk:
-            # El tipo no se puede cambiar al editar, sin importar qué venga en el POST.
-            tipo = self.instance.tipo_contenido
-        else:
-            tipo = cleaned_data.get('tipo_contenido') or TipoContenidoChoices.ARCHIVO
+        tipo = cleaned_data.get('tipo_contenido') or TipoContenidoChoices.ARCHIVO
         cleaned_data['tipo_contenido'] = tipo
 
-        archivo = cleaned_data.get('archivo')
+        # Un archivo "presente" en cleaned_data puede ser uno recién subido o,
+        # al editar, el que ya tenía la instancia (FileField.clean() cae a él
+        # si no se sube uno nuevo). Para la regla de "no ambos" solo cuenta un
+        # archivo realmente adjuntado en ESTE envío, no el heredado.
+        archivo_subido = self.files.get('archivo')
         texto_crudo = cleaned_data.get('texto_crudo')
 
-        if archivo and texto_crudo:
+        if archivo_subido and texto_crudo:
             raise forms.ValidationError('Elige un solo método: sube un archivo o pega el texto, no ambos.')
-        if tipo == TipoContenidoChoices.ARCHIVO and not archivo:
-            self.add_error('archivo', 'Debes subir un documento.')
-        elif tipo == TipoContenidoChoices.TEXTO and not texto_crudo:
-            self.add_error('texto_crudo', 'Debes pegar el texto de la redacción.')
+
+        if tipo == TipoContenidoChoices.TEXTO:
+            # Cambiar a texto descarta el archivo anterior (si lo había), incluso
+            # aunque el form lo hubiera heredado por defecto.
+            cleaned_data['archivo'] = False
+            if not texto_crudo:
+                self.add_error('texto_crudo', 'Debes pegar el texto de la redacción.')
+        else:
+            cleaned_data['texto_crudo'] = ''
+            if not cleaned_data.get('archivo'):
+                self.add_error('archivo', 'Debes subir un documento.')
 
         return cleaned_data

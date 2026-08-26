@@ -67,7 +67,7 @@ class Redaccion(models.Model):
         help_text='Texto plano extraído del PDF para el buscador de palabras.',
     )
     texto_crudo = models.TextField(
-        blank=True, default='', verbose_name='Texto pegado',
+        blank=True, verbose_name='Texto pegado',
         help_text='Contenido de la redacción pegado directamente (sin archivo).',
     )
     fecha_creacion = models.DateTimeField(auto_now_add=True)
