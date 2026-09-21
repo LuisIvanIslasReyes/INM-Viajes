@@ -272,7 +272,6 @@ ${data.origen_pais} - Tijuana (local): <strong>${data.total_pekin_tijuana}</stro
 
 <strong>Mexicanos</strong>: ${data.total_mexicanos}
 <strong>Extranjeros</strong>: ${data.total_extranjeros}`;
-
         contenido.innerHTML = `<div style="white-space: pre-wrap;">${pinTexto}</div>`;
 
     } catch (error) {
