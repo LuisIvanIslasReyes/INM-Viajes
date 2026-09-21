@@ -213,7 +213,7 @@ function cerrarModalPin() {
 }
 
 // =====================================================
-// PIN Binacional (versión corta)
+// PIN Previo (versión corta)
 // =====================================================
 // Versión abreviada del PIN: solo encabezado, fecha,
 // segundas revisiones y RECHAZOS. Sin párrafo del vuelo,
@@ -262,11 +262,7 @@ async function abrirModalPinBinacional(fecha, fechaTexto) {
         const rechStr = String(data.total_rechazos).padStart(2, '0');
         const intStr = String(data.total_internaciones).padStart(2, '0');
 
-        const pinTexto = `<strong>INSTITUTO NACIONAL DE MIGRACIÓN</strong>
-Oficina de Representación Baja California
-Aeropuerto Internacional de Tijuana
-
-<strong>${fechaTexto.toUpperCase()}</strong>
+        const pinTexto = `<strong>${fechaTexto.toUpperCase()}</strong>
 
 Vuelo <strong>${data.vuelo_numero}</strong> proveniente de <strong>${data.origen_pais}</strong>:
 
@@ -275,21 +271,17 @@ ${data.origen_pais} – México (tránsito): <strong>${data.total_pekin_mexico}<
 ${data.origen_pais} - Tijuana (local): <strong>${data.total_pekin_tijuana}</strong> pasajeros
 
 <strong>Mexicanos</strong>: ${data.total_mexicanos}
-<strong>Extranjeros</strong>: ${data.total_extranjeros}
-
-<strong>Segundas Revisiones: ${srStr}</strong>
-Rechazos: <strong>${rechStr}</strong>
-Internaciones: <strong>${intStr}</strong>`;
+<strong>Extranjeros</strong>: ${data.total_extranjeros}`;
 
         contenido.innerHTML = `<div style="white-space: pre-wrap;">${pinTexto}</div>`;
 
     } catch (error) {
-        console.error('Error al cargar el PIN Binacional:', error);
+        console.error('Error al cargar el PIN Previo:', error);
         contenido.innerHTML = `
             <div class="ds-alert ds-alert-danger" role="alert">
                 <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m15 9-6 6M9 9l6 6"/></svg>
                 <div>
-                    <strong>Error al cargar el PIN Binacional</strong>
+                    <strong>Error al cargar el PIN Previo</strong>
                     <p class="ds-small" style="margin:2px 0 0;">${error.message}</p>
                 </div>
             </div>
@@ -318,25 +310,19 @@ async function copiarPinBinacional(event) {
         const intStr = String(pinBinacionalData.total_internaciones).padStart(2, '0');
 
         const texto =
-            `*INSTITUTO NACIONAL DE MIGRACIÓN*\n` +
-            `Oficina de Representación Baja California\n` +
-            `Aeropuerto Internacional de Tijuana\n\n` +
             `*${pinBinacionalData.fechaTexto.toUpperCase()}*\n\n` +
             `Vuelo *${pinBinacionalData.vuelo_numero}* proveniente de *${pinBinacionalData.origen_pais}*:\n\n` +
             `*Total pasajeros: ${pinBinacionalData.total_pasajeros}*\n` +
             `${pinBinacionalData.origen_pais} – México (tránsito): *${pinBinacionalData.total_pekin_mexico}* pasajeros\n` +
             `${pinBinacionalData.origen_pais} - Tijuana (local): *${pinBinacionalData.total_pekin_tijuana}* pasajeros\n\n` +
             `*Mexicanos*: ${pinBinacionalData.total_mexicanos}\n` +
-            `*Extranjeros*: ${pinBinacionalData.total_extranjeros}\n\n` +
-            `*Segundas Revisiones: ${srStr}*\n` +
-            `Rechazos: *${rechStr}*\n` +
-            `Internaciones: *${intStr}*`;
+            `*Extranjeros*: ${pinBinacionalData.total_extranjeros}\n\n`;
 
         await navigator.clipboard.writeText(texto);
-        mostrarNotificacion(' PIN Binacional copiado', 'success');
+        mostrarNotificacion(' PIN Previo copiado', 'success');
 
     } catch (err) {
-        console.error('Error al copiar PIN Binacional:', err);
+        console.error('Error al copiar PIN Previo:', err);
         mostrarNotificacion('Error al copiar', 'error');
     }
 }

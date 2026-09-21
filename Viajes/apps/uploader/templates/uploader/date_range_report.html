@@ -100,9 +100,9 @@
                 {# Botón Generar PIN Binacional (versión corta) #}
                 <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary"
                         onclick="event.stopPropagation(); abrirModalPinBinacional('{{ stat.fecha|date:'Y-m-d' }}', '{{ stat.fecha|date:'l, d \d\e F \d\e Y'|title }}')"
-                        title="Generar PIN Binacional (versión corta)">
+                        title="Generar PIN Previo (versión corta)">
                     <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4"/></svg>
-                    PIN Binacional
+                    PIN Previo
                 </button>
 
                 <span class="ds-badge ds-badge-brand">Total: {{ stat.total }}</span>
@@ -202,7 +202,7 @@
         <header class="ds-modal-header">
             <h2 class="ds-h3" id="modalPinBinTitle" style="margin:0; display:flex; align-items:center; gap:8px;">
                 <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24" style="color:var(--ds-brand);"><path d="M9 5H7a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V7a2 2 0 0 0-2-2h-2"/><path d="M9 5a2 2 0 0 0 2 2h2a2 2 0 0 0 2-2M9 5a2 2 0 0 1 2-2h2a2 2 0 0 1 2 2m-6 9 2 2 4-4"/></svg>
-                PIN Binacional
+                PIN Previo
             </h2>
             <div style="display:flex; flex-wrap:wrap; gap:8px;">
                 <button onclick="copiarPinBinacional(event)" class="ds-btn ds-btn-sm ds-btn-primary">

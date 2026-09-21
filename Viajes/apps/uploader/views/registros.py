@@ -258,7 +258,7 @@ def generar_pin(request, fecha):
         messages.error(request, f' No se encontraron registros para la fecha {fecha_obj.strftime("%d/%m/%Y")}')
         return redirect('date_range_report')
 
-    # Desglose por destino para el PIN Binacional.
+    # Desglose por destino para el PIN Previo.
     # Se combinan varias señales porque batch.tipo_vuelo puede estar en
     # NULL (lotes cargados antes de la migración 0008 o cuando el primer
     # registro no contenía TIJ/MEX): tipo_vuelo del batch, nombre del
