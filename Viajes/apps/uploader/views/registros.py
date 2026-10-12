@@ -387,8 +387,9 @@ DIAS_ES = {
 }
 
 
-def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
-    """Calcula los datos del reporte de inadmitidos para un rango de fechas."""
+def _filtros_arribos():
+    """Devuelve (filtro_tij, filtro_mex): Q de arribos locales (PEK-TIJ) y en
+    tránsito (PEK-MEX). Su OR deja fuera los vuelos de regreso (MEX→PEK)."""
     filtro_tij = (
         models.Q(batch__tipo_vuelo='PEK-TIJ') |
         models.Q(batch__archivo__icontains='PEK-TIJ') |
@@ -404,6 +405,35 @@ def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
         models.Q(aeropuerto_llegada__icontains='MÉXICO') |
         models.Q(aeropuerto_llegada__icontains='墨西哥')
     )
+    return filtro_tij, filtro_mex
+
+
+def _meses_disponibles():
+    """{anio: [meses]} entre el primer y el último arribo cargado (mes UTC,
+    igual que las ventanas por día del reporte). Alimenta el modal del
+    Reporte completo."""
+    filtro_tij, filtro_mex = _filtros_arribos()
+    rango = (
+        Registro.objects.filter(vuelo_fecha__isnull=False)
+        .filter(filtro_tij | filtro_mex)
+        .aggregate(minimo=models.Min('vuelo_fecha'), maximo=models.Max('vuelo_fecha'))
+    )
+    if not rango['minimo'] or not rango['maximo']:
+        return {}
+    ini = rango['minimo'].astimezone(dt_timezone.utc)
+    fin = rango['maximo'].astimezone(dt_timezone.utc)
+
+    disponibles = {}
+    anio, mes = ini.year, ini.month
+    while (anio, mes) <= (fin.year, fin.month):
+        disponibles.setdefault(anio, []).append(mes)
+        anio, mes = (anio + 1, 1) if mes == 12 else (anio, mes + 1)
+    return disponibles
+
+
+def _compute_inadmitidos_data(fecha_inicio, fecha_fin):
+    """Calcula los datos del reporte de inadmitidos para un rango de fechas."""
+    filtro_tij, filtro_mex = _filtros_arribos()
 
     dias = []
     dia_actual = fecha_inicio
@@ -590,6 +620,7 @@ def inadmitidos_page(request):
     """Página principal del reporte de inadmitidos"""
     return render(request, 'uploader/inadmitidos_report.html', {
         'is_superuser': request.user.is_superuser,
+        'meses_disponibles': _meses_disponibles(),
     })
 
 
@@ -1008,15 +1039,10 @@ def generar_inadmitidos_excel(request):
     incluir_total = n > 1
     last_col = (n + 2) if incluir_total else (n + 1)  # etiqueta + n días [+ Total]
 
-    # ─── Colores tomados tal cual del CSS del reporte (inadmitidos_report.css),
-    #     aplanando los rgba() sobre fondo blanco. Prefijo 'FF' = alfa opaco. ───
-    MAROON       = 'FF6B1D1D'  # row-vuelo / row-dias
-    DARK_RED     = 'FF4D060A'  # total-sr / encabezado de sección
-    ROSA_TITULO  = 'FFFFEEED'  # row-title / row-total-inad
-    ROSA_FECHAS  = 'FFFFF7F6'  # row-fechas
-    VERDE_INTERN = 'FFE6EDE9'  # row-total-intern (el verde va aquí, en el Total)
-    DATA_BG      = 'FFF9F9FC'  # row-data / row-intern-nac
-    PAX_BG       = 'FFE2E2E5'  # row-total-pax
+    # ─── Colores del CSS del reporte (paleta compartida con el Reporte completo) ───
+    from ..utils.excel_estilos import (
+        MAROON, DARK_RED, ROSA_TITULO, ROSA_FECHAS, VERDE_INTERN, DATA_BG, PAX_BG,
+    )
 
     fill_maroon   = PatternFill('solid', fgColor=MAROON)
     fill_dark_red = PatternFill('solid', fgColor=DARK_RED)

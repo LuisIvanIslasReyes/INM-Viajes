@@ -370,6 +370,92 @@ function abrirExcel(autoridades) {
     window.open(url, '_blank');
 }
 
+/* --- Reporte completo: resumen mensual (.xlsx) con los meses elegidos --- */
+
+const NOMBRES_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',
+    'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
+
+// {anio: [meses con vuelos cargados]} (lo inyecta la vista con json_script).
+function mesesDisponibles() {
+    const el = document.getElementById('meses-disponibles');
+    return el ? JSON.parse(el.textContent) : {};
+}
+
+function abrirModalReporteCompleto() {
+    const disponibles = mesesDisponibles();
+    const anios = Object.keys(disponibles).sort();
+    const select = document.getElementById('rc-anio');
+    select.innerHTML = anios.map((a) => `<option value="${a}">${a}</option>`).join('');
+
+    if (anios.length) {
+        // Por defecto: el último año con datos y todos sus meses marcados.
+        select.value = anios[anios.length - 1];
+        renderMesesReporteCompleto(select.value);
+    } else {
+        document.getElementById('rc-meses').innerHTML =
+            '<p class="ds-small" style="grid-column:1/-1;">Aún no hay vuelos cargados.</p>';
+    }
+    document.getElementById('btn-descargar-reporte-completo').disabled = !anios.length;
+    document.getElementById('modalReporteCompleto').showModal();
+}
+
+function renderMesesReporteCompleto(anio) {
+    const conDatos = mesesDisponibles()[anio] || [];
+    document.getElementById('rc-meses').innerHTML = NOMBRES_MESES.map((nombre, i) => {
+        const mes = i + 1;
+        const habilitado = conDatos.includes(mes);
+        return `<label class="ds-choice"${habilitado ? '' : ' style="opacity:.45; cursor:not-allowed;"'}>
+            <input type="checkbox" class="ds-check" name="rc-mes" value="${mes}"
+                ${habilitado ? 'checked' : 'disabled'}> ${nombre}
+        </label>`;
+    }).join('');
+}
+
+function marcarMesesReporteCompleto(marcar) {
+    document.querySelectorAll('#rc-meses input[name="rc-mes"]:not(:disabled)')
+        .forEach((cb) => { cb.checked = marcar; });
+}
+
+async function descargarReporteCompleto(e) {
+    e.preventDefault();
+    const anio = document.getElementById('rc-anio').value;
+    const meses = [...document.querySelectorAll('#rc-meses input[name="rc-mes"]:checked')]
+        .map((cb) => cb.value);
+    if (!anio || !meses.length) {
+        mostrarToast('Selecciona al menos un mes.', 'warning');
+        return;
+    }
+
+    const btn = document.getElementById('btn-descargar-reporte-completo');
+    const textoOriginal = btn.innerHTML;
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fas fa-spinner fa-spin mr-1"></i> Generando...';
+
+    try {
+        const url = `${window.INADMITIDOS_MENSUAL_URL}?anio=${anio}&meses=${meses.join(',')}`;
+        const resp = await fetch(url, { headers: { 'X-Requested-With': 'XMLHttpRequest' } });
+        const tipo = resp.headers.get('Content-Type') || '';
+        if (!resp.ok || !tipo.includes('spreadsheetml')) {
+            // 400 → texto del error; un 200 que no es xlsx suele ser el login (sesión vencida).
+            const msg = resp.ok ? 'La sesión expiró, vuelve a iniciar sesión.' : await resp.text();
+            throw new Error(msg);
+        }
+        const blob = await resp.blob();
+        const disp = resp.headers.get('Content-Disposition') || '';
+        const match = disp.match(/filename\*=UTF-8''([^;]+)/);
+        const nombre = match ? decodeURIComponent(match[1]) : `Reporte_Completo_${anio}.xlsx`;
+        descargarBlob(blob, nombre);
+        document.getElementById('modalReporteCompleto').close();
+        mostrarToast('Reporte completo descargado.', 'success');
+    } catch (err) {
+        console.error(err);
+        mostrarToast('No se pudo generar el reporte: ' + (err.message || ''), 'error');
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = textoOriginal;
+    }
+}
+
 /* --- Captura de nodos como PNG (helper compartido) --- */
 
 async function capturarNodo(nodo) {

@@ -11,6 +11,8 @@
        #loading-spinner #error-msg #error-text #tabla-preview #tabla-capture
        #tabla-inadmitidos .inadmitidos-* #motivos-section #motivos-capture
        #motivos-lista .no-capturar #toast-container.
+     Reporte completo: #btn-reporte-completo abre #modalReporteCompleto
+       (año + casillas de meses) → INADMITIDOS_MENSUAL_URL (.xlsx).
    Solo cambia el shell (base → base_ds) y el "chrome" exterior a estilo ds.
    FontAwesome se carga localmente porque el JS inyecta iconos fa-* (toasts,
    spinners de botón). Backend: 0 cambios.
@@ -44,8 +46,9 @@
 <script>
     window.INADMITIDOS_DATA_URL = '{% url "inadmitidos_data" %}';
     window.INADMITIDOS_EXCEL_URL = '{% url "generar_inadmitidos_excel" %}';
+    window.INADMITIDOS_MENSUAL_URL = '{% url "generar_reporte_mensual_excel" %}';
 </script>
-<script src="{% static 'js/inadmitidos_report.js' %}?v=26"></script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=27"></script>
 {% endblock %}
 
 {% block content %}
@@ -84,6 +87,10 @@
                 <button id="btn-generar" onclick="generarReporte()" class="ds-btn ds-btn-primary">
                     <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 3h18v18H3zM3 9h18M3 15h18M9 3v18M15 3v18"/></svg>
                     Generar reporte
+                </button>
+                <button id="btn-reporte-completo" onclick="abrirModalReporteCompleto()" class="ds-btn ds-btn-secondary">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M8 13h8M8 17h8M8 9h2"/></svg>
+                    Reporte completo
                 </button>
                 <button id="btn-excel" onclick="descargarExcel()" class="ds-btn ds-btn-secondary hidden">
                     <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
@@ -163,6 +170,42 @@
             </div>
         </section>
     </div>
+
+    {# Modal · Reporte completo (resumen mensual en .xlsx) #}
+    {{ meses_disponibles|json_script:"meses-disponibles" }}
+    <dialog id="modalReporteCompleto" class="ds-modal" aria-labelledby="rc-titulo">
+        <div class="ds-modal-box">
+            <header class="ds-modal-header">
+                <h2 class="ds-h2" id="rc-titulo" style="font-size:18px;">Reporte completo</h2>
+                <button type="button" class="ds-btn ds-btn-icon ds-btn-ghost" aria-label="Cerrar" onclick="document.getElementById('modalReporteCompleto').close()"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </header>
+            <form id="formReporteCompleto" onsubmit="descargarReporteCompleto(event)">
+                <div class="ds-modal-body">
+                    <p class="ds-small" style="margin-bottom:16px;">Elige los meses que se incluyen en el resumen mensual. Los meses sin vuelos cargados aparecen deshabilitados.</p>
+                    <div class="ds-field">
+                        <label class="ds-label" for="rc-anio">Año</label>
+                        <select id="rc-anio" class="ds-select" onchange="renderMesesReporteCompleto(this.value)"></select>
+                    </div>
+                    <fieldset style="border:0; padding:0; margin:var(--ds-sp-4) 0 0; min-width:0;">
+                        <legend class="ds-label" style="padding:0;">Meses</legend>
+                        <div style="display:flex; gap:8px; margin:4px 0 8px;">
+                            <button type="button" class="ds-btn ds-btn-sm ds-btn-ghost" onclick="marcarMesesReporteCompleto(true)">Todos</button>
+                            <button type="button" class="ds-btn ds-btn-sm ds-btn-ghost" onclick="marcarMesesReporteCompleto(false)">Ninguno</button>
+                        </div>
+                        <div id="rc-meses" style="display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); column-gap:var(--ds-sp-4);"></div>
+                    </fieldset>
+                </div>
+                <footer class="ds-modal-footer">
+                    <button type="button" class="ds-btn ds-btn-ghost" onclick="document.getElementById('modalReporteCompleto').close()">Cancelar</button>
+                    <button type="submit" class="ds-btn ds-btn-primary" id="btn-descargar-reporte-completo">
+                        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                        Descargar .xlsx
+                    </button>
+                </footer>
+            </form>
+        </div>
+        <form method="dialog" class="ds-sr-only"><button>cerrar</button></form>
+    </dialog>
 
     {# Toasts (el JS inyecta aquí) #}
     <div id="toast-container" class="toast toast-end"></div>
