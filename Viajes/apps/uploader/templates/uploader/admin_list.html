@@ -3,9 +3,10 @@
 {# ====================================================================
    FASE 5·bis · GESTIÓN DE REGISTROS DE VIAJE  (PR 07)  — la vista de la captura
    Conserva TODO el context (is_superuser, page_obj, notificaciones_no_leidas,
-   casos_urgentes, casos_pendientes, batches, tiempos_rubros, paises, is_production)
+   casos_urgentes, casos_pendientes, nacionalidades, lote_activo, tiempos_rubros, paises, is_production)
    y TODOS los IDs/clases que consume admin_list.js:
-     searchInput, clearSearch, clearSearchFilter(), batchFilter,
+     searchInput, clearSearch, clearSearchFilter(), paisFilter (+ paisClear,
+     paisListbox, nacionalidadesData), quitarFiltroLote(),
      segundaRevisionFilter, rechazadoFilter, internacionFilter,
      .ajax-toggle (forms SR/R/I), openAccionesModal(), editModal, editForm,
      comentario, modalFotoRechazo (+ inputFotoRechazo, previewFotoRechazo,
@@ -20,7 +21,7 @@
 {% block title %}{% if is_superuser %}Registros — Admin{% else %}Mis registros{% endif %} · INM Viajes{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin_list.css' %}">
+<link rel="stylesheet" href="{% static 'css/admin_list.css' %}?v=2">
 {% endblock %}
 
 {% block content %}
@@ -65,8 +66,8 @@
     </div>
     {% endblock %}
 
-    <!-- Barra de herramientas: búsqueda + lote + filtros con la leyenda INTEGRADA -->
-    <section class="ds-card">
+    <!-- Barra de herramientas: búsqueda + nacionalidad + filtros con la leyenda INTEGRADA -->
+    <section class="ds-card ds-card-toolbar">
         <div class="ds-card-body" style="display:flex; flex-wrap:wrap; gap:var(--ds-sp-4); align-items:flex-end;">
             <div class="ds-field" style="flex:1; min-width:280px;">
                 <label class="ds-label" for="searchInput">Buscar por documento o pasajero</label>
@@ -76,14 +77,15 @@
                     <button id="clearSearch" type="button" class="ds-search-clear" onclick="clearSearchFilter()" aria-label="Limpiar búsqueda"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
                 </div>
             </div>
-            <div class="ds-field" style="width:260px;">
-                <label class="ds-label" for="batchFilter">Lote de carga</label>
-                <select name="batch" id="batchFilter" class="ds-select">
-                    <option value="">Todos los lotes</option>
-                    {% for batch in batches %}
-                    <option value="{{ batch.id }}" {% if request.GET.batch == batch.id|stringformat:"s" %}selected{% endif %}>Lote #{{ batch.id }} · {{ batch.usuario.username }} ({{ batch.nombre_archivo|default:"sin archivo" }})</option>
-                    {% endfor %}
-                </select>
+            <div class="ds-field" style="width:280px;">
+                <label class="ds-label" for="paisFilter">Nacionalidad</label>
+                <div class="ds-search ds-combo">
+                    <svg class="ds-icon ds-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/></svg>
+                    <input type="text" id="paisFilter" class="ds-input" role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="paisListbox" autocomplete="off" spellcheck="false" placeholder="Todas · escribe un país…" value="{{ request.GET.pais }}" data-seleccionado="{{ request.GET.pais }}">
+                    <button id="paisClear" type="button" class="ds-search-clear" aria-label="Quitar filtro de nacionalidad"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+                    <ul id="paisListbox" class="ds-combo-list" role="listbox" aria-label="Nacionalidades" hidden></ul>
+                </div>
+                {{ nacionalidades|json_script:"nacionalidadesData" }}
             </div>
             <div class="ds-field">
                 <span class="ds-label" id="lblFiltros">Estatus <span style="font-weight:400; color:var(--ds-text-muted);">· SR Segunda Revisión · R Rechazo · I Internación</span></span>
@@ -102,6 +104,11 @@
                     </label>
                 </div>
             </div>
+            {% if request.GET.batch %}
+            <span class="ds-chip" style="margin-bottom:7px;" title="{% if lote_activo %}{{ lote_activo.nombre_archivo|default:'sin archivo' }}{% endif %}">Lote #{{ request.GET.batch }}
+                <button type="button" class="ds-chip-x" onclick="quitarFiltroLote()" aria-label="Quitar filtro de lote"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg></button>
+            </span>
+            {% endif %}
             <a href="{% url 'admin_list' %}" class="ds-btn ds-btn-ghost"><svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>Limpiar</a>
         </div>
     </section>
@@ -224,11 +231,11 @@
     <nav aria-label="Paginación" style="display:flex; justify-content:center; gap:8px;">
         {% with qs=request.GET.urlencode %}
         {% if page_obj.has_previous %}
-        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado %}&rechazado={{ request.GET.rechazado }}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">‹ Anterior</a>
+        <a href="?page={{ page_obj.previous_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.pais %}&pais={{ request.GET.pais|urlencode }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado %}&rechazado={{ request.GET.rechazado }}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">‹ Anterior</a>
         {% endif %}
         <span class="ds-btn ds-btn-sm ds-btn-ghost ds-tabular" aria-current="page">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
         {% if page_obj.has_next %}
-        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado %}&rechazado={{ request.GET.rechazado }}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">Siguiente ›</a>
+        <a href="?page={{ page_obj.next_page_number }}{% if request.GET.search %}&search={{ request.GET.search }}{% endif %}{% if request.GET.pais %}&pais={{ request.GET.pais|urlencode }}{% endif %}{% if request.GET.batch %}&batch={{ request.GET.batch }}{% endif %}{% if request.GET.segunda_revision %}&segunda_revision={{ request.GET.segunda_revision }}{% endif %}{% if request.GET.rechazado %}&rechazado={{ request.GET.rechazado }}{% endif %}{% if request.GET.internacion %}&internacion={{ request.GET.internacion }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">Siguiente ›</a>
         {% endif %}
         {% endwith %}
     </nav>
@@ -301,5 +308,5 @@
 
 {% block extra_js %}
 <script>window.URL_PREFIX = {{ is_production|yesno:"'/viajes',''"|safe }};</script>
-<script src="{% static 'js/admin_list.js' %}"></script>
+<script src="{% static 'js/admin_list.js' %}?v=2"></script>
 {% endblock %}

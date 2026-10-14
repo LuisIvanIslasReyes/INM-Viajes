@@ -370,6 +370,16 @@ function abrirExcel(autoridades) {
     window.open(url, '_blank');
 }
 
+/* --- Aviso de SR sin estado: despliega / pliega los registros extra --- */
+
+function toggleSrSinEstado(btn) {
+    const expandido = btn.getAttribute('aria-expanded') === 'true';
+    document.querySelectorAll('#sr-sin-estado-lista .sr-extra')
+        .forEach((li) => li.classList.toggle('hidden', expandido));
+    btn.setAttribute('aria-expanded', String(!expandido));
+    btn.textContent = expandido ? btn.dataset.mas : 'Leer menos';
+}
+
 /* --- Reporte completo: resumen mensual (.xlsx) con los meses elegidos --- */
 
 const NOMBRES_MESES = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio',

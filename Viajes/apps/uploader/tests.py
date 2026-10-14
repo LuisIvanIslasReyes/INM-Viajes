@@ -1,4 +1,4 @@
-from datetime import datetime, timezone as dt_timezone
+from datetime import date, datetime, timezone as dt_timezone
 from io import BytesIO
 
 from django.contrib.auth.models import Group, User
@@ -7,6 +7,8 @@ from django.urls import reverse
 
 from apps.cuentas.roles import GRUPO_AEROPUERTO, GRUPO_GENERAL
 from .models import Registro, UploadBatch
+from .utils.parsers import obtener_nacionalidad
+from .views.registros import _compute_inadmitidos_data
 from .views.reporte_mensual import _compute_reporte_mensual
 
 
@@ -60,7 +62,8 @@ class ReporteMensualTests(TestCase):
         self.assertEqual(d['meses_labels'], ['May', 'Jun'])
         self.assertEqual(d['inad'], [2, 1])
         self.assertEqual(d['intern'], [1, 1])
-        self.assertEqual(d['sr'], [4, 2])
+        # La SR sin resolver de fin de mayo no cuenta: SR = Inadmitidos + Internaciones
+        self.assertEqual(d['sr'], [3, 2])
         self.assertEqual(d['local'], [2, 1])
         self.assertEqual(d['transito'], [3, 1])
         self.assertEqual(d['total'], [5, 2])
@@ -103,3 +106,91 @@ class ReporteMensualTests(TestCase):
         resp = self.client.get(reverse('inadmitidos_page'))
         self.assertEqual(resp.context['meses_disponibles'], {2026: [5, 6]})
         self.assertContains(resp, 'id="btn-reporte-completo"')
+
+    def test_meses_sin_vuelos_no_se_ofrecen(self):
+        # Ruta suspendida jul-sep: agosto tiene datos, julio y septiembre no.
+        tij = UploadBatch.objects.get(tipo_vuelo='PEK-TIJ')
+        _registro(tij, datetime(2026, 8, 3, 7, tzinfo=dt_timezone.utc), 'TIJ', 'China')
+        _registro(tij, datetime(2026, 12, 31, 23, tzinfo=dt_timezone.utc), 'TIJ', 'China')
+        _registro(tij, datetime(2027, 1, 2, 7, tzinfo=dt_timezone.utc), 'TIJ', 'China')
+        self.client.force_login(self.aeropuerto)
+        resp = self.client.get(reverse('inadmitidos_page'))
+        self.assertEqual(resp.context['meses_disponibles'], {2026: [5, 6, 8, 12], 2027: [1]})
+
+    def test_sr_diaria_cuenta_sin_estado(self):
+        # El reporte del día sí cuenta las SR en curso (aún sin R ni I).
+        d = _compute_inadmitidos_data(date(2026, 5, 20), date(2026, 5, 31))
+        self.assertEqual(d['totals_sr'][0], 3)   # 20-may: 2 R + 1 I
+        self.assertEqual(d['totals_sr'][-1], 1)  # 31-may: sólo la SR sin resolver
+
+    def test_pagina_avisa_sr_sin_estado(self):
+        self.client.force_login(self.aeropuerto)
+        resp = self.client.get(reverse('inadmitidos_page'))
+        pendientes = resp.context['sr_sin_estado']
+        self.assertEqual(len(pendientes), 1)
+        self.assertEqual(pendientes[0]['vuelo_fecha'], datetime(2026, 5, 31, 23, 59, tzinfo=dt_timezone.utc))
+        # La fecha se muestra en UTC (31/05), igual que las ventanas del reporte.
+        self.assertContains(resp, 'id="sr-sin-estado"')
+        self.assertContains(resp, '31/05/2026')
+        self.assertNotContains(resp, 'toggleSrSinEstado(this)')  # con 3 o menos no hay "Leer más"
+
+        # Con más de 3 sólo los 3 primeros quedan a la vista; el resto tras "Leer más".
+        tij = UploadBatch.objects.get(tipo_vuelo='PEK-TIJ')
+        for _ in range(4):
+            _registro(tij, datetime(2026, 6, 10, tzinfo=dt_timezone.utc), 'TIJ', 'China', sr=True)
+        resp = self.client.get(reverse('inadmitidos_page'))
+        self.assertEqual(len(resp.context['sr_sin_estado']), 5)
+        self.assertContains(resp, 'class="sr-extra hidden"', count=2)
+        self.assertContains(resp, 'Leer más (2)', count=2)  # texto del botón + data-mas
+
+        Registro.objects.filter(segunda_revision=True, rechazado=False, internacion=False).update(internacion=True)
+        resp = self.client.get(reverse('inadmitidos_page'))
+        self.assertEqual(resp.context['sr_sin_estado'], [])
+        self.assertNotContains(resp, 'id="sr-sin-estado"')
+
+
+class NacionalidadesTests(TestCase):
+    def test_territorios_y_codigos_icao(self):
+        self.assertEqual(obtener_nacionalidad('MAC'), 'Macao')
+        self.assertEqual(obtener_nacionalidad('hkg'), 'Hong Kong')
+        self.assertEqual(obtener_nacionalidad('TWN'), 'Taiwán')
+        self.assertEqual(obtener_nacionalidad('GBN'), 'Reino Unido (BNO)')
+        self.assertEqual(obtener_nacionalidad('XX'), 'XX')
+
+
+class AdminListNacionalidadTests(TestCase):
+    @classmethod
+    def setUpTestData(cls):
+        cls.aeropuerto = User.objects.create_user('aero', password='x')
+        cls.aeropuerto.groups.add(Group.objects.get(name=GRUPO_AEROPUERTO))
+        cls.lote = UploadBatch.objects.create(usuario=cls.aeropuerto, vuelo_numero='HU7925', tipo_vuelo='PEK-TIJ')
+        otro = UploadBatch.objects.create(usuario=cls.aeropuerto, vuelo_numero='HU7925', tipo_vuelo='PEK-MEX')
+        fecha = datetime(2026, 5, 20, tzinfo=dt_timezone.utc)
+        _registro(cls.lote, fecha, 'TIJ', 'Estados Unidos')
+        _registro(otro, fecha, 'MEX', 'Estados Unidos')
+        _registro(cls.lote, fecha, 'TIJ', 'México')
+        _registro(cls.lote, fecha, 'TIJ', '')
+
+    def setUp(self):
+        self.client.force_login(self.aeropuerto)
+
+    def test_lista_nacionalidades_con_total(self):
+        resp = self.client.get(reverse('admin_list'))
+        self.assertEqual(resp.context['nacionalidades'], [
+            {'pais_emision': 'Estados Unidos', 'total': 2},
+            {'pais_emision': 'México', 'total': 1},
+        ])
+        self.assertContains(resp, 'id="nacionalidadesData"')
+
+    def test_filtra_por_pais_de_emision(self):
+        resp = self.client.get(reverse('admin_list'), {'pais': 'Estados Unidos'})
+        self.assertEqual({r.pais_emision for r in resp.context['page_obj']}, {'Estados Unidos'})
+        self.assertEqual(len(resp.context['page_obj']), 2)
+
+    def test_lote_por_enlace_sigue_filtrando(self):
+        resp = self.client.get(reverse('admin_list'), {'batch': self.lote.id, 'pais': 'Estados Unidos'})
+        self.assertEqual(len(resp.context['page_obj']), 1)
+        self.assertEqual(resp.context['lote_activo'], self.lote)
+        self.assertContains(resp, 'Quitar filtro de lote')
+        # Un batch no numérico se ignora en vez de romper la página
+        self.assertEqual(self.client.get(reverse('admin_list'), {'batch': 'abc'}).status_code, 200)

@@ -158,8 +158,15 @@ def admin_list(request):
     """Vista para ver y modificar registros (TODOS VEN TODO)"""
     # TODOS ven TODOS los registros
     registros = Registro.objects.select_related('batch', 'batch__usuario').all()
-    batches = UploadBatch.objects.all().order_by('-fecha_carga')
-    
+
+    # Nacionalidades presentes (país de emisión) para el buscador del filtro
+    nacionalidades = list(
+        Registro.objects.exclude(pais_emision='')
+        .values('pais_emision')
+        .annotate(total=Count('id'))
+        .order_by('pais_emision')
+    )
+
     # Filtro de búsqueda por documento o pasajero
     search = request.GET.get('search')
     if search:
@@ -167,12 +174,20 @@ def admin_list(request):
             models.Q(numero_documento__icontains=search) |
             models.Q(nombre_pasajero__icontains=search)
         )
-    
-    # Filtro por batch
-    batch_id = request.GET.get('batch')
-    if batch_id:
+
+    # Filtro por nacionalidad (país de emisión, coincidencia exacta)
+    pais = request.GET.get('pais', '').strip()
+    if pais:
+        registros = registros.filter(pais_emision=pais)
+
+    # Filtro por batch: ya no está en la barra, pero los enlaces "Ver" de
+    # Cargas (?batch=) siguen llegando aquí; se muestra como chip removible.
+    batch_id = request.GET.get('batch', '')
+    lote_activo = None
+    if batch_id.isdigit():
         registros = registros.filter(batch_id=batch_id)
-    
+        lote_activo = UploadBatch.objects.filter(id=batch_id).first()
+
     # Filtro por Segunda Revisión (SR)
     segunda_revision = request.GET.get('segunda_revision')
     if segunda_revision == 'true':
@@ -208,7 +223,8 @@ def admin_list(request):
 
     context = {
         'page_obj': page_obj,
-        'batches': batches,
+        'nacionalidades': nacionalidades,
+        'lote_activo': lote_activo,
         'is_superuser': request.user.is_superuser,
         'notificaciones_no_leidas': notificaciones_no_leidas,
         'casos_pendientes': casos_pendientes,
@@ -408,26 +424,39 @@ def _filtros_arribos():
     return filtro_tij, filtro_mex
 
 
-def _meses_disponibles():
-    """{anio: [meses]} entre el primer y el último arribo cargado (mes UTC,
-    igual que las ventanas por día del reporte). Alimenta el modal del
-    Reporte completo."""
+def _sr_sin_estado():
+    """Arribos con SR marcada pero sin R ni I. El reporte del día sí los
+    cuenta (son SR en curso), pero el Reporte completo no: se avisan en la
+    página para que un olvido de captura no quede flotando."""
     filtro_tij, filtro_mex = _filtros_arribos()
-    rango = (
+    return list(
+        Registro.objects.filter(segunda_revision=True, rechazado=False, internacion=False)
+        .filter(filtro_tij | filtro_mex)
+        .distinct()
+        .order_by('vuelo_fecha', 'nombre_pasajero')
+        .values('id', 'vuelo_numero', 'vuelo_fecha', 'nombre_pasajero', 'numero_documento', 'pais_emision')
+    )
+
+
+def _meses_disponibles():
+    """{anio: [meses]} con al menos un arribo cargado (mes UTC, igual que las
+    ventanas por día del reporte). Alimenta el modal del Reporte completo:
+    los meses sin vuelos (p. ej. ruta suspendida) no se ofrecen."""
+    filtro_tij, filtro_mex = _filtros_arribos()
+    # Pocas fechas distintas (una por vuelo); se agrupan en Python para no
+    # depender de las tablas de zona horaria de MySQL.
+    fechas = (
         Registro.objects.filter(vuelo_fecha__isnull=False)
         .filter(filtro_tij | filtro_mex)
-        .aggregate(minimo=models.Min('vuelo_fecha'), maximo=models.Max('vuelo_fecha'))
+        .order_by()
+        .values_list('vuelo_fecha', flat=True)
+        .distinct()
     )
-    if not rango['minimo'] or not rango['maximo']:
-        return {}
-    ini = rango['minimo'].astimezone(dt_timezone.utc)
-    fin = rango['maximo'].astimezone(dt_timezone.utc)
+    meses = {(f.astimezone(dt_timezone.utc).year, f.astimezone(dt_timezone.utc).month) for f in fechas}
 
     disponibles = {}
-    anio, mes = ini.year, ini.month
-    while (anio, mes) <= (fin.year, fin.month):
+    for anio, mes in sorted(meses):
         disponibles.setdefault(anio, []).append(mes)
-        anio, mes = (anio + 1, 1) if mes == 12 else (anio, mes + 1)
     return disponibles
 
 
@@ -621,6 +650,7 @@ def inadmitidos_page(request):
     return render(request, 'uploader/inadmitidos_report.html', {
         'is_superuser': request.user.is_superuser,
         'meses_disponibles': _meses_disponibles(),
+        'sr_sin_estado': _sr_sin_estado(),
     })
 
 

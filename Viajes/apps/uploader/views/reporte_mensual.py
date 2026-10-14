@@ -5,7 +5,8 @@ Replica la hoja "<Aerolínea>_Mensual" que se armaba a mano a partir de las
 hojas diarias: (1) tabla por mes y nacionalidad, (2) Inadmitidos vs
 Internaciones por país y (3) totales de pasajeros por mes, más dos gráficas
 nativas de Excel. Usa las mismas definiciones que el reporte diario
-(_compute_inadmitidos_data) para que las cifras cuadren con él.
+(_compute_inadmitidos_data) para que las cifras cuadren con él, salvo el
+Total de Segundas Revisiones (ver Q_SR_RESUELTA).
 """
 from datetime import datetime, timezone as dt_timezone
 from io import BytesIO
@@ -28,6 +29,11 @@ from .registros import MESES_ES, _detectar_vuelo_y_origen, _filtros_arribos
 COLOR_SERIE_INAD = '6B1D1D'
 COLOR_SERIE_INTERN = '4F7A65'
 COLOR_SERIE_SR = '4D060A'
+
+# A diferencia del reporte del día (que cuenta las SR en curso), aquí una SR
+# cuenta sólo con resolución (R o I): Total SR = Inadmitidos + Internaciones.
+# Las que siguen sin estado se avisan en la página (_sr_sin_estado).
+Q_SR_RESUELTA = Q(segunda_revision=True) & (Q(rechazado=True) | Q(internacion=True))
 
 
 def _rango_mes_utc(anio, mes):
@@ -68,7 +74,7 @@ def _compute_reporte_mensual(anio, meses):
         tot = arribos.aggregate(
             inad=Count('id', filter=Q(segunda_revision=True, rechazado=True), distinct=True),
             intern=Count('id', filter=Q(segunda_revision=True, internacion=True), distinct=True),
-            sr=Count('id', filter=Q(segunda_revision=True), distinct=True),
+            sr=Count('id', filter=Q_SR_RESUELTA, distinct=True),
             local=Count('id', filter=filtro_tij, distinct=True),
             transito=Count('id', filter=filtro_mex, distinct=True),
             total=Count('id', distinct=True),

@@ -1,5 +1,5 @@
 {% extends 'uploader/base_ds.html' %}
-{% load static %}
+{% load static tz %}
 {# ====================================================================
    FASE 8 · REPORTE DE INADMITIDOS (re-skin sobre la vista real)
    Dashboard cargado por AJAX (inadmitidos_report.js). Se conserva TODO:
@@ -48,13 +48,38 @@
     window.INADMITIDOS_EXCEL_URL = '{% url "generar_inadmitidos_excel" %}';
     window.INADMITIDOS_MENSUAL_URL = '{% url "generar_reporte_mensual_excel" %}';
 </script>
-<script src="{% static 'js/inadmitidos_report.js' %}?v=27"></script>
+<script src="{% static 'js/inadmitidos_report.js' %}?v=28"></script>
 {% endblock %}
 
 {% block content %}
 <div style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
 
     {% include 'uploader/_page_header.html' with titulo='Reporte de inadmitidos' subtitulo='Selecciona el rango de fechas para generar la tabla y descargar el Excel. El vuelo y el origen se detectan automáticamente de las cargas del rango.' %}
+
+    {# SR sin R ni I: cuentan en el reporte del día, no en el Reporte completo; se listan para corregirlas. #}
+    {% if sr_sin_estado %}
+    <div id="sr-sin-estado" class="ds-alert ds-alert-warning" role="alert">
+        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>
+        <div>
+            <b>{{ sr_sin_estado|length }} registro{{ sr_sin_estado|length|pluralize }} con Segunda Revisión sin estado.</b>
+            No se cuenta{{ sr_sin_estado|length|pluralize:"n" }} en el Reporte completo hasta que se le{{ sr_sin_estado|length|pluralize }} asigne Rechazo o Internación (o se le{{ sr_sin_estado|length|pluralize }} quite la SR).
+            {# Durante el turno las SR se capturan antes que su estado: sólo los 3 primeros (los más viejos) a la vista, el resto con "Leer más". #}
+            <ul id="sr-sin-estado-lista" style="margin:6px 0 0; padding-left:18px;">
+                {% for r in sr_sin_estado %}
+                <li{% if forloop.counter > 3 %} class="sr-extra hidden"{% endif %}>
+                    {{ r.vuelo_fecha|utc|date:"d/m/Y" }} · {{ r.vuelo_numero }} · {{ r.nombre_pasajero }} · {{ r.numero_documento|default:"Sin documento" }} · {{ r.pais_emision }}
+                    — <a href="{% url 'admin_list' %}?search={{ r.numero_documento|default:r.nombre_pasajero|urlencode }}">Corregir</a>
+                </li>
+                {% endfor %}
+            </ul>
+            {% if sr_sin_estado|length > 3 %}
+            <button type="button" class="ds-btn ds-btn-ghost ds-btn-sm" style="margin-top:6px;"
+                    onclick="toggleSrSinEstado(this)" aria-expanded="false" aria-controls="sr-sin-estado-lista"
+                    data-mas="Leer más ({{ sr_sin_estado|length|add:'-3' }})">Leer más ({{ sr_sin_estado|length|add:'-3' }})</button>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
 
     {# Rango de fechas + acciones #}
     <section class="ds-card">

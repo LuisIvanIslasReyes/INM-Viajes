@@ -1,6 +1,6 @@
 from django.core.management.base import BaseCommand
-from uploader.models import Registro
-from uploader.views import obtener_nacionalidad
+from apps.uploader.models import Registro
+from apps.uploader.utils.parsers import PAISES_ISO, obtener_nacionalidad
 
 
 class Command(BaseCommand):
@@ -14,7 +14,9 @@ class Command(BaseCommand):
         self.stdout.write(f'📊 Procesando {total} registros...\n')
         
         for i, registro in enumerate(registros, 1):
-            if registro.codigo_pais_emision:
+            # Sólo códigos conocidos: uno fuera del diccionario (p. ej. 'XX' de
+            # captura manual) devolvería el código y pisaría el nombre actual.
+            if registro.codigo_pais_emision and registro.codigo_pais_emision.strip().upper() in PAISES_ISO:
                 nacionalidad_parseada = obtener_nacionalidad(registro.codigo_pais_emision)
                 if nacionalidad_parseada != registro.pais_emision:
                     registro.pais_emision = nacionalidad_parseada

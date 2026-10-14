@@ -78,3 +78,33 @@
 .ds-toggle-cell.is-on-r  { background:var(--ds-danger-container); border-color:#F4B4AE; color:var(--ds-danger); }
 .ds-toggle-cell.is-on-i  { background:var(--ds-info-container); border-color:#B9D2E5; color:var(--ds-info); }
 #registrosTable tbody tr:hover td[style*="sticky"] { background:var(--ds-hover-bg) !important; }
+
+/* ====================================================================
+   Buscador de nacionalidad (combobox ARIA): input .ds-search + lista
+   desplegable que se filtra en cada tecla (sin acentos ni mayúsculas).
+   ==================================================================== */
+/* .ds-card recorta con overflow:hidden; la barra de filtros debe dejar salir la lista. */
+.ds-card-toolbar { overflow: visible; }
+.ds-combo-list {
+  position: absolute; left: 0; right: 0; top: calc(100% + 4px); z-index: var(--ds-z-dropdown);
+  max-height: 320px; overflow-y: auto; margin: 0; padding: var(--ds-sp-1);
+  list-style: none;
+  background: var(--ds-bg-elevated);
+  border: 1px solid var(--ds-border); border-radius: var(--ds-radius-lg);
+  box-shadow: var(--ds-shadow-sm);
+}
+.ds-combo-list[hidden] { display: none; }
+.ds-combo-opt {
+  display: flex; align-items: center; gap: var(--ds-sp-2);
+  min-height: 38px; padding: 0 var(--ds-sp-3);
+  border-radius: var(--ds-radius-md);
+  font-size: var(--ds-text-sm); color: var(--ds-text); cursor: pointer;
+}
+.ds-combo-opt:hover { background: var(--ds-hover-bg); }
+.ds-combo-opt.is-active { background: var(--ds-selected-bg); box-shadow: inset 3px 0 0 var(--ds-primary); }
+.ds-combo-opt[aria-selected="true"] { font-weight: 700; }
+.ds-combo-opt .ds-combo-check { width: 16px; flex: none; color: var(--ds-primary); }
+.ds-combo-opt .ds-combo-name { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.ds-combo-opt mark { background: var(--ds-guinda-100); color: inherit; border-radius: 2px; padding: 0 1px; }
+.ds-combo-opt .ds-combo-count { flex: none; font-size: var(--ds-text-xs); color: var(--ds-text-muted); font-variant-numeric: tabular-nums; }
+.ds-combo-empty { padding: var(--ds-sp-3); font-size: var(--ds-text-sm); color: var(--ds-text-muted); }

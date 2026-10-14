@@ -2,7 +2,11 @@
 let searchTimeout;
 const searchInput = document.getElementById('searchInput');
 const clearSearchBtn = document.getElementById('clearSearch');
-const batchFilter = document.getElementById('batchFilter');
+const paisFilter = document.getElementById('paisFilter');
+// País aplicado (el del URL); el texto del input puede diferir mientras se escribe.
+let paisSeleccionado = paisFilter ? paisFilter.dataset.seleccionado : '';
+// El lote ya no tiene selector; llega por ?batch= desde Cargas y se quita con su chip.
+let loteActivo = new URLSearchParams(window.location.search).get('batch') || '';
 const segundaRevisionFilter = document.getElementById('segundaRevisionFilter');  // ← CAMBIO 1
 const rechazadoFilter = document.getElementById('rechazadoFilter');              // ← CAMBIO 2
 const internacionFilter = document.getElementById('internacionFilter');          // ← CAMBIO 3
@@ -73,11 +77,12 @@ function clearSearchFilter() {
     applyFilters();
 }
 
-// Aplicar filtros cuando cambien
-if (batchFilter) {
-    batchFilter.addEventListener('change', applyFilters);
+function quitarFiltroLote() {
+    loteActivo = '';
+    applyFilters();
 }
 
+// Aplicar filtros cuando cambien
 if (segundaRevisionFilter) {                                                    // ← CAMBIO 4
     segundaRevisionFilter.addEventListener('change', applyFilters);
 }
@@ -99,9 +104,14 @@ function applyFilters() {
         params.set('search', searchValue);
     }
     
-    // Batch
-    if (batchFilter.value) {
-        params.set('batch', batchFilter.value);
+    // Nacionalidad (país de emisión)
+    if (paisSeleccionado) {
+        params.set('pais', paisSeleccionado);
+    }
+
+    // Lote (solo si se llegó con ?batch=)
+    if (loteActivo) {
+        params.set('batch', loteActivo);
     }
     
     // Segunda Revisión (SR)
@@ -122,6 +132,167 @@ function applyFilters() {
     // Redirigir con los nuevos filtros (siempre a la página 1)
     window.location.search = params.toString();
 }
+
+// =====================================================================
+// Buscador de nacionalidad (combobox): la lista se filtra en cada tecla
+// sin distinguir acentos ni mayúsculas ("esta" → Estados Unidos,
+// "mexico" → México). Al elegir un país se recarga con ?pais=.
+// =====================================================================
+(function () {
+    if (!paisFilter) return;
+    const lista = document.getElementById('paisListbox');
+    const btnLimpiar = document.getElementById('paisClear');
+    const dataEl = document.getElementById('nacionalidadesData');
+    const placeholderBase = paisFilter.placeholder;
+
+    function normalizar(s) {
+        return (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+    }
+
+    function escapar(s) {
+        return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+    }
+
+    const paises = (dataEl ? JSON.parse(dataEl.textContent) : []).map((p) => ({
+        nombre: p.pais_emision,
+        total: p.total,
+        clave: normalizar(p.pais_emision),
+    }));
+    // Primera opción con el texto vacío: quita el filtro.
+    const todas = { nombre: '', total: paises.reduce((s, p) => s + p.total, 0), clave: '' };
+    let visibles = [];
+    let activo = -1;
+
+    // Resalta la coincidencia. Quitar acentos conserva la longitud en los
+    // nombres en español, así que los índices de la clave sirven en el original.
+    function resaltar(p, q) {
+        const i = q ? p.clave.indexOf(q) : -1;
+        if (i < 0 || p.clave.length !== p.nombre.length) return escapar(p.nombre);
+        return escapar(p.nombre.slice(0, i)) + '<mark>' + escapar(p.nombre.slice(i, i + q.length)) + '</mark>' + escapar(p.nombre.slice(i + q.length));
+    }
+
+    // Orden: empieza con el texto → empieza una palabra → lo contiene.
+    // El sort es estable, así que dentro de cada grupo queda alfabético.
+    function filtrar(q) {
+        if (!q) return [todas, ...paises];
+        const rango = (p) => {
+            const i = p.clave.indexOf(q);
+            if (i < 0) return -1;
+            if (i === 0) return 0;
+            return p.clave[i - 1] === ' ' ? 1 : 2;
+        };
+        return paises
+            .map((p) => ({ p, r: rango(p) }))
+            .filter((x) => x.r >= 0)
+            .sort((a, b) => a.r - b.r)
+            .map((x) => x.p);
+    }
+
+    function render(q) {
+        visibles = filtrar(q);
+        if (!visibles.length) {
+            lista.innerHTML = `<li class="ds-combo-empty" role="presentation">Sin coincidencias para “${escapar(paisFilter.value.trim())}”</li>`;
+        } else {
+            lista.innerHTML = visibles.map((p, i) => {
+                const sel = p.nombre === paisSeleccionado;
+                const nombre = p === todas ? 'Todas las nacionalidades' : resaltar(p, q);
+                return `<li id="paisOpt-${i}" class="ds-combo-opt" role="option" aria-selected="${sel}" data-i="${i}">` +
+                    `<svg class="ds-icon ds-icon-sm ds-combo-check" aria-hidden="true" viewBox="0 0 24 24">${sel ? '<path d="M20 6 9 17l-5-5"/>' : ''}</svg>` +
+                    `<span class="ds-combo-name">${nombre}</span>` +
+                    `<span class="ds-combo-count">${p.total.toLocaleString('es-MX')}</span></li>`;
+            }).join('');
+        }
+        abrir();
+        // Con texto, la primera coincidencia queda activa (Enter la elige);
+        // sin texto, se posiciona sobre el país ya aplicado.
+        marcarActivo(q ? (visibles.length ? 0 : -1) : visibles.findIndex((p) => p.nombre === paisSeleccionado));
+    }
+
+    function marcarActivo(i) {
+        const prev = lista.querySelector('.is-active');
+        if (prev) prev.classList.remove('is-active');
+        activo = i;
+        if (i < 0) {
+            paisFilter.removeAttribute('aria-activedescendant');
+            return;
+        }
+        const opt = document.getElementById(`paisOpt-${i}`);
+        opt.classList.add('is-active');
+        // Scroll solo dentro de la lista (scrollIntoView movería también la página)
+        const arriba = opt.offsetTop;
+        const abajo = arriba + opt.offsetHeight;
+        if (arriba < lista.scrollTop) lista.scrollTop = arriba;
+        else if (abajo > lista.scrollTop + lista.clientHeight) lista.scrollTop = abajo - lista.clientHeight;
+        paisFilter.setAttribute('aria-activedescendant', opt.id);
+    }
+
+    function abrir() {
+        lista.hidden = false;
+        paisFilter.setAttribute('aria-expanded', 'true');
+    }
+
+    function cerrar() {
+        lista.hidden = true;
+        paisFilter.setAttribute('aria-expanded', 'false');
+        paisFilter.removeAttribute('aria-activedescendant');
+        activo = -1;
+    }
+
+    function elegir(nombre) {
+        cerrar();
+        paisFilter.value = nombre;
+        if (nombre === paisSeleccionado) return;
+        paisSeleccionado = nombre;
+        applyFilters();
+    }
+
+    // Al entrar se vacía el campo para teclear directo; el país aplicado
+    // queda como placeholder y se restaura al salir sin elegir.
+    paisFilter.addEventListener('focus', () => {
+        paisFilter.value = '';
+        paisFilter.placeholder = paisSeleccionado || placeholderBase;
+        render('');
+    });
+
+    paisFilter.addEventListener('blur', () => {
+        cerrar();
+        paisFilter.value = paisSeleccionado;
+        paisFilter.placeholder = placeholderBase;
+    });
+
+    paisFilter.addEventListener('input', () => render(normalizar(paisFilter.value.trim())));
+
+    paisFilter.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+            e.preventDefault();
+            if (lista.hidden) { render(normalizar(paisFilter.value.trim())); return; }
+            if (!visibles.length) return;
+            const paso = e.key === 'ArrowDown' ? 1 : -1;
+            marcarActivo((activo + paso + visibles.length) % visibles.length);
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (activo >= 0) elegir(visibles[activo].nombre);
+        } else if (e.key === 'Escape') {
+            e.preventDefault();
+            paisFilter.blur();
+        }
+    });
+
+    // mousedown (no click) para elegir antes de que el input pierda el foco
+    lista.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        const opt = e.target.closest('.ds-combo-opt');
+        if (opt) elegir(visibles[Number(opt.dataset.i)].nombre);
+    });
+
+    // ✕ visible solo con texto: con país aplicado lo quita; si no, limpia lo tecleado.
+    btnLimpiar.addEventListener('mousedown', (e) => e.preventDefault());
+    btnLimpiar.addEventListener('click', () => {
+        if (paisSeleccionado) { elegir(''); return; }
+        paisFilter.value = '';
+        render('');
+    });
+})();
 
 // Modal functions
 function openEditModal(registroId, comentario) {

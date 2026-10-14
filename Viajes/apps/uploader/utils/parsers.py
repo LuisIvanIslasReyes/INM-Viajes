@@ -49,6 +49,8 @@ PAISES_ISO = {
     'TKM': 'Turkmenistán', 'TUR': 'Turquía', 'TUV': 'Tuvalu', 'UKR': 'Ucrania', 'UGA': 'Uganda',
     'URY': 'Uruguay', 'UZB': 'Uzbekistán', 'VUT': 'Vanuatu', 'VEN': 'Venezuela', 'VNM': 'Vietnam',
     'YEM': 'Yemen', 'DJI': 'Yibuti', 'ZMB': 'Zambia', 'ZWE': 'Zimbabue',
+    # Territorios y códigos de pasaporte (ICAO 9303) que llegan en los manifiestos
+    'HKG': 'Hong Kong', 'MAC': 'Macao', 'TWN': 'Taiwán', 'GBN': 'Reino Unido (BNO)',
     # Códigos adicionales de 2 letras comunes
     'CN': 'China', 'US': 'Estados Unidos', 'MX': 'México', 'BR': 'Brasil', 'AR': 'Argentina',
     'CA': 'Canadá', 'JP': 'Japón', 'KR': 'Corea del Sur', 'IN': 'India', 'GB': 'Reino Unido',
