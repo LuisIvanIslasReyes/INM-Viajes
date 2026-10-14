@@ -138,7 +138,7 @@
 
     <!-- ===================== CONTENIDO ===================== -->
     <main id="contenido" class="{% if user.is_authenticated %}ds-main-with-side{% endif %}" style="min-height: calc(100vh - 56px);">
-        <div class="ds-container" style="padding-block: var(--ds-sp-6);">
+        <div class="ds-container {% block container_class %}{% endblock %}" style="padding-block: var(--ds-sp-6);">
             {% block page_header %}{% endblock %}
             {% block content %}{% endblock %}
         </div>

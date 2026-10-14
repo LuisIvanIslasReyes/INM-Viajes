@@ -3,7 +3,7 @@
 {# ====================================================================
    FASE 7 · REPORTE POR RANGO DE FECHAS  (re-skin sobre la vista real)
    Conserva el context real (estadisticas_por_fecha, fecha_inicio/fecha_fin,
-   total_registros) y TODOS los hooks de date_range_report.js:
+   page_obj/querystring: 15 días por página) y TODOS los hooks de date_range_report.js:
      #fecha_inicio #fecha_fin, toggleFiltros()/#filtros-content/#filtros-toggle,
      toggleFecha(this)/.fecha-grupo/.fecha-content/.fecha-toggle,
      abrirModalPin(...) abrirModalPinBinacional(...),
@@ -79,6 +79,13 @@
     </section>
 
     {% if estadisticas_por_fecha %}
+    <p class="ds-small" style="margin:0; color:var(--ds-text-muted);">
+        {% if fecha_inicio or fecha_fin %}
+        {{ page_obj.paginator.count }} día{{ page_obj.paginator.count|pluralize:"s" }} con vuelos en el rango seleccionado.
+        {% else %}
+        Mostrando los últimos {{ page_obj.paginator.per_page }} días con vuelos. Usa el filtro para consultar un día o rango en concreto.
+        {% endif %}
+    </p>
     {% for stat in estadisticas_por_fecha %}
     <section class="ds-card fecha-grupo" style="padding:0;">
         {# Encabezado de fecha — toggleFecha(this) colapsa .fecha-content #}
@@ -153,11 +160,23 @@
     </section>
     {% endfor %}
 
-    {% elif fecha_inicio or fecha_fin %}
+    {% if page_obj.has_other_pages %}
+    <nav aria-label="Paginación" style="display:flex; justify-content:center; gap:8px;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">‹ Más recientes</a>
+        {% endif %}
+        <span class="ds-btn ds-btn-sm ds-btn-ghost ds-tabular" aria-current="page">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">Anteriores ›</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+
+    {% else %}
     <div class="ds-empty">
-        <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></div>
-        <h3 class="ds-h3">Sin casos especiales en este rango</h3>
-        <p class="ds-empty-desc">Todos los pasajeros cruzaron correctamente (sin marcas de SR, R o I).</p>
+        <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg></div>
+        <h3 class="ds-h3">Sin vuelos {% if fecha_inicio or fecha_fin %}en este rango{% else %}registrados{% endif %}</h3>
+        <p class="ds-empty-desc">No hay registros cargados para las fechas seleccionadas.</p>
     </div>
     {% endif %}
 </div>

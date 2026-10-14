@@ -21,8 +21,10 @@
 {% block title %}{% if is_superuser %}Registros — Admin{% else %}Mis registros{% endif %} · INM Viajes{% endblock %}
 
 {% block extra_css %}
-<link rel="stylesheet" href="{% static 'css/admin_list.css' %}?v=2">
+<link rel="stylesheet" href="{% static 'css/admin_list.css' %}?v=4">
 {% endblock %}
+
+{% block container_class %}ds-container-full{% endblock %}
 
 {% block content %}
 <div class="space-y-6" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
@@ -127,7 +129,7 @@
                         <th scope="col" class="ds-stick ds-stick-com">Comentario</th>
                         <th scope="col" class="ds-stick ds-stick-acc">Acciones</th>
                         <th scope="col">Vuelo</th><th scope="col">Fecha</th><th scope="col">Salida</th><th scope="col">Llegada</th><th scope="col">Pasajero</th>
-                        <th scope="col">Documento</th><th scope="col">Asiento</th><th scope="col">Nacimiento</th><th scope="col">Género</th><th scope="col">País emisión</th>
+                        <th scope="col">Documento</th><th scope="col">Nacimiento</th><th scope="col">Género</th><th scope="col">País emisión</th><th scope="col">Asiento</th>
                         <th scope="col">Equipaje</th><th scope="col">Piezas</th><th scope="col">Peso</th><th scope="col">Check-in</th><th scope="col">Contacto gral.</th>
                         <th scope="col">Contacto reserva</th><th scope="col">Contacto pasajero</th><th scope="col">Ticket</th><th scope="col">Hora salida</th><th scope="col">Cód. país</th>
                     </tr>
@@ -194,10 +196,10 @@
                             <span class="ds-badge ds-badge-danger" title="Pasajero sin número de documento — revisar en Casos Especiales"><svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></svg>Sin documento</span>
                         </td>
                         {% endif %}
-                        <td><span class="ds-badge ds-badge-info">{{ registro.numero_asiento }}</span></td>
                         <td class="ds-tabular" style="font-size:var(--ds-text-xs);">{% if registro.fecha_nacimiento %}{{ registro.fecha_nacimiento|date:"d/m/Y" }}{% else %}—{% endif %}</td>
                         <td style="text-align:center;">{% if registro.genero == 'M' %}<span class="ds-badge ds-badge-info">M</span>{% elif registro.genero == 'F' %}<span class="ds-badge ds-badge-brand">F</span>{% else %}{{ registro.genero }}{% endif %}</td>
                         <td>{{ registro.pais_emision }}</td>
+                        <td><span class="ds-badge ds-badge-info">{{ registro.numero_asiento }}</span></td>
                         <td class="truncate" style="font-size:var(--ds-text-xs); max-width:200px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;" title="{{ registro.numero_equipaje }}">{{ registro.numero_equipaje|default:"—" }}</td>
                         <td class="ds-tabular" style="text-align:center;">{{ registro.piezas }}</td>
                         <td class="ds-tabular" style="text-align:center;">{{ registro.peso }} kg</td>

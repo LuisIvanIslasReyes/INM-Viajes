@@ -1,3 +1,8 @@
+/* La tabla de registros tiene 25 columnas: usa el 75 % del ancho disponible
+   (nunca menos que el tope normal de --ds-container-max). */
+/* .ds-container.ds-container-full { max-width: none; } */
+.ds-container.ds-container-full { max-width: max(var(--ds-container-max), 82%); }
+
 /* ====================================================================
    Columnas congeladas de la tabla de registros (SR · R · I · Comentario
    · Acciones). Anchos FIJOS con box-sizing:border-box para que los offsets
