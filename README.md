@@ -29,13 +29,49 @@ python manage.py migrate
 python manage.py createsuperuser
 ```
 
-### 4. Ejecutar el Servidor
+### 4. Ejecutar el Servidor (desarrollo)
 
 ```powershell
 python manage.py runserver
 ```
 
 Accede a: `http://127.0.0.1:8000/`
+
+---
+
+## Producción: servicio de Windows (NSSM)
+
+En el servidor, Django corre como el servicio de Windows **INMViajes** ("INM Viajes (Django)"),
+registrado con [NSSM](https://nssm.cc/). Escucha en el puerto `8002` con `Viajes.settings.production`.
+Arranca solo después de un reinicio o un apagón (inicio automático retrasado y dependencia de `MySQL80`)
+y NSSM lo vuelve a levantar si el proceso se cae.
+
+Los scripts están en la carpeta `Viajes` y **se ejecutan como Administrador**. La ruta de `nssm.exe`
+está definida al inicio de cada uno (`C:\Users\usuariobc\Documents\nssm-2.24\win64\nssm.exe`).
+
+| Script | Para qué |
+|---|---|
+| `instalar_servicio.bat` | Crea (o reinstala) el servicio y lo arranca. Solo se usa una vez, o si cambia la ruta del proyecto/entorno. |
+| `actualizar_produccion.bat` | Despliegue manual: detiene el servicio, levanta la página de mantenimiento y muestra el menú (migrate / collectstatic / ambos / solo levantar). |
+| `desinstalar_servicio.bat` | Detiene y elimina el servicio. |
+
+### Actualizar producción
+
+1. Ejecuta `actualizar_produccion.bat` como Administrador. Los usuarios verán la página de mantenimiento.
+2. Copia el código nuevo (y, si cambió `requirements.txt`, instala los paquetes en el `env`).
+3. Elige en el menú: **M** migraciones, **S** collectstatic, **A** ambos, **R** solo levantar, **X** salir dejando el mantenimiento.
+   Si `migrate` o `collectstatic` fallan, el servicio no se levanta y se regresa al menú.
+
+### Comandos útiles
+
+```powershell
+C:\Users\usuariobc\Documents\nssm-2.24\win64\nssm.exe status INMViajes
+C:\Users\usuariobc\Documents\nssm-2.24\win64\nssm.exe restart INMViajes
+```
+
+Log del servicio: `Viajes\logs\servicio.log` (rota a los 10 MB).
+
+> No corras `python manage.py runserver 0.0.0.0:8002` a mano en el servidor: chocaría con el servicio en el puerto 8002.
 
 ---
 
