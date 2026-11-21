@@ -24,6 +24,7 @@ INSTALLED_APPS = [
     'apps.camara',
     'apps.directorio',
     'apps.redacciones',
+    'apps.empleados',
 ]
 
 MIDDLEWARE = [
@@ -118,3 +119,14 @@ LOGOUT_REDIRECT_URL = '/accounts/login/'
 #   SOFFICE_BIN=C:\Program Files\LibreOffice\program\soffice.exe
 # Si no está disponible, la vista previa se degrada a solo-descarga.
 SOFFICE_BIN = config('SOFFICE_BIN', default='soffice')
+
+# ── Catálogo de empleados replicado de la Estancia (apps.empleados) ──
+# URL completa del endpoint de integración de la Estancia, p. ej.
+#   http://10.100.152.XX/estancia/api/v1/personal/integracion/empleados/
+# y la API key que la Estancia tiene registrada para Viajes en INTEGRACION_API_KEYS.
+# Vacíos = la sincronización falla con un mensaje claro; el catálogo local sigue sirviendo.
+ESTANCIA_EMPLEADOS_URL = config('ESTANCIA_EMPLEADOS_URL', default='')
+ESTANCIA_API_KEY = config('ESTANCIA_API_KEY', default='')
+ESTANCIA_API_TIMEOUT = config('ESTANCIA_API_TIMEOUT', default=15, cast=int)
+# Solo para HTTPS con certificado interno no reconocido por Windows. No desactivar si es HTTP.
+ESTANCIA_API_VERIFICAR_SSL = config('ESTANCIA_API_VERIFICAR_SSL', default=True, cast=bool)

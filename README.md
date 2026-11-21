@@ -75,6 +75,47 @@ Log del servicio: `Viajes\logs\servicio.log` (rota a los 10 MB).
 
 ---
 
+## Catálogo de empleados (réplica de la Estancia)
+
+El módulo **Empleados** (`apps/empleados`, menú lateral → Empleados) tiene una copia local de los
+empleados de la Estancia (ProyectoEstancia → Personal). La Estancia es la fuente de verdad: las altas,
+correcciones y bajas se hacen allá en Recursos Humanos. Viajes solo copia, para seguir teniendo el
+catálogo aunque la Estancia se apague. Lo único propio de Viajes es la marca de **firmante habitual**
+(se muestra primero en el buscador).
+
+- Nunca se borran empleados: los dados de baja (o que dejan de venir) quedan **inactivos**.
+- Si la Estancia no responde, se sigue usando la última copia y la pantalla avisa del intento fallido.
+- `GET /empleados/buscar/?q=&municipio=` devuelve JSON para autocompletar firmante y testigos.
+
+### Configuración (`.env` de la raíz)
+
+```ini
+ESTANCIA_EMPLEADOS_URL=http://<ip-estancia>/<ruta>/api/v1/personal/integracion/empleados/
+ESTANCIA_API_KEY=<la misma clave que la Estancia tiene en INTEGRACION_API_KEYS como viajes=...>
+# Opcionales
+ESTANCIA_API_TIMEOUT=15
+ESTANCIA_API_VERIFICAR_SSL=True
+```
+
+En el `.env` de la Estancia va la contraparte: `INTEGRACION_API_KEYS=viajes=<clave>`. Generar la clave con
+`python -c "import secrets; print(secrets.token_urlsafe(32))"`.
+
+### Sincronización automática
+
+1. Prueba a mano: `sincronizar_empleados.bat` (resultado en `Viajes\logs\sincronizar_empleados.log`).
+2. Como Administrador, ejecuta `programar_sincronizacion_empleados.bat`: crea la tarea de Windows
+   `INMViajes\SincronizarEmpleados`, cada 15 minutos, como SYSTEM.
+
+También hay un botón **Sincronizar ahora** en la pantalla (SuperUser y Aeropuerto).
+
+### Tests sin MySQL
+
+```powershell
+python manage.py test apps.empleados --settings=Viajes.settings.test
+```
+
+---
+
 ## Uso del Sistema
 
 ### Para Usuarios Normales:

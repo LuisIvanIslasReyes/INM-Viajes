@@ -1,0 +1,164 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   EMPLEADOS — LISTADO (réplica local del catálogo de la Estancia)
+     context: page_obj, total, busqueda (q), municipio, municipios
+              [(id, nombre)], inactivos, querystring, ultima_ok,
+              ultimo_intento (SincronizacionEmpleados), puede_gestionar.
+   Los datos se corrigen en la Estancia (RRHH), no aquí.
+   ==================================================================== #}
+{% block title %}Empleados · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="max-width:1100px; display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+
+    {% include 'uploader/_page_header.html' with titulo='Empleados' subtitulo='Catálogo replicado de la Estancia. Las correcciones se hacen allá, en Recursos Humanos.' %}
+
+    {# ---------- Estado de la sincronización ---------- #}
+    <section class="ds-card">
+        <div class="ds-card-body" style="display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:12px;">
+            <div style="display:flex; flex-direction:column; gap:4px;">
+                {% if ultima_ok %}
+                <p class="ds-small" style="margin:0;">
+                    Última actualización desde la Estancia:
+                    <strong>{{ ultima_ok.terminada_en|date:"d/m/Y H:i" }}</strong>
+                    ({{ ultima_ok.terminada_en|timesince }})
+                </p>
+                {% else %}
+                <p class="ds-small" style="margin:0;"><strong>Aún no se ha sincronizado el catálogo.</strong></p>
+                {% endif %}
+                {% if ultimo_intento and not ultimo_intento.exitosa %}
+                <p class="ds-small" style="margin:0;">
+                    <span class="ds-badge ds-badge-danger">Último intento falló</span>
+                    {{ ultimo_intento.iniciada_en|date:"d/m/Y H:i" }} · {{ ultimo_intento.error }}
+                </p>
+                {% endif %}
+            </div>
+            {% if puede_gestionar %}
+            <form method="post" action="{% url 'empleados:sincronizar' %}">
+                {% csrf_token %}
+                <button type="submit" class="ds-btn ds-btn-secondary">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 12a9 9 0 0 1-15.5 6.2M3 12a9 9 0 0 1 15.5-6.2M21 3v6h-6M3 21v-6h6"/></svg>
+                    Sincronizar ahora
+                </button>
+            </form>
+            {% endif %}
+        </div>
+    </section>
+
+    <p class="ds-small" style="margin:0;">{{ total }} empleado{{ total|pluralize }}{% if inactivos %} (incluye inactivos){% endif %}</p>
+
+    {# ---------- Filtros ---------- #}
+    <section class="ds-card">
+        <div class="ds-card-body">
+            <form method="get" style="display:flex; flex-wrap:wrap; gap:var(--ds-sp-4); align-items:flex-end;">
+                <div class="ds-field" style="flex:1; min-width:240px;">
+                    <label class="ds-label" for="q">Buscar</label>
+                    <div class="ds-search">
+                        <svg class="ds-icon ds-search-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                        <input type="text" name="q" id="q" value="{{ busqueda }}" placeholder="Nombre, apellidos o número de empleado…" class="ds-input">
+                    </div>
+                </div>
+                <div class="ds-field" style="width:220px;">
+                    <label class="ds-label" for="municipio">Municipio</label>
+                    <select name="municipio" id="municipio" class="ds-select">
+                        <option value="">Todos</option>
+                        {% for id_mun, nombre_mun in municipios %}
+                        <option value="{{ id_mun }}" {% if municipio == id_mun|stringformat:"s" %}selected{% endif %}>{{ nombre_mun }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <label class="ds-small" style="display:flex; align-items:center; gap:6px; padding-bottom:10px;">
+                    <input type="checkbox" name="inactivos" value="1" {% if inactivos %}checked{% endif %}>
+                    Incluir inactivos
+                </label>
+                <button type="submit" class="ds-btn ds-btn-primary">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    Buscar
+                </button>
+                {% if busqueda or municipio or inactivos %}
+                <a href="{% url 'empleados:listado' %}" class="ds-btn ds-btn-ghost">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></svg>
+                    Limpiar
+                </a>
+                {% endif %}
+            </form>
+        </div>
+    </section>
+
+    {# ---------- Resultados ---------- #}
+    <section class="ds-card" style="padding:0;">
+        <div class="ds-table-wrap" tabindex="0" role="region" aria-label="Empleados" style="border:0;">
+            <table class="ds-table">
+                <thead><tr>
+                    <th scope="col">No.</th>
+                    <th scope="col">Nombre</th>
+                    <th scope="col">Cargo</th>
+                    <th scope="col">Plaza</th>
+                    <th scope="col">Municipio</th>
+                    <th scope="col">Estado</th>
+                    <th scope="col" style="text-align:right;">Firmante habitual</th>
+                </tr></thead>
+                <tbody>
+                    {% for e in page_obj %}
+                    <tr>
+                        <td class="ds-tabular">{{ e.numero_empleado|default:"—" }}</td>
+                        <td style="font-weight:600;">{{ e.nombre_para_oficio }}</td>
+                        <td>{{ e.cargo|default:"—" }}</td>
+                        <td>{{ e.plaza|default:"—" }}</td>
+                        <td>{{ e.municipio|default:"—" }}</td>
+                        <td>
+                            {% if not e.activo %}
+                            <span class="ds-badge ds-badge-danger">Inactivo</span>
+                            {% else %}
+                            <span class="ds-badge">{{ e.estado_estancia|default:"—"|title }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="ds-td-actions">
+                                {% if puede_gestionar %}
+                                <form method="post" action="{% url 'empleados:alternar_firmante' e.pk %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="querystring" value="{{ request.GET.urlencode }}">
+                                    <button type="submit" class="ds-btn ds-btn-sm {% if e.firmante_habitual %}ds-btn-primary{% else %}ds-btn-ghost{% endif %}"
+                                            aria-pressed="{% if e.firmante_habitual %}true{% else %}false{% endif %}"
+                                            title="{% if e.firmante_habitual %}Quitar de firmantes habituales{% else %}Marcar como firmante habitual{% endif %}">
+                                        <svg class="ds-icon ds-icon-sm" aria-hidden="true" viewBox="0 0 24 24"><path d="m12 2 3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
+                                        {% if e.firmante_habitual %}Sí{% else %}No{% endif %}
+                                    </button>
+                                </form>
+                                {% elif e.firmante_habitual %}
+                                <span class="ds-badge ds-badge-success">Sí</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="ds-empty">
+                                <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                                <h3 class="ds-h3">{% if busqueda or municipio %}Sin coincidencias{% else %}Catálogo vacío{% endif %}</h3>
+                                <p class="ds-empty-desc">{% if busqueda or municipio %}Ajusta la búsqueda o el municipio.{% else %}Sincroniza con la Estancia para traer la lista de empleados.{% endif %}</p>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+
+    {# ---------- Paginación ---------- #}
+    {% if page_obj.paginator.num_pages > 1 %}
+    <nav aria-label="Paginación" style="display:flex; justify-content:center; gap:8px;">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">‹ Anterior</a>
+        {% endif %}
+        <span class="ds-btn ds-btn-sm ds-btn-ghost ds-tabular" aria-current="page">Página {{ page_obj.number }} de {{ page_obj.paginator.num_pages }}</span>
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}{% if querystring %}&{{ querystring }}{% endif %}" class="ds-btn ds-btn-sm ds-btn-secondary">Siguiente ›</a>
+        {% endif %}
+    </nav>
+    {% endif %}
+</div>
+{% endblock %}
