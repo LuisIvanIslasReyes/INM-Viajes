@@ -97,6 +97,8 @@ def buscar(request):
             'titulo': e.titulo_abreviado,
             'cargo': e.cargo,
             'plaza': e.plaza,
+            'plaza_descripcion': e.plaza_descripcion,
+            'jerarquia': e.jerarquia,
             'sexo': e.sexo,
             'municipio': e.municipio,
             'firmante_habitual': e.firmante_habitual,
@@ -110,7 +112,10 @@ def buscar(request):
 @_gestion_required
 def sincronizar_ahora(request):
     try:
-        r = sincronizar(origen=SincronizacionEmpleados.Origen.MANUAL, usuario=request.user)
+        # Manual = completa: quien pulsa el botón espera el catálogo entero al día.
+        r = sincronizar(
+            origen=SincronizacionEmpleados.Origen.MANUAL, usuario=request.user, completa=True,
+        )
     except ErrorSincronizacion as e:
         messages.error(request, f'No se pudo sincronizar: {e} Se sigue usando la última copia.')
     else:

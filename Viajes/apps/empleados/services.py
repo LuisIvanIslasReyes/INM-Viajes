@@ -1,23 +1,40 @@
 """
 Sincronización de la réplica de empleados contra la Estancia.
 
-    GET {ESTANCIA_EMPLEADOS_URL}?incluir_bajas=1&page_size=1000&page=N
-    Header: X-API-Key: {ESTANCIA_API_KEY}
+    GET {ESTANCIA_EMPLEADOS_URL}        Header: X-API-Key: {ESTANCIA_API_KEY}
 
-Se pide el catálogo COMPLETO cada vez (son cientos de filas): así no dependemos de
-fechas de modificación (un cambio de jerarquía en la Estancia no mueve la fecha del
-empleado) y quien deje de aparecer se marca inactivo.
+Dos modos (los dos los ofrece la Estancia en el mismo endpoint):
+
+**Completa** — `?incluir_bajas=1&page_size=1000&page=N`. Trae todo el catálogo y
+marca inactivo a quien ya no venga (también a los borrados físicamente en la
+Estancia, que la incremental no ve). Corre de noche y con el botón "Sincronizar
+ahora", y siempre que no haya un `proximo_desde` del que partir.
+
+**Incremental** — `?modificado_desde=<proximo_desde anterior>&page_size=1000`. Solo
+lo que cambió (bajas incluidas). La Estancia pagina por cursor: `next` trae
+`modificado_desde` + `despues_de_id`; aquí se toman esos dos parámetros y se
+aplican a NUESTRA URL base, en vez de seguir el `next` tal cual, porque detrás de
+nginx la Estancia puede armar el `next` con otro host o sin el prefijo.
+
+Ambos modos devuelven `proximo_desde`. Se guarda el MENOR de todas las páginas (el
+de la primera): un cambio que entra mientras se recorren las páginas queda
+cubierto la próxima vez. Por eso pueden llegar filas repetidas; el upsert por
+`id_estancia` lo absorbe.
+
+Si la Estancia aún no devuelve `proximo_desde` (versión vieja), la siguiente vez se
+hace otra completa: nunca se pide una incremental sin un punto de partida.
 
 Reglas de seguridad:
   - Si la descarga falla a medias, no se toca la réplica (todo o nada).
-  - Si la Estancia responde 0 empleados y aquí hay activos, se aborta: casi seguro es
-    un error de configuración, y no queremos dejar a todos inactivos.
+  - En la completa, si la Estancia responde 0 empleados y aquí hay activos, se
+    aborta: casi seguro es un error de configuración.
 """
 import json
 import ssl
 import urllib.error
 import urllib.parse
 import urllib.request
+from typing import NamedTuple
 
 from django.conf import settings
 from django.db import transaction
@@ -26,8 +43,10 @@ from django.utils.dateparse import parse_datetime
 
 from .models import Empleado, SincronizacionEmpleados
 
+Modo = SincronizacionEmpleados.Modo
+
 PAGE_SIZE = 1000
-MAX_PAGINAS = 50  # tope de seguridad: 50 000 empleados
+MAX_PAGINAS = 50  # tope de seguridad: 50 000 filas
 
 # Campo local → campo en la respuesta de la Estancia.
 MAPEO = {
@@ -37,7 +56,8 @@ MAPEO = {
     'apellidos': 'apellidos',
     'sexo': 'sexo',
     'plaza': 'plaza',
-    'cargo': 'jerarquia',
+    'plaza_descripcion': 'plaza_descripcion',
+    'jerarquia': 'jerarquia',
     'municipio_id_estancia': 'municipio_id',
     'municipio': 'municipio',
     'estado_estancia': 'estado_actual',
@@ -49,15 +69,65 @@ class ErrorSincronizacion(Exception):
     """Fallo esperado (red, credenciales, respuesta inválida) con mensaje para el usuario."""
 
 
-def _url_pagina(base, pagina):
+class Descarga(NamedTuple):
+    filas: list
+    proximo_desde: object  # datetime consciente, o None si la Estancia no lo manda
+
+
+def _url(base, params):
     partes = urllib.parse.urlsplit(base)
     query = dict(urllib.parse.parse_qsl(partes.query))
-    query.update({'incluir_bajas': '1', 'page_size': str(PAGE_SIZE), 'page': str(pagina)})
+    query.update(params)
     return urllib.parse.urlunsplit(partes._replace(query=urllib.parse.urlencode(query)))
 
 
-def descargar_empleados():
-    """Devuelve la lista completa de empleados de la Estancia (incluye bajas)."""
+def _fecha(valor):
+    try:
+        fecha = parse_datetime(valor or '')
+    except ValueError:
+        return None
+    if fecha is not None and timezone.is_naive(fecha):
+        fecha = timezone.make_aware(fecha)
+    return fecha
+
+
+def _pedir(url, clave, timeout, contexto):
+    req = urllib.request.Request(url, headers={
+        'X-API-Key': clave,
+        'Accept': 'application/json',
+        'User-Agent': 'INM-Viajes/sincronizar-empleados',
+    })
+    try:
+        with urllib.request.urlopen(req, timeout=timeout, context=contexto) as resp:
+            datos = json.load(resp)
+    except urllib.error.HTTPError as e:
+        if e.code == 401:
+            raise ErrorSincronizacion('La Estancia rechazó la API key (401).') from e
+        raise ErrorSincronizacion(f'La Estancia respondió HTTP {e.code}.') from e
+    except urllib.error.URLError as e:
+        raise ErrorSincronizacion(f'No se pudo conectar con la Estancia: {e.reason}') from e
+    except (TimeoutError, OSError) as e:
+        raise ErrorSincronizacion(f'No se pudo conectar con la Estancia: {e}') from e
+    except ValueError as e:
+        raise ErrorSincronizacion('La Estancia respondió algo que no es JSON.') from e
+
+    if not isinstance(datos, dict) or not isinstance(datos.get('results'), list):
+        raise ErrorSincronizacion('Respuesta inesperada de la Estancia (falta "results").')
+    return datos
+
+
+def _cursor_siguiente(siguiente):
+    """Del `next` de la incremental solo interesan `modificado_desde` y `despues_de_id`."""
+    query = dict(urllib.parse.parse_qsl(urllib.parse.urlsplit(siguiente).query))
+    cursor = {k: query[k] for k in ('modificado_desde', 'despues_de_id') if query.get(k)}
+    if 'modificado_desde' not in cursor or 'despues_de_id' not in cursor:
+        raise ErrorSincronizacion('La Estancia devolvió un "next" incremental sin cursor.')
+    return cursor
+
+
+def descargar_empleados(modificado_desde=None):
+    """Descarga de la Estancia: completa (incluye bajas) o, con `modificado_desde`,
+    solo lo que cambió desde esa fecha. Devuelve `Descarga(filas, proximo_desde)`."""
     base = getattr(settings, 'ESTANCIA_EMPLEADOS_URL', '')
     clave = getattr(settings, 'ESTANCIA_API_KEY', '')
     if not base or not clave:
@@ -69,32 +139,25 @@ def descargar_empleados():
     if base.startswith('https') and not getattr(settings, 'ESTANCIA_API_VERIFICAR_SSL', True):
         contexto = ssl._create_unverified_context()
 
-    resultados = []
-    for pagina in range(1, MAX_PAGINAS + 1):
-        req = urllib.request.Request(_url_pagina(base, pagina), headers={
-            'X-API-Key': clave,
-            'Accept': 'application/json',
-            'User-Agent': 'INM-Viajes/sincronizar-empleados',
-        })
-        try:
-            with urllib.request.urlopen(req, timeout=timeout, context=contexto) as resp:
-                datos = json.load(resp)
-        except urllib.error.HTTPError as e:
-            if e.code == 401:
-                raise ErrorSincronizacion('La Estancia rechazó la API key (401).') from e
-            raise ErrorSincronizacion(f'La Estancia respondió HTTP {e.code}.') from e
-        except urllib.error.URLError as e:
-            raise ErrorSincronizacion(f'No se pudo conectar con la Estancia: {e.reason}') from e
-        except (TimeoutError, OSError) as e:
-            raise ErrorSincronizacion(f'No se pudo conectar con la Estancia: {e}') from e
-        except ValueError as e:
-            raise ErrorSincronizacion('La Estancia respondió algo que no es JSON.') from e
+    if modificado_desde is None:
+        params = {'incluir_bajas': '1', 'page_size': str(PAGE_SIZE), 'page': '1'}
+    else:
+        params = {'modificado_desde': modificado_desde.isoformat(), 'page_size': str(PAGE_SIZE)}
 
-        if not isinstance(datos, dict) or not isinstance(datos.get('results'), list):
-            raise ErrorSincronizacion('Respuesta inesperada de la Estancia (falta "results").')
-        resultados.extend(datos['results'])
-        if not datos.get('next'):
-            return resultados
+    filas, proximos = [], []
+    for pagina in range(1, MAX_PAGINAS + 1):
+        datos = _pedir(_url(base, params), clave, timeout, contexto)
+        filas.extend(datos['results'])
+        proximos.append(_fecha(datos.get('proximo_desde')))
+        siguiente = datos.get('next')
+        if not siguiente:
+            # Si alguna página no lo trajo, no hay punto de partida confiable.
+            proximo = None if None in proximos else min(proximos)
+            return Descarga(filas, proximo)
+        if modificado_desde is None:
+            params['page'] = str(pagina + 1)
+        else:
+            params.update(_cursor_siguiente(siguiente))
     raise ErrorSincronizacion(f'La Estancia devolvió más de {MAX_PAGINAS} páginas; se abortó.')
 
 
@@ -108,15 +171,19 @@ def _valores(fila):
     for campo in MAPEO:
         if campo != 'municipio_id_estancia' and valores[campo] is None:
             valores[campo] = ''
-    valores['modificado_en_estancia'] = parse_datetime(fila.get('fecha_modificacion') or '')
+    # `actualizado` (D-144) incluye cambios de plaza, jerarquía y municipio.
+    valores['modificado_en_estancia'] = _fecha(fila.get('actualizado') or fila.get('fecha_modificacion'))
     valores['activo'] = valores['estado_estancia'] != 'BAJA'
     return id_estancia, valores
 
 
-def aplicar_empleados(filas, ahora=None):
-    """Aplica `filas` a la réplica. Devuelve (creados, actualizados, desactivados)."""
+def aplicar_empleados(filas, ahora=None, desactivar_ausentes=True):
+    """Aplica `filas` a la réplica. Devuelve (creados, actualizados, desactivados).
+
+    `desactivar_ausentes=False` en la incremental: ahí no venir no significa nada.
+    """
     ahora = ahora or timezone.now()
-    entrantes = dict(_valores(f) for f in filas)
+    entrantes = dict(_valores(f) for f in filas)  # si se repite un id, gana la última
 
     with transaction.atomic():
         existentes = {e.id_estancia: e for e in Empleado.objects.select_for_update()}
@@ -133,32 +200,46 @@ def aplicar_empleados(filas, ahora=None):
 
         Empleado.objects.bulk_create(nuevos)
         Empleado.objects.bulk_update(cambiados, CAMPOS_ACTUALIZABLES)
-        desactivados = (
-            Empleado.objects.filter(activo=True)
-            .exclude(id_estancia__in=entrantes.keys())
-            .update(activo=False, sincronizado_en=ahora)
-        )
+        desactivados = 0
+        if desactivar_ausentes:
+            desactivados = (
+                Empleado.objects.filter(activo=True)
+                .exclude(id_estancia__in=entrantes.keys())
+                .update(activo=False, sincronizado_en=ahora)
+            )
         # Los que siguen igual también quedan "vistos" en esta sincronización.
         Empleado.objects.filter(id_estancia__in=entrantes.keys()).update(sincronizado_en=ahora)
 
     return len(nuevos), len(cambiados), desactivados
 
 
-def sincronizar(origen=SincronizacionEmpleados.Origen.PROGRAMADA, usuario=None):
+def _punto_de_partida():
+    """`proximo_desde` de la última sincronización exitosa, o None (→ completa)."""
+    ultima = SincronizacionEmpleados.objects.filter(exitosa=True).first()
+    return ultima.proximo_desde if ultima else None
+
+
+def sincronizar(origen=SincronizacionEmpleados.Origen.PROGRAMADA, usuario=None, completa=False):
     """Descarga y aplica el catálogo. Siempre deja registro en `SincronizacionEmpleados`.
 
-    Devuelve el registro. Lanza `ErrorSincronizacion` si falló (el registro queda
-    guardado con `exitosa=False` y el mensaje).
+    Por defecto es incremental si hay un punto de partida; `completa=True` (o no
+    tenerlo) baja todo. Devuelve el registro. Lanza `ErrorSincronizacion` si falló
+    (el registro queda guardado con `exitosa=False` y el mensaje).
     """
-    registro = SincronizacionEmpleados.objects.create(origen=origen, usuario=usuario)
+    desde = None if completa else _punto_de_partida()
+    modo = Modo.COMPLETA if desde is None else Modo.INCREMENTAL
+    registro = SincronizacionEmpleados.objects.create(origen=origen, usuario=usuario, modo=modo)
     try:
-        filas = descargar_empleados()
-        if not filas and Empleado.objects.filter(activo=True).exists():
+        descarga = descargar_empleados(modificado_desde=desde)
+        if modo == Modo.COMPLETA and not descarga.filas and Empleado.objects.filter(activo=True).exists():
             raise ErrorSincronizacion(
                 'La Estancia devolvió 0 empleados; no se desactivó a nadie. Revisa la configuración.'
             )
-        registro.recibidos = len(filas)
-        registro.creados, registro.actualizados, registro.desactivados = aplicar_empleados(filas)
+        registro.recibidos = len(descarga.filas)
+        registro.creados, registro.actualizados, registro.desactivados = aplicar_empleados(
+            descarga.filas, desactivar_ausentes=(modo == Modo.COMPLETA),
+        )
+        registro.proximo_desde = descarga.proximo_desde
         registro.exitosa = True
     except ErrorSincronizacion as e:
         registro.error = str(e)

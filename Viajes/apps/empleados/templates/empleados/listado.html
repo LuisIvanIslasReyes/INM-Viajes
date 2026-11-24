@@ -21,7 +21,7 @@
                 <p class="ds-small" style="margin:0;">
                     Última actualización desde la Estancia:
                     <strong>{{ ultima_ok.terminada_en|date:"d/m/Y H:i" }}</strong>
-                    ({{ ultima_ok.terminada_en|timesince }})
+                    ({{ ultima_ok.terminada_en|timesince }}, {{ ultima_ok.get_modo_display|lower }})
                 </p>
                 {% else %}
                 <p class="ds-small" style="margin:0;"><strong>Aún no se ha sincronizado el catálogo.</strong></p>
@@ -93,7 +93,7 @@
                     <th scope="col">No.</th>
                     <th scope="col">Nombre</th>
                     <th scope="col">Cargo</th>
-                    <th scope="col">Plaza</th>
+                    <th scope="col">Descripción de la plaza</th>
                     <th scope="col">Municipio</th>
                     <th scope="col">Estado</th>
                     <th scope="col" style="text-align:right;">Firmante habitual</th>
@@ -104,7 +104,7 @@
                         <td class="ds-tabular">{{ e.numero_empleado|default:"—" }}</td>
                         <td style="font-weight:600;">{{ e.nombre_para_oficio }}</td>
                         <td>{{ e.cargo|default:"—" }}</td>
-                        <td>{{ e.plaza|default:"—" }}</td>
+                        <td class="ds-small">{{ e.plaza_descripcion|default:"—" }}</td>
                         <td>{{ e.municipio|default:"—" }}</td>
                         <td>
                             {% if not e.activo %}

@@ -29,6 +29,34 @@ TITULOS_ABREVIADOS = {
     'ARQ': 'ARQ.',
 }
 
+# Sin sexo capturado, el título decide (mismo criterio que la Estancia en sus oficios).
+TITULOS_FEMENINOS = {'MTRA', 'DRA'}
+
+# Copia de `apps/Personal/plazas.py` de la Estancia (D-144): solo la primera palabra
+# y con un diccionario cerrado; lo que no está (SUB REPRESENTANTE, AGENTE, ANALISTA,
+# OFICIAL, TITULAR…) ya es invariable o no se adivina. Si allá cambia, copiar aquí.
+FEMENINO_PRIMERA_PALABRA = {
+    'JEFE': 'JEFA',
+    'SUBJEFE': 'SUBJEFA',
+    'DIRECTOR': 'DIRECTORA',
+    'SUBDIRECTOR': 'SUBDIRECTORA',
+    'COORDINADOR': 'COORDINADORA',
+    'SUPERVISOR': 'SUPERVISORA',
+    'DICTAMINADOR': 'DICTAMINADORA',
+    'TÉCNICO': 'TÉCNICA',
+    'TECNICO': 'TECNICA',
+    'ENCARGADO': 'ENCARGADA',
+}
+
+
+def plaza_en_femenino(texto):
+    """'JEFE DE DEPARTAMENTO' → 'JEFA DE DEPARTAMENTO'; si no aplica, igual."""
+    palabras = (texto or '').split(' ', 1)
+    femenino = FEMENINO_PRIMERA_PALABRA.get(palabras[0].upper())
+    if not femenino:
+        return texto or ''
+    return ' '.join([femenino, *palabras[1:]])
+
 
 class Empleado(models.Model):
     class Sexo(models.TextChoices):
@@ -44,10 +72,17 @@ class Empleado(models.Model):
     nombres = models.CharField(max_length=100)
     apellidos = models.CharField(max_length=150)
     sexo = models.CharField(max_length=1, choices=Sexo.choices, blank=True, default='')
-    plaza = models.CharField(max_length=150, blank=True, default='')
-    cargo = models.CharField(
+    plaza = models.CharField(
         max_length=150, blank=True, default='',
-        help_text='Jerarquía principal vigente en la Estancia (ej. JEFE DE DEPARTAMENTO).',
+        help_text='Puesto genérico de la plaza en la Estancia (ej. JEFE DE DEPARTAMENTO).',
+    )
+    plaza_descripcion = models.CharField(
+        max_length=250, blank=True, default='',
+        help_text='La plaza concreta (ej. JEFATURA DE DEPARTAMENTO DE RECURSOS HUMANOS).',
+    )
+    jerarquia = models.CharField(
+        max_length=150, blank=True, default='',
+        help_text='Jerarquía principal vigente en la Estancia (la labor, ej. AFM).',
     )
     municipio_id_estancia = models.PositiveIntegerField(null=True, blank=True)
     municipio = models.CharField(max_length=100, blank=True, default='')
@@ -95,6 +130,23 @@ class Empleado(models.Model):
         """Como se imprime en un oficio: 'LIC. MELISSA GALLEGOS'."""
         return f'{self.titulo_abreviado} {self.nombre_completo}'.strip()
 
+    @property
+    def es_mujer(self):
+        if self.sexo:
+            return self.sexo == self.Sexo.FEMENINO
+        return self.titulo_academico in TITULOS_FEMENINOS
+
+    @property
+    def cargo(self):
+        """El puesto que se imprime bajo la firma (mismo criterio que la Estancia, D-144).
+
+        Manda la plaza, en femenino si firma una mujer; sin plaza, la jerarquía.
+        """
+        puesto = ' '.join((self.plaza or '').upper().split())
+        if puesto:
+            return plaza_en_femenino(puesto) if self.es_mujer else puesto
+        return ' '.join((self.jerarquia or '').upper().split())
+
 
 class SincronizacionEmpleados(models.Model):
     """Bitácora de cada intento de sincronización (para saber qué tan fresca está la réplica)."""
@@ -103,7 +155,16 @@ class SincronizacionEmpleados(models.Model):
         PROGRAMADA = 'PROGRAMADA', 'Tarea programada'
         MANUAL = 'MANUAL', 'Botón "Sincronizar ahora"'
 
+    class Modo(models.TextChoices):
+        COMPLETA = 'COMPLETA', 'Completa'
+        INCREMENTAL = 'INCREMENTAL', 'Incremental'
+
     origen = models.CharField(max_length=12, choices=Origen.choices)
+    modo = models.CharField(max_length=12, choices=Modo.choices, default=Modo.COMPLETA)
+    proximo_desde = models.DateTimeField(
+        null=True, blank=True,
+        help_text='Lo devuelve la Estancia; la siguiente incremental pide los cambios desde aquí.',
+    )
     usuario = models.ForeignKey(
         settings.AUTH_USER_MODEL, on_delete=models.SET_NULL, null=True, blank=True,
         related_name='+',

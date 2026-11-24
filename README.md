@@ -86,6 +86,10 @@ catálogo aunque la Estancia se apague. Lo único propio de Viajes es la marca d
 - Nunca se borran empleados: los dados de baja (o que dejan de venir) quedan **inactivos**.
 - Si la Estancia no responde, se sigue usando la última copia y la pantalla avisa del intento fallido.
 - `GET /empleados/buscar/?q=&municipio=` devuelve JSON para autocompletar firmante y testigos.
+- **Cargo impreso** (`Empleado.cargo`): el mismo criterio que usa la Estancia en sus oficios desde D-144.
+  Sale de la **plaza** (por ejemplo, "JEFE DE DEPARTAMENTO") y se pone en femenino si firma una mujer
+  ("JEFA DE DEPARTAMENTO"). Si el empleado no tiene plaza, se usa la jerarquía. La descripción de la
+  plaza ("JEFATURA DE DEPARTAMENTO DE …") se guarda aparte, en `plaza_descripcion`.
 
 ### Configuración (`.env` de la raíz)
 
@@ -103,10 +107,17 @@ En el `.env` de la Estancia va la contraparte: `INTEGRACION_API_KEYS=viajes=<cla
 ### Sincronización automática
 
 1. Prueba a mano: `sincronizar_empleados.bat` (resultado en `Viajes\logs\sincronizar_empleados.log`).
-2. Como Administrador, ejecuta `programar_sincronizacion_empleados.bat`: crea la tarea de Windows
-   `INMViajes\SincronizarEmpleados`, cada 15 minutos, como SYSTEM.
+2. Como Administrador, ejecuta `programar_sincronizacion_empleados.bat`. Crea dos tareas de Windows,
+   las dos como SYSTEM:
+   - `INMViajes\SincronizarEmpleados`: cada 15 minutos, **incremental**. Solo trae lo que cambió desde
+     la última sincronización exitosa.
+   - `INMViajes\SincronizarEmpleadosCompleta`: diario a las 03:00, **completa** (`--completa`). Trae todo
+     el catálogo y marca como inactivos a los que ya no vengan; por ejemplo, a los que se borraron en la
+     Estancia, que la incremental no ve.
 
-También hay un botón **Sincronizar ahora** en la pantalla (SuperUser y Aeropuerto).
+La incremental parte del `proximo_desde` que devolvió la Estancia la vez anterior. Si no hay uno (la primera
+vez, o si la Estancia todavía no lo manda), se hace una completa. El botón **Sincronizar ahora** de la
+pantalla (SuperUser y Aeropuerto) también hace una completa.
 
 ### Tests sin MySQL
 

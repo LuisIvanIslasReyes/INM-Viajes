@@ -22,9 +22,9 @@ class EmpleadoAdmin(admin.ModelAdmin):
 
 @admin.register(SincronizacionEmpleados)
 class SincronizacionEmpleadosAdmin(admin.ModelAdmin):
-    list_display = ('iniciada_en', 'origen', 'exitosa', 'recibidos', 'creados',
+    list_display = ('iniciada_en', 'origen', 'modo', 'exitosa', 'recibidos', 'creados',
                     'actualizados', 'desactivados', 'usuario')
-    list_filter = ('exitosa', 'origen')
+    list_filter = ('exitosa', 'origen', 'modo')
     readonly_fields = [f.name for f in SincronizacionEmpleados._meta.fields]
 
     def has_add_permission(self, request):

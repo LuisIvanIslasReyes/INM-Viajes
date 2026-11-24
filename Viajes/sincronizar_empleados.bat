@@ -1,9 +1,12 @@
 @echo off
 REM ============================================================
 REM  Sincroniza el catalogo de empleados con la Estancia.
-REM  Lo ejecuta la tarea programada "INMViajes\SincronizarEmpleados"
-REM  (ver programar_sincronizacion_empleados.bat). Tambien se puede
-REM  correr a mano para probar. Log: logs\sincronizar_empleados.log
+REM  Lo ejecutan las tareas programadas (ver
+REM  programar_sincronizacion_empleados.bat):
+REM    INMViajes\SincronizarEmpleados          cada 15 min, incremental
+REM    INMViajes\SincronizarEmpleadosCompleta  de noche, con --completa
+REM  Tambien se puede correr a mano para probar (acepta --completa).
+REM  Log: logs\sincronizar_empleados.log
 REM ============================================================
 setlocal
 
@@ -27,6 +30,6 @@ if not defined PYTHON_EXE (
 if not exist "%PROJECT_DIR%\logs" mkdir "%PROJECT_DIR%\logs"
 cd /d "%PROJECT_DIR%"
 
-echo [%date% %time%] >> "%PROJECT_DIR%\logs\sincronizar_empleados.log"
-"%PYTHON_EXE%" manage.py sincronizar_empleados >> "%PROJECT_DIR%\logs\sincronizar_empleados.log" 2>&1
+echo [%date% %time%] %* >> "%PROJECT_DIR%\logs\sincronizar_empleados.log"
+"%PYTHON_EXE%" manage.py sincronizar_empleados %* >> "%PROJECT_DIR%\logs\sincronizar_empleados.log" 2>&1
 exit /b %errorlevel%
