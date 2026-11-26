@@ -1,0 +1,11 @@
+{# Últimas versiones guardadas (PlantillaHistorial). Parámetro: versiones. #}
+<section class="ds-card">
+    <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+        <h2 class="ds-h4" style="margin:0;">Versiones guardadas</h2>
+        {% for v in versiones %}
+        <p class="ds-small" style="margin:0;">{{ v.fecha_hora|date:"d/m/Y H:i" }}{% if v.usuario %} · {{ v.usuario.username }}{% endif %}</p>
+        {% empty %}
+        <p class="ds-small" style="margin:0;">Aún no hay versiones guardadas desde la app.</p>
+        {% endfor %}
+    </div>
+</section>

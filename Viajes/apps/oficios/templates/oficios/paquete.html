@@ -1,0 +1,78 @@
+{% extends 'uploader/base_ds.html' %}
+{% load static %}
+{# ====================================================================
+   OFICIOS — PAQUETE PARA IMPRIMIR
+     context: expediente, personas [(PersonaExpediente, [OficioInstancia ordenados 02→14])].
+   Un solo Word/PDF con los oficios elegidos, por persona y luego por número.
+   Los impresos salen con lo congelado; los borradores, con los datos actuales.
+   ==================================================================== #}
+{% block title %}Paquete · {{ expediente.folio }} · Oficios · INM Viajes{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'oficios/oficios.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
+        <ol>
+            <li><a href="{% url 'oficios:lista' %}">Oficios</a></li>
+            <li><a href="{% url 'oficios:detalle' expediente.pk %}">{{ expediente.folio }}</a></li>
+            <li aria-current="page">Paquete</li>
+        </ol>
+    </nav>
+    <header>
+        <h1 class="ds-h1">Paquete para imprimir</h1>
+        <p class="ds-small" style="margin-top:4px;">Elige los oficios: salen en un solo archivo, por persona y del 02 al 14. Para un archivo por persona, elige solo los de esa persona.</p>
+    </header>
+
+    <form method="post" id="form-paquete" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+        {% csrf_token %}
+        {% for persona, oficios in personas %}
+        <section class="ds-card">
+            <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                <div style="display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap;">
+                    <h2 class="ds-h3" style="margin:0;">{{ persona.nombre }}</h2>
+                    <label class="ds-small" style="display:flex; align-items:center; gap:6px;">
+                        <input type="checkbox" data-todos="persona-{{ persona.pk }}" checked> Todos
+                    </label>
+                </div>
+                <ul class="ofi-formatos">
+                    {% for o in oficios %}
+                    <li class="ofi-formato">
+                        <label><input type="checkbox" name="oficios" value="{{ o.pk }}" data-grupo="persona-{{ persona.pk }}" checked> {{ o.plantilla.clave }}. {{ o.plantilla.nombre }}</label>
+                        <span class="ds-badge{% if o.estado == 'IMPRESO' %} ds-badge-success{% else %} ds-badge-info{% endif %}">{{ o.get_estado_display }}</span>
+                    </li>
+                    {% endfor %}
+                </ul>
+            </div>
+        </section>
+        {% empty %}
+        <div class="ds-alert ds-alert-info"><div>Este expediente aún no tiene oficios. Crea los borradores desde el expediente.</div></div>
+        {% endfor %}
+
+        {% if personas %}
+        <div style="display:flex; gap:8px; flex-wrap:wrap; align-items:center;">
+            <button type="submit" name="accion" value="pdf" class="ds-btn ds-btn-primary">Descargar PDF</button>
+            <button type="submit" name="accion" value="word" class="ds-btn ds-btn-secondary">Descargar Word</button>
+            <button type="submit" name="accion" value="imprimir" class="ds-btn ds-btn-secondary"
+                    onclick="return confirm('Los borradores elegidos quedarán congelados tal como están. ¿Continuar?');">Marcar como impresos</button>
+            <a href="{% url 'oficios:detalle' expediente.pk %}" class="ds-btn ds-btn-ghost">Volver al expediente</a>
+        </div>
+        <p class="ds-small" style="margin:0;">Los borradores salen con los datos actuales; los impresos, exactamente como se congelaron. Después de imprimir en papel, márcalos como impresos.</p>
+        {% endif %}
+    </form>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+/* "Todos" por persona: marca o desmarca sus oficios. */
+document.querySelectorAll('[data-todos]').forEach(function (todos) {
+    var casillas = document.querySelectorAll('[data-grupo="' + todos.dataset.todos + '"]');
+    todos.addEventListener('change', function () { casillas.forEach(function (c) { c.checked = todos.checked; }); });
+    casillas.forEach(function (c) {
+        c.addEventListener('change', function () {
+            todos.checked = Array.prototype.every.call(casillas, function (x) { return x.checked; });
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -1,0 +1,62 @@
+{% extends 'uploader/base_ds.html' %}
+{% load static %}
+{# OFICIOS — EDITAR PLANTILLA. context: plantilla, form (PlantillaForm), variables, titulos_separador. #}
+{% block title %}Plantilla {{ plantilla.clave }} · Oficios · INM Viajes{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'oficios/vendor/quill/quill.snow.css' %}">
+<link rel="stylesheet" href="{% static 'oficios/oficios.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
+        <ol>
+            <li><a href="{% url 'oficios:lista' %}">Oficios</a></li>
+            <li><a href="{% url 'oficios:plantillas' %}">Plantillas</a></li>
+            <li aria-current="page">{{ plantilla.clave }}</li>
+        </ol>
+    </nav>
+    <header>
+        <h1 class="ds-h1">Plantilla {{ plantilla.clave }}. {{ plantilla.nombre }}</h1>
+        <p class="ds-small" style="margin-top:4px;">Texto base en español. Solo el cuerpo: el membrete, el encabezado, el título, la fecha y las firmas los agrega el sistema.
+            {% if plantilla.variantes.exists %}Tiene traducción a: {% for v in plantilla.variantes.all %}<a href="{% url 'oficios:plantilla_idioma' plantilla.pk v.idioma %}">{{ v.get_idioma_display|lower }}</a>{% if not forloop.last %}, {% endif %}{% endfor %}; si cambias el sentido del texto, actualízalas también.{% endif %}</p>
+    </header>
+
+    <div class="ofi-layout">
+        <form method="post" style="display:flex; flex-direction:column; gap:var(--ds-sp-4); min-width:0;">
+            {% csrf_token %}
+            {{ form.contenido_html }}
+            <section class="ds-card">
+                <div class="ds-card-body ofi-grid-campos">
+                    {% for campo in form %}{% if campo.name != 'contenido_html' %}
+                    <div class="ds-field">
+                        {% if campo.name == 'lleva_fecha' or campo.name == 'activo' %}
+                        <label class="ds-small" style="display:flex; align-items:center; gap:6px; padding-top:28px;">{{ campo }} {{ campo.label }}</label>
+                        {% else %}
+                        <label class="ds-label" for="{{ campo.id_for_label }}">{{ campo.label }}</label>
+                        {{ campo }}
+                        {% endif %}
+                        {% if campo.errors %}<p class="ds-error-text">{{ campo.errors|striptags }}</p>{% endif %}
+                    </div>
+                    {% endif %}{% endfor %}
+                </div>
+            </section>
+            <div class="ofi-editor"><div id="editor" data-destino="{{ form.contenido_html.id_for_label }}" data-solo-lectura="0"></div></div>
+            <div style="display:flex; gap:8px;">
+                <button type="submit" class="ds-btn ds-btn-primary">Guardar plantilla</button>
+                <a href="{% url 'oficios:plantillas' %}" class="ds-btn ds-btn-ghost">Cancelar</a>
+            </div>
+        </form>
+        <aside class="ofi-panel">
+            {% include 'oficios/_panel_editor.html' %}
+            {% include 'oficios/_versiones.html' %}
+        </aside>
+    </div>
+</div>
+{{ form.contenido_html.value|default:""|json_script:"contenido-inicial" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'oficios/vendor/quill/quill.js' %}"></script>
+<script src="{% static 'oficios/editor_oficio.js' %}"></script>
+{% endblock %}

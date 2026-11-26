@@ -56,6 +56,15 @@ def _convertir_a_pdf(ruta_origen):
     return pdf_path
 
 
+def convertir_a_pdf(ruta_origen):
+    """Uso público de la conversión (lo usa también apps.oficios).
+
+    Devuelve la ruta del PDF dentro de un directorio temporal, o None si falla. Quien
+    llama debe borrar ese directorio (`os.path.dirname(ruta)`) al terminar.
+    """
+    return _convertir_a_pdf(ruta_origen)
+
+
 def generar_preview(redaccion):
     """
     Genera y guarda el PDF de vista previa para una Redacción de tipo Word.

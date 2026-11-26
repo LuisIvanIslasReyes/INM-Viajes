@@ -3,7 +3,7 @@ Vistas del catálogo de empleados (réplica de la Estancia).
 
 - listado:   consulta con búsqueda y filtro por municipio (todos los roles).
 - buscar:    JSON para autocompletar (lo usarán los oficios para firmante/testigos).
-- sincronizar / firmante: acciones POST, solo SuperUser y Aeropuerto.
+- sincronizar / firmante / fundamento: acciones POST, solo SuperUser y Aeropuerto.
 
 Todo lee la réplica local, así que funciona aunque la Estancia esté apagada.
 """
@@ -20,7 +20,7 @@ from django.views.decorators.http import require_POST
 
 from apps.cuentas.roles import puede_flujo_principal
 
-from .models import Empleado, SincronizacionEmpleados
+from .models import Empleado, FundamentoPlaza, SincronizacionEmpleados, precargar_fundamentos
 from .services import ErrorSincronizacion, sincronizar, ultima_sincronizacion_exitosa
 
 LIMITE_BUSQUEDA = 20
@@ -59,6 +59,7 @@ def listado(request):
 
     paginator = Paginator(qs, 25)
     page_obj = paginator.get_page(request.GET.get('page'))
+    fundamentos = precargar_fundamentos(page_obj)
     params = request.GET.copy()
     params.pop('page', None)
 
@@ -75,6 +76,7 @@ def listado(request):
         'busqueda': q,
         'municipio': municipio,
         'municipios': list(municipios),
+        'fundamentos': fundamentos,
         'inactivos': inactivos,
         'querystring': params.urlencode(),
         'ultima_ok': ultima_sincronizacion_exitosa(),
@@ -88,6 +90,8 @@ def listado(request):
 def buscar(request):
     """Autocompletar: hasta 20 empleados activos, firmantes habituales primero."""
     qs, _q, _m = _filtrar(request, Empleado.objects.filter(activo=True))
+    empleados = list(qs[:LIMITE_BUSQUEDA])
+    precargar_fundamentos(empleados)
     datos = [
         {
             'id': e.pk,
@@ -102,8 +106,10 @@ def buscar(request):
             'sexo': e.sexo,
             'municipio': e.municipio,
             'firmante_habitual': e.firmante_habitual,
+            'fundamento': e.fundamento,
+            'fundamento_origen': e.fundamento_origen,
         }
-        for e in qs[:LIMITE_BUSQUEDA]
+        for e in empleados
     ]
     return JsonResponse({'resultados': datos})
 
@@ -135,7 +141,45 @@ def alternar_firmante(request, pk):
     empleado.save(update_fields=['firmante_habitual'])
     estado = 'marcado como' if empleado.firmante_habitual else 'quitado de'
     messages.success(request, f'{empleado.nombre_completo} {estado} firmante habitual.')
-    # Volver al mismo filtro/página del listado (solo querystring, nunca otra URL).
+    return _volver_al_listado(request)
+
+
+@require_POST
+@_gestion_required
+def asignar_fundamento(request, pk):
+    """Asigna a mano uno de los fundamentos activos; vacío = volver al de su plaza."""
+    empleado = get_object_or_404(Empleado, pk=pk)
+    valor = (request.POST.get('fundamento') or '').strip()
+    if valor:
+        fundamento = (
+            FundamentoPlaza.objects.filter(activo=True, pk=valor).first() if valor.isdigit() else None
+        )
+        if fundamento is None:
+            messages.error(request, 'Ese fundamento no existe o está inactivo.')
+            return _volver_al_listado(request)
+        empleado.fundamento_manual = fundamento
+        empleado.save(update_fields=['fundamento_manual'])
+        messages.success(
+            request, f'{empleado.nombre_completo}: se asignó a mano el fundamento de {fundamento.nombre}.',
+        )
+        return _volver_al_listado(request)
+
+    empleado.fundamento_manual = None
+    empleado.save(update_fields=['fundamento_manual'])
+    de_su_plaza = empleado.fundamento_de_su_plaza
+    if de_su_plaza:
+        messages.success(
+            request, f'{empleado.nombre_completo}: se usa el fundamento de su plaza ({de_su_plaza.nombre}).',
+        )
+    else:
+        messages.warning(
+            request, f'{empleado.nombre_completo}: su plaza no tiene fundamento; queda sin fundamento.',
+        )
+    return _volver_al_listado(request)
+
+
+def _volver_al_listado(request):
+    """Vuelve al mismo filtro/página del listado (solo querystring, nunca otra URL)."""
     querystring = (request.POST.get('querystring') or '').lstrip('?')
     destino = reverse('empleados:listado')
     return redirect(f'{destino}?{querystring}' if querystring else destino)

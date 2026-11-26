@@ -1,0 +1,110 @@
+{% extends 'uploader/base_ds.html' %}
+{# ====================================================================
+   OFICIOS — NUEVO EXPEDIENTE (o agregar personas a uno existente)
+     context: form (BusquedaRegistrosForm), registros (uploader.Registro),
+              buscando, destino (Expediente o None), limite.
+   Se eligen pasajeros del vuelo y sus datos se precargan; después se
+   editan en el expediente. "Crear vacío" es para capturar todo a mano.
+   ==================================================================== #}
+{% block title %}{% if destino %}Agregar personas{% else %}Nuevo expediente{% endif %} · Oficios · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
+        <ol>
+            <li><a href="{% url 'oficios:lista' %}">Oficios</a></li>
+            {% if destino %}<li><a href="{% url 'oficios:detalle' destino.pk %}">{{ destino.folio }}</a></li>{% endif %}
+            <li aria-current="page">{% if destino %}Agregar personas{% else %}Nuevo expediente{% endif %}</li>
+        </ol>
+    </nav>
+
+    <header>
+        <h1 class="ds-h1">{% if destino %}Agregar personas a {{ destino.folio }}{% else %}Nuevo expediente{% endif %}</h1>
+        <p class="ds-small" style="margin-top:4px;">Busca a los pasajeros en los vuelos cargados y elige a los de la familia. Sus datos se precargan y después se pueden corregir.</p>
+    </header>
+
+    <section class="ds-card">
+        <div class="ds-card-body">
+            <form method="get" style="display:flex; flex-wrap:wrap; gap:var(--ds-sp-4); align-items:flex-end;">
+                {% if destino %}<input type="hidden" name="expediente" value="{{ destino.pk }}">{% endif %}
+                <input type="hidden" name="buscar" value="1">
+                <div class="ds-field" style="flex:1; min-width:220px;">
+                    <label class="ds-label" for="{{ form.q.id_for_label }}">{{ form.q.label }}</label>
+                    {{ form.q }}
+                </div>
+                <div class="ds-field" style="width:150px;">
+                    <label class="ds-label" for="{{ form.vuelo.id_for_label }}">{{ form.vuelo.label }}</label>
+                    {{ form.vuelo }}
+                </div>
+                <div class="ds-field" style="width:180px;">
+                    <label class="ds-label" for="{{ form.fecha.id_for_label }}">{{ form.fecha.label }}</label>
+                    {{ form.fecha }}
+                </div>
+                <label class="ds-small" style="display:flex; align-items:center; gap:6px; padding-bottom:10px;">
+                    {{ form.solo_marcados }} {{ form.solo_marcados.label }}
+                </label>
+                <button type="submit" class="ds-btn ds-btn-primary">
+                    <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+                    Buscar pasajeros
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <form method="post" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+        {% csrf_token %}
+        {% if destino %}<input type="hidden" name="expediente" value="{{ destino.pk }}">{% endif %}
+
+        {% if buscando %}
+        <section class="ds-card" style="padding:0;">
+            <div class="ds-table-wrap" tabindex="0" role="region" aria-label="Pasajeros" style="border:0;">
+                <table class="ds-table">
+                    <thead><tr>
+                        <th scope="col" style="width:44px;"><span class="sr-only">Elegir</span></th>
+                        <th scope="col">Pasajero</th>
+                        <th scope="col">Documento</th>
+                        <th scope="col">País</th>
+                        <th scope="col">Vuelo</th>
+                        <th scope="col">Marcas</th>
+                    </tr></thead>
+                    <tbody>
+                        {% for r in registros %}
+                        <tr>
+                            <td><input type="checkbox" name="registros" value="{{ r.pk }}" id="reg-{{ r.pk }}" aria-label="Elegir a {{ r.nombre_pasajero }}"></td>
+                            <td style="font-weight:600;"><label for="reg-{{ r.pk }}" style="cursor:pointer;">{{ r.nombre_pasajero }}</label></td>
+                            <td class="ds-tabular">{{ r.numero_documento|default:"—" }}</td>
+                            <td>{{ r.codigo_pais_emision|default:"" }} {{ r.pais_emision|default:"" }}</td>
+                            <td class="ds-tabular">{{ r.vuelo_numero }} · {{ r.vuelo_fecha|date:"d/m/Y" }}</td>
+                            <td>
+                                {% if r.segunda_revision %}<span class="ds-badge ds-badge-info">SR</span>{% endif %}
+                                {% if r.rechazado %}<span class="ds-badge ds-badge-danger">R</span>{% endif %}
+                                {% if r.internacion %}<span class="ds-badge ds-badge-success">PI</span>{% endif %}
+                            </td>
+                        </tr>
+                        {% empty %}
+                        <tr><td colspan="6"><div class="ds-empty"><h3 class="ds-h3">Sin pasajeros</h3><p class="ds-empty-desc">Ajusta la búsqueda o quita el filtro "Solo marcados SR o R".</p></div></td></tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% if registros|length >= limite %}<p class="ds-small" style="padding:var(--ds-sp-3) var(--ds-sp-4); margin:0;">Se muestran los primeros {{ limite }}. Afina la búsqueda si no ves a quien buscas.</p>{% endif %}
+        </section>
+        {% else %}
+        <p class="ds-small" style="margin:0;">Escribe un nombre, un documento, un vuelo o una fecha para buscar.</p>
+        {% endif %}
+
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            {% if buscando %}
+            <button type="submit" class="ds-btn ds-btn-primary">
+                {% if destino %}Agregar a {{ destino.folio }}{% else %}Crear expediente con los elegidos{% endif %}
+            </button>
+            {% endif %}
+            {% if not destino %}
+            <button type="submit" name="accion" value="vacio" class="ds-btn ds-btn-secondary">Crear vacío (capturar a mano)</button>
+            {% endif %}
+            <a href="{% if destino %}{% url 'oficios:detalle' destino.pk %}{% else %}{% url 'oficios:lista' %}{% endif %}" class="ds-btn ds-btn-ghost">Cancelar</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

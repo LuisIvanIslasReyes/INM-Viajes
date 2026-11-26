@@ -1,0 +1,12 @@
+{# Campos de PersonaForm en rejilla. Parámetro: form. #}
+{% if form.non_field_errors %}<div class="ds-alert ds-alert-danger"><div>{{ form.non_field_errors|striptags }}</div></div>{% endif %}
+<div class="ofi-grid-campos">
+    {% for campo in form %}
+    <div class="ds-field"{% if campo.name == 'motivo_rechazo' %} style="grid-column:1 / -1;"{% endif %}>
+        <label class="ds-label" for="{{ campo.id_for_label }}">{{ campo.label }}{% if campo.field.required %} <span class="ds-req" aria-hidden="true">*</span>{% endif %}</label>
+        {{ campo }}
+        {% if campo.help_text %}<p class="ds-help">{{ campo.help_text }}</p>{% endif %}
+        {% if campo.errors %}<p class="ds-error-text">{{ campo.errors|striptags }}</p>{% endif %}
+    </div>
+    {% endfor %}
+</div>

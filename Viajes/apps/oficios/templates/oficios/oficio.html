@@ -1,0 +1,179 @@
+{% extends 'uploader/base_ds.html' %}
+{% load static %}
+{# ====================================================================
+   OFICIOS — UN OFICIO (borrador editable o impreso congelado)
+     context: instancia, expediente, form (OficioForm), errores, avisos,
+              variables, titulos_separador, historial, testigos_expediente.
+   El texto se edita con Quill; membrete, encabezado, título, fecha y firmas
+   los pone el generador (services/docx_oficio.py). "Marcar como impreso"
+   congela variables y .docx; para cambiarlo hay que reabrir con motivo.
+   ==================================================================== #}
+{% block title %}{{ instancia.plantilla.clave }} · {{ instancia.persona.nombre }} · Oficios · INM Viajes{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'oficios/vendor/quill/quill.snow.css' %}">
+<link rel="stylesheet" href="{% static 'oficios/oficios.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
+        <ol>
+            <li><a href="{% url 'oficios:lista' %}">Oficios</a></li>
+            <li><a href="{% url 'oficios:detalle' expediente.pk %}">{{ expediente.folio }}</a></li>
+            <li><a href="{% url 'oficios:detalle' expediente.pk %}#persona-{{ instancia.persona.pk }}">{{ instancia.persona.nombre }}</a></li>
+            <li aria-current="page">{{ instancia.plantilla.clave }}</li>
+        </ol>
+    </nav>
+
+    <header style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px;">
+        <div>
+            <h1 class="ds-h1">{{ instancia.plantilla.clave }}. {{ instancia.plantilla.nombre }}</h1>
+            <p class="ds-small" style="margin-top:4px;">
+                {{ instancia.persona.nombre }} ·
+                {% if instancia.editable %}<span class="ds-badge ds-badge-info">Borrador</span>
+                {% else %}<span class="ds-badge ds-badge-success">Impreso</span> el {{ instancia.impreso_en|date:"d/m/Y H:i" }}{% if instancia.impreso_por %} por {{ instancia.impreso_por.username }}{% endif %}{% endif %}
+            </p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="{% url 'oficios:oficio_docx' instancia.pk %}" class="ds-btn ds-btn-secondary">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                Word
+            </a>
+            <a href="{% url 'oficios:oficio_pdf' instancia.pk %}" class="ds-btn ds-btn-secondary">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+                PDF
+            </a>
+            <button type="button" class="ds-btn ds-btn-secondary" data-preview="{% url 'oficios:oficio_pdf' instancia.pk %}">Vista previa</button>
+            {% if instancia.editable %}
+            <form method="post" action="{% url 'oficios:oficio_imprimir' instancia.pk %}"
+                  onsubmit="return confirm('Al marcarlo como impreso el oficio queda congelado tal como está guardado. ¿Continuar?');">
+                {% csrf_token %}
+                <button type="submit" class="ds-btn ds-btn-primary" {% if errores %}disabled title="Corrige lo que falta antes de imprimir"{% endif %}>Marcar como impreso</button>
+            </form>
+            {% endif %}
+        </div>
+    </header>
+
+    {% if errores and instancia.editable %}
+    <div class="ds-alert ds-alert-danger">
+        <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg>
+        <div><strong>No se puede marcar como impreso:</strong><ul style="margin:4px 0 0; padding-left:18px;">{% for e in errores %}<li>{{ e }}{% if 'Empleados' in e %} <a href="{% url 'empleados:listado' %}">Ir a Empleados</a>{% elif 'firmante' in e or 'testigos' in e %} <a href="{% url 'oficios:detalle' expediente.pk %}">Ir al expediente</a>{% endif %}</li>{% endfor %}</ul></div>
+    </div>
+    {% endif %}
+    {% for a in avisos %}
+    {% if instancia.editable %}<div class="ds-alert ds-alert-warning"><div>{{ a }} Se corrige en los datos de la persona o del expediente.</div></div>{% endif %}
+    {% endfor %}
+
+    {% if not instancia.editable %}
+    <div class="ds-alert ds-alert-info" style="align-items:flex-start;">
+        <div style="flex:1;">
+            Este oficio está <strong>congelado</strong>: Word y PDF salen exactamente como se imprimió. Para corregirlo hay que reabrirlo.
+            <details style="margin-top:8px;">
+                <summary style="cursor:pointer; font-weight:600;">Reabrir como borrador</summary>
+                <form method="post" action="{% url 'oficios:oficio_reabrir' instancia.pk %}" style="display:flex; flex-direction:column; gap:8px; margin-top:8px; max-width:520px;">
+                    {% csrf_token %}
+                    <label class="ds-label" for="motivo">Motivo (queda en el historial)</label>
+                    <textarea name="motivo" id="motivo" class="ds-textarea" required></textarea>
+                    <div><button type="submit" class="ds-btn ds-btn-secondary">Reabrir</button></div>
+                </form>
+            </details>
+        </div>
+    </div>
+    {% endif %}
+
+    <div class="ofi-layout">
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-4); min-width:0;">
+            <form method="post" id="form-oficio" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+                {% csrf_token %}
+                {{ form.contenido_html }}
+                <section class="ds-card">
+                    <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+                        <div class="ofi-grid-campos">
+                            <div class="ds-field">
+                                <label class="ds-label" for="{{ form.fecha_oficio.id_for_label }}">Fecha del oficio</label>
+                                {% if instancia.editable %}{{ form.fecha_oficio }}{% else %}<p style="margin:0;">{{ instancia.fecha_oficio|date:"d/m/Y" }}</p>{% endif %}
+                            </div>
+                        </div>
+                        <div style="display:flex; flex-wrap:wrap; gap:8px; align-items:center;">
+                            <span class="ds-small">Idioma del texto: <strong>{{ instancia.get_idioma_display }}</strong>{% if instancia.idioma != instancia.persona.idioma %} · la persona habla {{ instancia.persona.get_idioma_display|lower }}{% endif %}</span>
+                        </div>
+                        {% if instancia.plantilla.requiere_testigos %}
+                        <details class="ds-acc" {% if instancia.testigo_1 or instancia.testigo_2 %}open{% endif %}>
+                            <summary class="ds-acc-summary">Testigos de este oficio
+                                <svg class="ds-icon ds-acc-chev" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                            </summary>
+                            <div class="ds-acc-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                                <p class="ds-small" style="margin:0;">Vacío = el del expediente ({{ testigos_expediente.0.nombre_para_oficio|default:"sin testigo 1" }} y {{ testigos_expediente.1.nombre_para_oficio|default:"sin testigo 2" }}).</p>
+                                {% if instancia.editable %}
+                                <div class="ofi-grid-campos">
+                                    {% include 'oficios/_empleado_auto.html' with campo='testigo_1' etiqueta='Testigo 1 (solo este oficio)' empleado=instancia.testigo_1 %}
+                                    {% include 'oficios/_empleado_auto.html' with campo='testigo_2' etiqueta='Testigo 2 (solo este oficio)' empleado=instancia.testigo_2 %}
+                                </div>
+                                {% else %}
+                                <p style="margin:0;">{{ instancia.testigos.0.nombre_para_oficio|default:"—" }} · {{ instancia.testigos.1.nombre_para_oficio|default:"—" }}</p>
+                                {% endif %}
+                            </div>
+                        </details>
+                        {% endif %}
+                    </div>
+                </section>
+
+                <div class="ofi-editor{% if not instancia.editable %} ofi-solo-lectura{% endif %}">
+                    <div id="editor" data-destino="{{ form.contenido_html.id_for_label }}" data-solo-lectura="{{ instancia.editable|yesno:'0,1' }}"></div>
+                </div>
+                {% if instancia.editable %}
+                <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <button type="submit" class="ds-btn ds-btn-primary">Guardar</button>
+                    <span class="ds-small">El membrete, el encabezado, el título, la fecha y las firmas los agrega el sistema.</span>
+                </div>
+                {% endif %}
+            </form>
+
+            <p class="ds-small" id="aviso-preview" hidden style="margin:0;">La vista previa muestra lo último <strong>guardado</strong>.</p>
+            <iframe id="vista-previa" class="ofi-preview" title="Vista previa en PDF" hidden></iframe>
+        </div>
+
+        <aside class="ofi-panel">
+            {% if instancia.editable %}
+            <section class="ds-card">
+                <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+                    <h2 class="ds-h4" style="margin:0;">Recargar texto</h2>
+                    <p class="ds-small" style="margin:0;">Reemplaza el texto de este borrador por el de la plantilla en el idioma elegido. Se pierden los cambios hechos aquí.</p>
+                    <form method="post" action="{% url 'oficios:oficio_recargar' instancia.pk %}" style="display:flex; gap:6px; flex-wrap:wrap;"
+                          onsubmit="return confirm('Se reemplaza el texto actual del borrador. ¿Continuar?');">
+                        {% csrf_token %}
+                        <select name="idioma" class="ds-select" aria-label="Idioma" style="height:32px; padding-block:0; font-size:var(--ds-text-sm); width:auto;">
+                            {% for codigo, nombre in idiomas_disponibles %}<option value="{{ codigo }}" {% if codigo == instancia.idioma %}selected{% endif %}>{{ nombre }}</option>{% endfor %}
+                        </select>
+                        <button type="submit" class="ds-btn ds-btn-sm ds-btn-secondary">Recargar</button>
+                    </form>
+                </div>
+            </section>
+            {% include 'oficios/_panel_editor.html' %}
+            {% endif %}
+            <section class="ds-card">
+                <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+                    <h2 class="ds-h4" style="margin:0;">Historial</h2>
+                    {% for h in historial %}
+                    <p class="ds-small" style="margin:0;"><strong>{{ h.get_accion_display }}</strong> · {{ h.fecha_hora|date:"d/m/Y H:i" }}{% if h.usuario %} · {{ h.usuario.username }}{% endif %}{% if h.detalle %}<br>{{ h.detalle }}{% endif %}</p>
+                    {% empty %}<p class="ds-small" style="margin:0;">Sin movimientos.</p>{% endfor %}
+                    {% if instancia.editable %}
+                    <form method="post" action="{% url 'oficios:oficio_eliminar' instancia.pk %}" onsubmit="return confirm('¿Eliminar este borrador?');" style="margin-top:8px;">
+                        {% csrf_token %}
+                        <button type="submit" class="ds-btn ds-btn-sm ds-btn-danger-ghost">Eliminar borrador</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </section>
+        </aside>
+    </div>
+</div>
+{{ instancia.contenido_html|json_script:"contenido-inicial" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'oficios/vendor/quill/quill.js' %}"></script>
+<script src="{% static 'oficios/editor_oficio.js' %}"></script>
+<script src="{% static 'oficios/autocompletar_empleado.js' %}"></script>
+{% endblock %}

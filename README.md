@@ -81,7 +81,7 @@ El módulo **Empleados** (`apps/empleados`, menú lateral → Empleados) tiene u
 empleados de la Estancia (ProyectoEstancia → Personal). La Estancia es la fuente de verdad: las altas,
 correcciones y bajas se hacen allá en Recursos Humanos. Viajes solo copia, para seguir teniendo el
 catálogo aunque la Estancia se apague. Lo único propio de Viajes es la marca de **firmante habitual**
-(se muestra primero en el buscador).
+(se muestra primero en el buscador) y el **fundamento asignado a mano** (ver abajo).
 
 - Nunca se borran empleados: los dados de baja (o que dejan de venir) quedan **inactivos**.
 - Si la Estancia no responde, se sigue usando la última copia y la pantalla avisa del intento fallido.
@@ -90,6 +90,15 @@ catálogo aunque la Estancia se apague. Lo único propio de Viajes es la marca d
   Sale de la **plaza** (por ejemplo, "JEFE DE DEPARTAMENTO") y se pone en femenino si firma una mujer
   ("JEFA DE DEPARTAMENTO"). Si el empleado no tiene plaza, se usa la jerarquía. La descripción de la
   plaza ("JEFATURA DE DEPARTAMENTO DE …") se guarda aparte, en `plaza_descripcion`.
+- **Fundamento impreso** (`Empleado.fundamento`): el artículo del Acuerdo que se cita según la plaza de
+  quien firma (por ejemplo, Representante Local → "Artículo 14, apartado B, fracciones I, II y III").
+  - El catálogo de los 6 fundamentos está en el admin, en **Fundamentos por plaza**. Solo el
+    SuperUser lo edita.
+  - Se asigna solo por la plaza. El Subdirector de Control y Verificación se distingue por la
+    descripción de la plaza.
+  - Cuando la plaza no lo determina, SuperUser o Aeropuerto lo asignan a mano en la pantalla
+    Empleados ("Cambiar"). La sincronización no lo toca.
+  - La pantalla marca **Sin fundamento** a los firmantes habituales que no tienen uno.
 
 ### Configuración (`.env` de la raíz)
 
@@ -124,6 +133,84 @@ pantalla (SuperUser y Aeropuerto) también hace una completa.
 ```powershell
 python manage.py test apps.empleados --settings=Viajes.settings.test
 ```
+
+---
+
+## Oficios (expedientes de familia)
+
+El módulo **Oficios** (`apps/oficios`, menú lateral → Principal → Oficios) arma los oficios 02–14 de cada
+extranjero. Solo lo usan SuperUser y Aeropuerto. El detalle del diseño está en `Docs/EMPLEADOS_Y_OFICIOS.md`.
+
+1. **Nuevo expediente:**
+   - Se buscan los pasajeros en los vuelos cargados (por defecto, solo los marcados SR o R).
+   - Se eligen los de la familia.
+   - Sus datos se precargan, con la nacionalidad sacada del código del país emisor, y se pueden corregir.
+   - También se puede capturar a una persona a mano.
+2. **Firmante y 2 testigos:** se eligen de la pantalla Empleados, una vez por expediente. Si en un oficio
+   cambian los testigos, se ajusta en ese oficio. El fundamento del firmante sale de su plaza.
+3. **Borradores por persona** (o para toda la familia de una vez, con los formatos sugeridos según el
+   resultado): cada oficio copia el texto de su plantilla y se edita en la app.
+   - En el texto hay `{{variables}}` y guiones automáticos: `[[ HACE CONSTAR ]]` y un ` --` al final del renglón.
+   - Lo que vaya entre `[[ RECUADRO ]]` y `[[ /RECUADRO ]]` sale dentro de un recuadro con borde; entre
+     `[[ TABLA ]]` y `[[ /TABLA ]]`, una fila con borde por renglón.
+   - `[[ RENGLÓN ]]` y ` __` dejan líneas para escribir a mano.
+   - En una `[[ TABLA ]]`, ` || ` separa las columnas de una fila.
+   - `[[ FIRMA: leyenda ]]` dibuja una línea de firma (`[[ FIRMA: A || B ]]`, dos lado a lado) y
+     `[[ NUEVA HOJA ]]` empieza otra hoja con el encabezado.
+   - `[[ EVIDENCIAS ]]` es donde salen las evidencias de la persona (ver abajo).
+   - Lo que va entre `«…»` hay que llenarlo en la app: no deja marcar el oficio como impreso mientras quede alguno.
+   - El membrete, el encabezado, el título, la fecha y las firmas los pone el sistema.
+4. **Word y PDF:** el PDF es el mismo Word convertido con LibreOffice (`SOFFICE_BIN`).
+5. **Marcar como impreso:** congela el oficio tal como se imprimió (variables y `.docx`). Para corregirlo hay
+   que reabrirlo con un motivo, y queda en el historial.
+6. **Paquete para imprimir:** se eligen varios oficios del expediente y salen en un solo Word o PDF, por
+   persona y del 02 al 14. Desde ahí también se marcan como impresos.
+
+Están las plantillas **02, 03, 04, 04.1, 05, 07, 08, 09, 11, 12, 13 y 14**, cada una con el tamaño de letra de
+su Word oficial. Las respuestas del 04 y el 04.1 se escriben a mano.
+
+**Evidencias (09 y 05):** en el detalle, dentro de cada persona, se capturan de 1 a N evidencias. En el 09
+cada una lleva a quién se verificó, la hora, si hubo respuesta, los intentos, observaciones y foto; en el 05,
+observaciones y foto.
+- La foto se sube desde la computadora o el celular (abre la cámara), o se toma de la app Cámara.
+- Cada evidencia sale en su propio recuadro; sin foto, el recuadro sale en blanco para llenarlo a mano.
+- Al marcar el oficio como impreso, sus evidencias quedan congeladas hasta reabrirlo.
+- Las fotos se guardan en `media/oficios/evidencias/`.
+
+**Traducciones:** en Oficios → Plantillas, cada formato puede tener una traducción por idioma.
+- Se captura una vez y la usan todos los oficios futuros de personas con ese idioma; si no hay, sale en español.
+- Lleva título bilingüe, texto bilingüe (la traducción va en letra chica) y leyenda de firma.
+- Ya vienen el 02 y el 03 en chino, ruso y francés; el 04 en chino y francés; el 04.1 en chino; y la leyenda
+  del 07, 08 y 09 en chino y ruso.
+- El chino usa Microsoft YaHei y el árabe Arial, que vienen con Windows. El texto base se corrige en **Oficios → Plantillas**.
+
+En el admin, solo el SuperUser puede editar:
+- los datos de la oficina;
+- la hoja membretada: si no hay ninguna, se usa la de 2026 incluida en `apps/oficios/assets/`;
+- los motivos de rechazo.
+
+### Despliegue en el servidor (.12, sin internet)
+
+1. Instalar las dependencias nuevas desde `vendor/python-docx-wheels.zip` (python-docx, lxml y
+   typing_extensions para Windows y Python 3.11):
+
+   ```powershell
+   # desde la raíz del proyecto, después de descomprimir el zip (queda la carpeta wheels\)
+   env\Scripts\pip install --no-index --find-links wheels python-docx==1.1.2 lxml==6.1.3
+   ```
+
+2. Instalar en Windows las fuentes **Noto Sans** (Regular, Bold, Italic y BoldItalic) para que LibreOffice
+   genere el PDF con la misma letra. Los `.ttf` están en `ProyectoEstancia/backend/apps/Oficios/assets/fonts`.
+3. `actualizar_produccion.bat` → **M** (migrate, `oficios` 0001 a 0012): crea las tablas `oficios_*` y
+   siembra la oficina, los motivos de rechazo, las plantillas y sus traducciones.
+
+### Tests
+
+```powershell
+python manage.py test apps.oficios --settings=Viajes.settings.test
+```
+
+Si LibreOffice no está instalado, la prueba de conversión real a PDF se salta.
 
 ---
 

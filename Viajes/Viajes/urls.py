@@ -26,6 +26,7 @@ urlpatterns = [
     path('directorio/', include('apps.directorio.urls')),
     path('redacciones/', include('apps.redacciones.urls')),
     path('empleados/', include('apps.empleados.urls')),
+    path('oficios/', include('apps.oficios.urls')),
     path('accounts/', include('django.contrib.auth.urls')),  # Rutas de autenticación
 ]
 

@@ -1,0 +1,48 @@
+{# Panel lateral del editor: marcadores de formato y variables. Parámetros: variables, titulos_separador. #}
+<section class="ds-card">
+    <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+        <h2 class="ds-h4" style="margin:0;">Guiones</h2>
+        <p class="ds-small" style="margin:0;">No se escriben a mano: Word los dibuja hasta el margen.</p>
+        <div class="ofi-botones">
+            {% for titulo in titulos_separador %}
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-separador="{{ titulo }}" title="Agrega un renglón [[ {{ titulo }} ]]">{{ titulo|truncatechars:22 }}</button>
+            {% endfor %}
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-separador="" title="[[ ]]: línea completa de guiones">Línea de guiones</button>
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-relleno="--" title="Agrega ' --' al final del renglón: guiones hasta el margen">Rellenar con guiones</button>
+        </div>
+
+        <h2 class="ds-h4" style="margin:var(--ds-sp-2) 0 0;">Para escribir a mano</h2>
+        <div class="ofi-botones">
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-linea="[[ RENGLÓN ]]" title="[[ RENGLÓN ]]: un renglón completo para escribir en el papel">Renglón</button>
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-relleno="__" title="Agrega ' __' al final del renglón: línea hasta el margen">Completar con línea</button>
+        </div>
+
+        <h2 class="ds-h4" style="margin:var(--ds-sp-2) 0 0;">Recuadros, firmas y hojas</h2>
+        <p class="ds-small" style="margin:0;">Lo que quede entre la apertura y el cierre va con borde: en un <strong>recuadro</strong> todo junto; en una <strong>tabla</strong>, una fila por renglón.</p>
+        <div class="ofi-botones">
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-bloque="RECUADRO">Recuadro</button>
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-bloque="TABLA">Tabla</button>
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-linea="[[ FIRMA: NOMBRE Y FIRMA ]]" title="Línea de firma con la leyenda debajo (cambia el texto después de los dos puntos)">Línea de firma</button>
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-linea="[[ NUEVA HOJA ]]" title="Empieza otra hoja con el encabezado institucional">Nueva hoja</button>
+        </div>
+
+        <h2 class="ds-h4" style="margin:var(--ds-sp-2) 0 0;">Por llenar</h2>
+        <p class="ds-small" style="margin:0;">Lo que va entre <code>«…»</code> <strong>en mayúsculas</strong> (ej. <code>«DESTINO»</code>) se tiene que escribir antes de imprimir: no deja marcarlo como impreso mientras quede alguno.</p>
+        <div class="ofi-botones">
+            <button type="button" class="ds-btn ds-btn-sm ds-btn-secondary" data-campo>Campo «…»</button>
+        </div>
+    </div>
+</section>
+<section class="ds-card">
+    <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+        <h2 class="ds-h4" style="margin:0;">Variables</h2>
+        <p class="ds-small" style="margin:0;">Clic para insertarla donde está el cursor. Se llenan con los datos del expediente al generar el documento.</p>
+        <ul class="ofi-vars">
+            {% for clave, etiqueta, ejemplo in variables %}
+            <li><button type="button" class="ofi-var" data-insertar="{% templatetag openvariable %}{{ clave }}{% templatetag closevariable %}" title="Ej.: {{ ejemplo }}">
+                <code>{% templatetag openvariable %}{{ clave }}{% templatetag closevariable %}</code><span>{{ etiqueta }}</span>
+            </button></li>
+            {% endfor %}
+        </ul>
+    </div>
+</section>

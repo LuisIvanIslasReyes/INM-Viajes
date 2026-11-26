@@ -1,0 +1,39 @@
+{% extends 'uploader/base_ds.html' %}
+{% load static %}
+{# OFICIOS — EDITAR UNA EVIDENCIA. context: evidencia, form (EvidenciaForm), persona, plantilla, bloqueada. #}
+{% block title %}Evidencia · {{ persona.nombre }} · Oficios · INM Viajes{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'oficios/oficios.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ds-container-form" style="max-width:760px; display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
+        <ol>
+            <li><a href="{% url 'oficios:lista' %}">Oficios</a></li>
+            <li><a href="{% url 'oficios:detalle' persona.expediente_id %}">{{ persona.expediente.folio }}</a></li>
+            <li><a href="{% url 'oficios:detalle' persona.expediente_id %}#persona-{{ persona.pk }}">{{ persona.nombre }}</a></li>
+            <li aria-current="page">Evidencia del {{ plantilla.clave }}</li>
+        </ol>
+    </nav>
+    <h1 class="ds-h1">Evidencia del {{ plantilla.clave }}</h1>
+    {% if bloqueada %}<div class="ds-alert ds-alert-info"><div>El {{ plantilla.clave }} ya está impreso: reábrelo para cambiar sus evidencias.</div></div>{% endif %}
+    <form method="post" enctype="multipart/form-data" class="ds-card">
+        <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            {% csrf_token %}
+            {% if evidencia.foto %}<img src="{{ evidencia.foto.url }}" alt="Foto actual" style="max-height:260px; max-width:100%; object-fit:contain; align-self:center; border:1px solid var(--ds-border); border-radius:var(--ds-radius-md);">{% endif %}
+            <div class="ofi-grid-campos">
+                {% for campo in form %}
+                <div class="ds-field"{% if campo.name == 'nota' or campo.name == 'verificacion_a' or campo.name == 'foto' %} style="grid-column:1 / -1;"{% endif %}>
+                    <label class="ds-label" for="{{ campo.id_for_label }}">{{ campo.label|capfirst }}</label>
+                    {{ campo }}
+                    {% if campo.errors %}<p class="ds-error-text">{{ campo.errors|striptags }}</p>{% endif %}
+                </div>
+                {% endfor %}
+            </div>
+            <div style="display:flex; gap:8px;">
+                {% if not bloqueada %}<button type="submit" class="ds-btn ds-btn-primary">Guardar</button>{% endif %}
+                <a href="{% url 'oficios:detalle' persona.expediente_id %}#persona-{{ persona.pk }}" class="ds-btn ds-btn-ghost">Volver</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

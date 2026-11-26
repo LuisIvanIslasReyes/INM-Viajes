@@ -1,0 +1,176 @@
+{% extends 'uploader/base_ds.html' %}
+{% load static %}
+{# ====================================================================
+   OFICIOS — DETALLE DEL EXPEDIENTE
+     context: expediente, personas (con .form, .formatos [(plantilla, instancia|None)],
+              .tiene_impresos), firmas_form, nueva_form.
+   Firmante + 2 testigos valen para todos los oficios del expediente (cada
+   oficio puede cambiar sus testigos). Todo lo demás es por persona.
+   Formularios hermanos, nunca anidados.
+   ==================================================================== #}
+{% block title %}{{ expediente.folio }} · Oficios · INM Viajes{% endblock %}
+{% block extra_css %}<link rel="stylesheet" href="{% static 'oficios/oficios.css' %}">{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
+        <ol>
+            <li><a href="{% url 'oficios:lista' %}">Oficios</a></li>
+            <li aria-current="page">{{ expediente.folio }}</li>
+        </ol>
+    </nav>
+
+    <header style="display:flex; flex-wrap:wrap; align-items:flex-end; justify-content:space-between; gap:16px;">
+        <div>
+            <h1 class="ds-h1">Expediente {{ expediente.folio }}</h1>
+            <p class="ds-small" style="margin-top:4px;">
+                Creado el {{ expediente.creado_en|date:"d/m/Y H:i" }}{% if expediente.creado_por %} por {{ expediente.creado_por.username }}{% endif %} ·
+                <span class="ds-badge{% if expediente.resultado == 'RECHAZO' %} ds-badge-danger{% elif expediente.resultado == 'INTERNACION' %} ds-badge-success{% endif %}">{{ expediente.get_resultado_display }}</span>
+            </p>
+        </div>
+        <div style="display:flex; gap:8px; flex-wrap:wrap;">
+            <a href="{% url 'oficios:nuevo' %}?expediente={{ expediente.pk }}" class="ds-btn ds-btn-secondary">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>
+                Agregar pasajeros del vuelo
+            </a>
+            {% if hay_oficios %}
+            <a href="{% url 'oficios:paquete' expediente.pk %}" class="ds-btn ds-btn-primary">
+                <svg class="ds-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M6 9V2h12v7M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><path d="M6 14h12v8H6z"/></svg>
+                Paquete para imprimir
+            </a>
+            {% endif %}
+        </div>
+    </header>
+
+    {# ---------- Firmante y testigos ---------- #}
+    <section class="ds-card">
+        <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <div>
+                <h2 class="ds-h3" style="margin:0;">Firmante y testigos</h2>
+                <p class="ds-small" style="margin:4px 0 0;">Firman todos los oficios del expediente. Si en un oficio cambian los testigos, se ajusta en ese oficio.</p>
+            </div>
+            {% if firmas_form.non_field_errors %}
+            <div class="ds-alert ds-alert-danger"><div>{{ firmas_form.non_field_errors|striptags }}</div></div>
+            {% endif %}
+            <form method="post" action="{% url 'oficios:guardar_firmas' expediente.pk %}" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+                {% csrf_token %}
+                <div class="ofi-grid-campos">
+                    {% include 'oficios/_empleado_auto.html' with campo='firmante' etiqueta='Firmante (autoridad migratoria)' empleado=expediente.firmante pide_fundamento=True vacio='Sin firmante: no se puede imprimir.' %}
+                    {% include 'oficios/_empleado_auto.html' with campo='testigo_1' etiqueta='Testigo de asistencia 1' empleado=expediente.testigo_1 %}
+                    {% include 'oficios/_empleado_auto.html' with campo='testigo_2' etiqueta='Testigo de asistencia 2' empleado=expediente.testigo_2 %}
+                    <div class="ds-field">
+                        <label class="ds-label" for="{{ firmas_form.resultado.id_for_label }}">Resultado</label>
+                        {{ firmas_form.resultado }}
+                    </div>
+                </div>
+                <div><button type="submit" class="ds-btn ds-btn-primary">Guardar firmante y testigos</button></div>
+            </form>
+        </div>
+    </section>
+
+    {# ---------- Borradores para toda la familia ---------- #}
+    {% if personas and plantillas_familia %}
+    <section class="ds-card">
+        <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+            <div>
+                <h2 class="ds-h3" style="margin:0;">Borradores para toda la familia</h2>
+                <p class="ds-small" style="margin:4px 0 0;">Crea los mismos formatos para las {{ personas|length }} persona{{ personas|length|pluralize }}. Vienen marcados los que normalmente lleva un expediente de {{ expediente.get_resultado_display|lower }}; a quien ya tenga un formato no se le duplica.</p>
+            </div>
+            <form method="post" action="{% url 'oficios:crear_borradores_familia' expediente.pk %}" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                {% csrf_token %}
+                <ul class="ofi-formatos">
+                    {% for plantilla, sugerido in plantillas_familia %}
+                    <li class="ofi-formato"><label><input type="checkbox" name="plantillas" value="{{ plantilla.pk }}" {% if sugerido %}checked{% endif %}> {{ plantilla.clave }}. {{ plantilla.nombre }}</label></li>
+                    {% endfor %}
+                </ul>
+                <div><button type="submit" class="ds-btn ds-btn-sm ds-btn-secondary">Crear para toda la familia</button></div>
+            </form>
+        </div>
+    </section>
+    {% endif %}
+
+    {# ---------- Personas ---------- #}
+    {% for persona in personas %}
+    <section class="ds-card" id="persona-{{ persona.pk }}">
+        <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+            <div style="display:flex; flex-wrap:wrap; justify-content:space-between; gap:12px; align-items:flex-start;">
+                <div>
+                    <h2 class="ds-h3" style="margin:0;">{{ persona.nombre }}</h2>
+                    <p class="ds-small" style="margin:4px 0 0;">
+                        {{ persona.nacionalidad|default:"Sin nacionalidad" }} ·
+                        {{ persona.documento|default:"Sin documento" }} ·
+                        Nac. {{ persona.fecha_nacimiento|date:"d/m/Y"|default:"—" }} ·
+                        Idioma: {{ persona.get_idioma_display }}{% if persona.vuelo %} · Vuelo {{ persona.vuelo }}{% endif %}
+                    </p>
+                </div>
+                {% if not persona.registro_id %}<span class="ds-badge">Capturada a mano</span>{% endif %}
+            </div>
+
+            {# Formatos: los existentes se abren; los demás se eligen para crear borradores. #}
+            <form method="post" action="{% url 'oficios:crear_borradores' persona.pk %}" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                {% csrf_token %}
+                <ul class="ofi-formatos">
+                    {% for plantilla, instancia in persona.formatos %}
+                    <li class="ofi-formato">
+                        {% if instancia %}
+                        <a href="{% url 'oficios:oficio' instancia.pk %}" style="font-size:var(--ds-text-sm); font-weight:600;">{{ plantilla.clave }}. {{ plantilla.nombre }}</a>
+                        <span style="display:flex; gap:4px; flex-wrap:wrap; justify-content:flex-end;">
+                            {% if instancia.idioma != 'es' %}<span class="ds-badge" title="Texto bilingüe">{{ instancia.get_idioma_display }}</span>{% endif %}
+                            <span class="ds-badge{% if instancia.estado == 'IMPRESO' %} ds-badge-success{% else %} ds-badge-info{% endif %}">{{ instancia.get_estado_display }}</span>
+                        </span>
+                        {% else %}
+                        <label><input type="checkbox" name="plantillas" value="{{ plantilla.pk }}"> {{ plantilla.clave }}. {{ plantilla.nombre }}</label>
+                        <span class="ds-small" style="color:var(--ds-text-muted);">Sin crear</span>
+                        {% endif %}
+                    </li>
+                    {% endfor %}
+                </ul>
+                <div><button type="submit" class="ds-btn ds-btn-sm ds-btn-secondary">Crear borradores de los elegidos</button></div>
+            </form>
+
+            {% for sec in persona.secciones_evidencia %}
+            {% include 'oficios/_evidencias.html' %}
+            {% endfor %}
+
+            <details class="ds-acc">
+                <summary class="ds-acc-summary">Datos de la persona
+                    <svg class="ds-icon ds-acc-chev" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="ds-acc-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+                    <form method="post" action="{% url 'oficios:editar_persona' persona.pk %}" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+                        {% csrf_token %}
+                        {% include 'oficios/_persona_campos.html' with form=persona.form %}
+                        <div><button type="submit" class="ds-btn ds-btn-primary">Guardar datos</button></div>
+                    </form>
+                    {% if not persona.tiene_impresos %}
+                    <form method="post" action="{% url 'oficios:quitar_persona' persona.pk %}" onsubmit="return confirm('¿Quitar a {{ persona.nombre|escapejs }} y sus borradores del expediente?');">
+                        {% csrf_token %}
+                        <button type="submit" class="ds-btn ds-btn-sm ds-btn-danger-ghost">Quitar del expediente</button>
+                    </form>
+                    {% endif %}
+                </div>
+            </details>
+        </div>
+    </section>
+    {% empty %}
+    <div class="ds-alert ds-alert-info"><div>El expediente aún no tiene personas. Agrégalas desde el vuelo o captúralas a mano.</div></div>
+    {% endfor %}
+
+    {# ---------- Persona capturada a mano ---------- #}
+    <details class="ds-acc" {% if nueva_form.errors %}open{% endif %}>
+        <summary class="ds-acc-summary">Agregar persona a mano
+            <svg class="ds-icon ds-acc-chev" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+        </summary>
+        <div class="ds-acc-body">
+            <form method="post" action="{% url 'oficios:agregar_persona' expediente.pk %}" style="display:flex; flex-direction:column; gap:var(--ds-sp-4);">
+                {% csrf_token %}
+                {% include 'oficios/_persona_campos.html' with form=nueva_form %}
+                <div><button type="submit" class="ds-btn ds-btn-primary">Agregar persona</button></div>
+            </form>
+        </div>
+    </details>
+</div>
+{% endblock %}
+
+{% block extra_js %}<script src="{% static 'oficios/autocompletar_empleado.js' %}"></script>{% endblock %}

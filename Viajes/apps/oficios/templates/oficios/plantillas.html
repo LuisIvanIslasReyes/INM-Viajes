@@ -1,0 +1,56 @@
+{% extends 'uploader/base_ds.html' %}
+{# OFICIOS — PLANTILLAS. context: plantillas (con variantes), idiomas [(código, nombre)] sin español. #}
+{% block title %}Plantillas · Oficios · INM Viajes{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
+        <ol><li><a href="{% url 'oficios:lista' %}">Oficios</a></li><li aria-current="page">Plantillas</li></ol>
+    </nav>
+    <header>
+        <h1 class="ds-h1">Plantillas de oficio</h1>
+        <p class="ds-small" style="margin-top:4px;">
+            Texto base en español de cada formato y sus traducciones. Una traducción se captura una sola vez y se usa en
+            todos los oficios futuros de personas con ese idioma; si no hay, el oficio sale en español.
+            Un cambio aplica a los borradores que se creen desde ahora.
+        </p>
+    </header>
+    <section class="ds-card" style="padding:0;">
+        <div class="ds-table-wrap" tabindex="0" role="region" aria-label="Plantillas" style="border:0;">
+            <table class="ds-table">
+                <thead><tr>
+                    <th scope="col">No.</th><th scope="col">Formato</th><th scope="col">Traducciones</th>
+                    <th scope="col">Estado</th><th scope="col">Última modificación</th>
+                </tr></thead>
+                <tbody>
+                    {% for p in plantillas %}
+                    <tr>
+                        <td class="ds-tabular" style="font-weight:700;">{{ p.clave }}</td>
+                        <td><a href="{% url 'oficios:plantilla_editar' p.pk %}" style="font-weight:600;">{{ p.nombre }}</a><br><span class="ds-small">{{ p.get_bloque_firmas_display }} · {{ p.tamano_letra_pt }} pt</span></td>
+                        <td>
+                            <div style="display:flex; flex-wrap:wrap; gap:6px; align-items:center;">
+                                {% for v in p.variantes.all %}
+                                <a href="{% url 'oficios:plantilla_idioma' p.pk v.idioma %}" class="ds-badge{% if v.activo %} ds-badge-info{% endif %}" title="Editar la traducción{% if not v.activo %} (inactiva){% endif %}">{{ v.get_idioma_display }}{% if not v.activo %} · inactiva{% endif %}</a>
+                                {% endfor %}
+                                <details class="ds-menu">
+                                    <summary class="ds-btn ds-btn-sm ds-btn-ghost" aria-label="Agregar traducción a {{ p.nombre }}">+ Traducción</summary>
+                                    <div class="ds-menu-list" role="menu">
+                                        {% for codigo, nombre in idiomas %}
+                                        <a class="ds-menu-item" role="menuitem" href="{% url 'oficios:plantilla_idioma' p.pk codigo %}">{{ nombre }}</a>
+                                        {% endfor %}
+                                    </div>
+                                </details>
+                            </div>
+                        </td>
+                        <td>{% if p.activo %}<span class="ds-badge ds-badge-success">Activa</span>{% else %}<span class="ds-badge">Inactiva</span>{% endif %}</td>
+                        <td class="ds-small">{{ p.modificado_en|date:"d/m/Y H:i" }}{% if p.modificado_por %} · {{ p.modificado_por.username }}{% endif %}</td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5"><div class="ds-empty"><h3 class="ds-h3">Sin plantillas</h3></div></td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </section>
+</div>
+{% endblock %}

@@ -1,0 +1,74 @@
+{% comment %} Evidencias de una persona para un formato (09 verificación / 05 foto).
+   Parámetros: persona, sec = {plantilla, evidencias, bloqueada, form, camara}. {% endcomment %}
+<details class="ds-acc" {% if sec.evidencias %}open{% endif %}>
+    <summary class="ds-acc-summary">
+        <span>Evidencias del {{ sec.plantilla.clave }} ({{ sec.plantilla.nombre|lower }}) · {{ sec.evidencias|length }}</span>
+        <svg class="ds-icon ds-acc-chev" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+    </summary>
+    <div class="ds-acc-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+        <p class="ds-small" style="margin:0;">Cada evidencia que presente la persona sale con su propio espacio en el {{ sec.plantilla.clave }}. Sin evidencias, sale un espacio en blanco para llenarlo a mano.</p>
+        {% if sec.bloqueada %}
+        <div class="ds-alert ds-alert-info"><div>El {{ sec.plantilla.clave }} ya está impreso: sus evidencias no se cambian hasta reabrirlo.</div></div>
+        {% endif %}
+
+        {% if sec.evidencias %}
+        <ul class="ofi-evidencias">
+            {% for ev in sec.evidencias %}
+            <li class="ofi-evidencia">
+                {% if ev.foto %}<a href="{{ ev.foto.url }}" target="_blank" rel="noopener"><img src="{{ ev.foto.url }}" alt="Foto de la evidencia {{ forloop.counter }}" class="ofi-evidencia-foto"></a>
+                {% else %}<div class="ofi-evidencia-foto ofi-evidencia-sin-foto">Sin foto</div>{% endif %}
+                <div style="flex:1; min-width:0;">
+                    <p style="margin:0; font-weight:600;">{{ forloop.counter }}. {{ ev.verificacion_a|default:"Evidencia" }}</p>
+                    {% if sec.plantilla.evidencias == 'VERIFICACION' %}
+                    <p class="ds-small" style="margin:2px 0 0;">Hora: {{ ev.hora|default:"—" }} · Respuesta: {{ ev.get_respuesta_display }} · Intentos: {{ ev.intentos|default_if_none:"—" }}</p>
+                    {% endif %}
+                    {% if ev.nota %}<p class="ds-small" style="margin:2px 0 0;">{{ ev.nota|truncatechars:160 }}</p>{% endif %}
+                </div>
+                {% if not sec.bloqueada %}
+                <div style="display:flex; gap:4px; align-items:flex-start;">
+                    <a href="{% url 'oficios:evidencia_editar' ev.pk %}" class="ds-btn ds-btn-sm ds-btn-ghost">Editar</a>
+                    <form method="post" action="{% url 'oficios:evidencia_quitar' ev.pk %}" onsubmit="return confirm('¿Quitar esta evidencia?');">
+                        {% csrf_token %}
+                        <button type="submit" class="ds-btn ds-btn-sm ds-btn-danger-ghost">Quitar</button>
+                    </form>
+                </div>
+                {% endif %}
+            </li>
+            {% endfor %}
+        </ul>
+        {% endif %}
+
+        {% if not sec.bloqueada %}
+        <form method="post" enctype="multipart/form-data" action="{% url 'oficios:evidencia_agregar' persona.pk sec.plantilla.pk %}"
+              style="display:flex; flex-direction:column; gap:var(--ds-sp-3); border-top:1px solid var(--ds-divider); padding-top:var(--ds-sp-3);">
+            {% csrf_token %}
+            <p style="margin:0; font-weight:600;">Agregar evidencia</p>
+            <div class="ofi-grid-campos">
+                {% for campo in sec.form %}{% if campo.name != 'orden' %}
+                <div class="ds-field"{% if campo.name == 'nota' or campo.name == 'verificacion_a' %} style="grid-column:1 / -1;"{% endif %}>
+                    <label class="ds-label" for="{{ campo.id_for_label }}">{{ campo.label|capfirst }}</label>
+                    {{ campo }}
+                    {% if campo.name == 'foto' %}<p class="ds-help">En el celular abre la cámara. JPG, PNG o WEBP.</p>{% endif %}
+                </div>
+                {% endif %}{% endfor %}
+            </div>
+            <div><button type="submit" class="ds-btn ds-btn-sm ds-btn-secondary">Agregar evidencia</button></div>
+        </form>
+        {% if sec.camara %}
+        <div style="display:flex; flex-direction:column; gap:var(--ds-sp-2);">
+            <p class="ds-small" style="margin:0;">Fotos de este pasajero en la app Cámara:</p>
+            <div style="display:flex; flex-wrap:wrap; gap:8px;">
+                {% for foto in sec.camara %}
+                <form method="post" action="{% url 'oficios:evidencia_camara' persona.pk sec.plantilla.pk %}" class="ofi-camara">
+                    {% csrf_token %}
+                    <input type="hidden" name="foto" value="{{ foto.pk }}">
+                    <img src="{{ foto.foto.url }}" alt="Foto de Cámara del {{ foto.fecha_captura|date:'d/m/Y H:i' }}" class="ofi-evidencia-foto">
+                    <button type="submit" class="ds-btn ds-btn-sm ds-btn-ghost">Usar</button>
+                </form>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+        {% endif %}
+    </div>
+</details>

@@ -1,0 +1,93 @@
+{% extends 'uploader/base_ds.html' %}
+{% load static %}
+{# ====================================================================
+   OFICIOS — TRADUCCIÓN DE UNA PLANTILLA
+     context: plantilla, variante (nueva sin guardar si `nueva`), form (VarianteForm),
+              idioma_nombre, faltan/desconocidas (variables), base_desactualizada,
+              variables, titulos_separador, versiones.
+   Una copia bilingüe completa: cada párrafo en español seguido de su traducción.
+   Se empieza con el texto en español para pegar la traducción donde va.
+   ==================================================================== #}
+{% block title %}{{ plantilla.clave }} en {{ idioma_nombre|lower }} · Plantillas · INM Viajes{% endblock %}
+{% block extra_css %}
+<link rel="stylesheet" href="{% static 'oficios/vendor/quill/quill.snow.css' %}">
+<link rel="stylesheet" href="{% static 'oficios/oficios.css' %}">
+{% endblock %}
+
+{% block content %}
+<div class="ds-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+    <nav class="ds-crumbs" aria-label="Ruta de navegación">
+        <ol>
+            <li><a href="{% url 'oficios:lista' %}">Oficios</a></li>
+            <li><a href="{% url 'oficios:plantillas' %}">Plantillas</a></li>
+            <li><a href="{% url 'oficios:plantilla_editar' plantilla.pk %}">{{ plantilla.clave }}</a></li>
+            <li aria-current="page">{{ idioma_nombre }}</li>
+        </ol>
+    </nav>
+    <header>
+        <h1 class="ds-h1">{{ plantilla.clave }}. {{ plantilla.nombre }} — {{ idioma_nombre }}</h1>
+        <p class="ds-small" style="margin-top:4px;">
+            {% if nueva %}Nueva traducción: se empieza con el texto en español. Pega la traducción después de cada párrafo
+            (o en un párrafo aparte), sin borrar el español.{% else %}Se usa en los borradores de personas que hablan {{ idioma_nombre|lower }}.{% endif %}
+            Los datos del caso van como <code>{% templatetag openvariable %}variables{% templatetag closevariable %}</code>;
+            lo que haya que escribir en {{ idioma_nombre|lower }} para cada persona (ej. la nacionalidad), entre <code>«…»</code>.
+        </p>
+    </header>
+
+    {% if igual_al_espanol %}
+    <div class="ds-alert ds-alert-info"><div>Esta traducción usa el <strong>mismo texto que el español</strong>; solo cambian el título y la leyenda de firma. Si pegas una traducción en el texto, se guarda aparte.</div></div>
+    {% endif %}
+    {% if base_desactualizada and not igual_al_espanol %}
+    <div class="ds-alert ds-alert-warning"><div>El texto en español de esta plantilla cambió después de la última vez que se guardó esta traducción. Revisa que siga diciendo lo mismo.</div></div>
+    {% endif %}
+    {% if desconocidas %}
+    <div class="ds-alert ds-alert-danger"><div>La traducción usa variables que no existen: {% for v in desconocidas %}<code>{% templatetag openvariable %}{{ v }}{% templatetag closevariable %}</code>{% if not forloop.last %}, {% endif %}{% endfor %}. No se podrá imprimir así.</div></div>
+    {% endif %}
+    {% if faltan %}
+    <div class="ds-alert ds-alert-warning"><div>Estas variables están en el español y no en la traducción: {% for v in faltan %}<code>{% templatetag openvariable %}{{ v }}{% templatetag closevariable %}</code>{% if not forloop.last %}, {% endif %}{% endfor %}. Si los datos del caso deben salir en la traducción, agrégalas.</div></div>
+    {% endif %}
+
+    <div class="ofi-layout">
+        <form method="post" style="display:flex; flex-direction:column; gap:var(--ds-sp-4); min-width:0;">
+            {% csrf_token %}
+            {{ form.contenido_html }}
+            <section class="ds-card">
+                <div class="ds-card-body" style="display:flex; flex-direction:column; gap:var(--ds-sp-3);">
+                    <div class="ds-field">
+                        <label class="ds-label" for="{{ form.titulo.id_for_label }}">Título bilingüe</label>
+                        {{ form.titulo }}
+                        <p class="ds-help">{{ form.titulo.help_text }}</p>
+                    </div>
+                    <div class="ds-field">
+                        <label class="ds-label" for="{{ form.leyenda_firma_persona.id_for_label }}">Leyenda bajo la firma de la persona</label>
+                        {{ form.leyenda_firma_persona }}
+                        <p class="ds-help">{{ form.leyenda_firma_persona.help_text }}</p>
+                    </div>
+                    <label class="ds-small" style="display:flex; align-items:center; gap:6px;">{{ form.activo }} Activa (si se desactiva, los oficios salen en español)</label>
+                </div>
+            </section>
+            <div class="ofi-editor"><div id="editor" data-destino="{{ form.contenido_html.id_for_label }}" data-solo-lectura="0"></div></div>
+            <div style="display:flex; gap:8px;">
+                <button type="submit" class="ds-btn ds-btn-primary">Guardar traducción</button>
+                <a href="{% url 'oficios:plantillas' %}" class="ds-btn ds-btn-ghost">Cancelar</a>
+            </div>
+            <details class="ds-acc">
+                <summary class="ds-acc-summary">Texto en español (referencia)
+                    <svg class="ds-icon ds-acc-chev" aria-hidden="true" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></svg>
+                </summary>
+                <div class="ds-acc-body ofi-referencia">{{ plantilla.contenido_html|safe }}</div>
+            </details>
+        </form>
+        <aside class="ofi-panel">
+            {% include 'oficios/_panel_editor.html' %}
+            {% include 'oficios/_versiones.html' %}
+        </aside>
+    </div>
+</div>
+{{ texto|json_script:"contenido-inicial" }}
+{% endblock %}
+
+{% block extra_js %}
+<script src="{% static 'oficios/vendor/quill/quill.js' %}"></script>
+<script src="{% static 'oficios/editor_oficio.js' %}"></script>
+{% endblock %}

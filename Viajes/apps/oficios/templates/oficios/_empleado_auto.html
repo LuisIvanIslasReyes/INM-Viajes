@@ -1,0 +1,12 @@
+{% comment %} Autocompletado de un empleado (static/oficios/autocompletar_empleado.js).
+   Parámetros: campo (name del input oculto), etiqueta, empleado (Empleado o None),
+   pide_fundamento (bool: avisa si no tiene), vacio (texto de ayuda sin empleado).
+{% endcomment %}
+<div class="ds-field emp-auto" data-empleado-auto data-url="{% url 'empleados:buscar' %}" data-fundamento="{{ pide_fundamento|yesno:'1,0' }}">
+    <label class="ds-label" for="auto-{{ campo }}">{{ etiqueta }}</label>
+    <input type="text" id="auto-{{ campo }}" class="ds-input" data-auto-texto
+           value="{{ empleado.nombre_para_oficio|default:'' }}" placeholder="Busca por nombre o número…">
+    <input type="hidden" name="{{ campo }}" data-auto-valor value="{{ empleado.pk|default:'' }}">
+    <ul class="emp-auto-lista" role="listbox" hidden></ul>
+    <p class="ds-small emp-auto-info" data-auto-info>{% if empleado %}{{ empleado.cargo|default:"Sin cargo" }}{% if pide_fundamento %} · {% if empleado.fundamento %}Fundamento: {{ empleado.fundamento }}{% else %}⚠ Sin fundamento: no podrá imprimir{% endif %}{% endif %}{% else %}{{ vacio|default:"" }}{% endif %}</p>
+</div>

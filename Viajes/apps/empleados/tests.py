@@ -11,16 +11,23 @@ import urllib.parse
 from contextlib import contextmanager
 from unittest import mock
 
+from django.contrib import admin as django_admin
 from django.contrib.auth.models import Group, User
 from django.core.management import CommandError, call_command
-from django.test import TestCase, override_settings
+from django.test import RequestFactory, TestCase, override_settings
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.dateparse import parse_datetime
 
 from apps.cuentas.roles import GRUPO_AEROPUERTO, GRUPO_GENERAL
 
-from .models import Empleado, SincronizacionEmpleados, plaza_en_femenino
+from .models import (
+    Empleado,
+    FundamentoPlaza,
+    SincronizacionEmpleados,
+    plaza_en_femenino,
+    precargar_fundamentos,
+)
 from .services import ErrorSincronizacion, aplicar_empleados, descargar_empleados, sincronizar
 
 URL_ESTANCIA = 'http://estancia.test/api/v1/personal/integracion/empleados/'
@@ -214,6 +221,17 @@ class AplicarTests(TestCase):
         aplicar_empleados([MELISSA, CARLOS])
         self.assertTrue(Empleado.objects.get(id_estancia=11).activo)
 
+    def test_conserva_fundamento_manual(self):
+        aplicar_empleados([MELISSA, CARLOS])
+        titular = FundamentoPlaza.objects.get(clave='TITULAR')
+        Empleado.objects.filter(id_estancia=11).update(fundamento_manual=titular)
+        aplicar_empleados([MELISSA, dict(CARLOS, plaza='AGENTE FEDERAL DE MIGRACIÓN "B"')])  # completa
+        aplicar_empleados([dict(CARLOS, plaza='OFICIAL')], desactivar_ausentes=False)  # incremental
+        carlos = Empleado.objects.get(id_estancia=11)
+        self.assertEqual(carlos.plaza, 'OFICIAL')
+        self.assertEqual(carlos.fundamento_manual, titular)
+        self.assertEqual(carlos.fundamento_origen, 'manual')
+
 
 class CargoTests(TestCase):
 
@@ -236,6 +254,116 @@ class CargoTests(TestCase):
     def test_sin_plaza_cae_a_la_jerarquia(self):
         self.assertEqual(self._empleado(sexo='F', jerarquia='afm').cargo, 'AFM')
         self.assertEqual(self._empleado().cargo, '')
+
+
+class FundamentoTests(TestCase):
+    """Plaza → fundamento, con plazas reales tal como quedan tras D-144 (`separar_plaza`)."""
+
+    def _empleado(self, plaza='', descripcion='', **campos):
+        return Empleado(nombres='A', apellidos='B', plaza=plaza, plaza_descripcion=descripcion,
+                        sincronizado_en=timezone.now(), **campos)
+
+    def _clave(self, plaza, descripcion=''):
+        aplicable = self._empleado(plaza, descripcion).fundamento_aplicable
+        return aplicable.clave if aplicable else None
+
+    def test_siembra_los_6(self):
+        self.assertEqual(
+            list(FundamentoPlaza.objects.values_list('clave', flat=True)),
+            ['TITULAR', 'SUB_REP_FEDERAL', 'REP_LOCAL', 'SUB_REP_LOCAL', 'SUBDIR_CYV', 'JEFE_DEPTO'],
+        )
+        self.assertTrue(all(FundamentoPlaza.objects.values_list('activo', flat=True)))
+
+    def test_cada_plaza_recibe_su_fundamento(self):
+        casos = [
+            ('TITULAR DE LA OFICINA DE REPRESENTACION DEL I.N.M. EN BAJA CALIFORNIA', '', 'TITULAR'),
+            ('REPRESENTANTE LOCAL', 'REPRESENTACION LOCAL DEL I.N.M. EN TIJUANA', 'REP_LOCAL'),
+            ('SUB REPRESENTANTE LOCAL', 'SUB REPRESENTACION LOCAL TECATE', 'SUB_REP_LOCAL'),
+            ('SUB REPRESENTANTE LOCAL',
+             'SUB REPRESENTANTE LOCAL AEROPUERTO INTERNACIONAL DE TIJUANA "A"', 'SUB_REP_LOCAL'),
+            ('SUBDIRECTOR DE ÁREA',
+             'SUBDIRECCION DE CONTROL Y VERIFICACION MIGRATORIA EN B.C.', 'SUBDIR_CYV'),
+            ('JEFE DE DEPARTAMENTO', 'JEFATURA DE DEPARTAMENTO DE RECURSOS HUMANOS', 'JEFE_DEPTO'),
+            ('JEFE DE DEPARTAMENTO', '', 'JEFE_DEPTO'),
+        ]
+        for plaza, descripcion, clave in casos:
+            with self.subTest(plaza=plaza, descripcion=descripcion):
+                self.assertEqual(self._clave(plaza, descripcion), clave)
+
+    def test_textos_impresos(self):
+        esperados = {
+            'TITULAR DE LA OFICINA': 'Artículo 12, apartado B, fracciones I, II y III',
+            'REPRESENTANTE LOCAL': 'Artículo 14, apartado B, fracciones I, II y III',
+            'SUB REPRESENTANTE LOCAL': 'Artículo 15, apartado B, fracciones I, II y III',
+            'JEFE DE DEPARTAMENTO': 'Artículo 23, fracciones I, II, III y IV',
+        }
+        for plaza, texto in esperados.items():
+            with self.subTest(plaza=plaza):
+                e = self._empleado(plaza)
+                self.assertEqual(e.fundamento, texto)
+                self.assertEqual(e.fundamento_origen, 'plaza')
+        subdirector = self._empleado('SUBDIRECTOR DE ÁREA', 'SUBDIRECCION DE CONTROL Y VERIFICACION')
+        self.assertEqual(subdirector.fundamento, 'Artículo 19, fracciones I, II, IV, V y IX')
+
+    def test_plazas_sin_fundamento(self):
+        casos = [
+            ('SUBDIRECTOR DE ÁREA', 'SUBDIRECCION DE REGULACION MIGRATORIA'),
+            ('SUBDIRECTOR DE ÁREA', 'SUBDIRECCION DE ATENCION AL MIGRANTE'),
+            ('AGENTE FEDERAL DE MIGRACIÓN "B"', ''),
+            ('COORDINADOR DEL GRUPO BETA', 'COORDINACION DEL GRUPO DE PROTECCION A MIGRANTES BETA TIJUANA'),
+            ('ENCARGADO DE LA OFICINA DE REPRESENTACIÓN BC', ''),
+            ('TITULARIDAD DE ALGO', ''),  # se compara en palabras completas
+            ('', ''),
+        ]
+        for plaza, descripcion in casos:
+            with self.subTest(plaza=plaza, descripcion=descripcion):
+                e = self._empleado(plaza, descripcion)
+                self.assertIsNone(e.fundamento_aplicable)
+                self.assertEqual(e.fundamento, '')
+                self.assertEqual(e.fundamento_origen, '')
+
+    def test_sub_representante_federal_solo_a_mano(self):
+        self.assertEqual(FundamentoPlaza.objects.get(clave='SUB_REP_FEDERAL').plaza_empieza_con, '')
+        self.assertIsNone(self._clave('SUB REPRESENTANTE FEDERAL'))
+        federal = FundamentoPlaza.objects.get(clave='SUB_REP_FEDERAL')
+        e = self._empleado('', fundamento_manual=federal)
+        self.assertEqual(e.fundamento, 'Artículo 13, apartado B, fracciones I, II y III')
+        self.assertEqual(e.fundamento_origen, 'manual')
+
+    def test_sin_importar_acentos_ni_espacios(self):
+        self.assertEqual(self._clave('  jefe  de   departamento '), 'JEFE_DEPTO')
+        self.assertEqual(
+            self._clave('SUBDIRECTOR DE AREA', 'Subdirección de Control y Verificación Migratoria'),
+            'SUBDIR_CYV',
+        )
+
+    def test_el_asignado_a_mano_gana(self):
+        titular = FundamentoPlaza.objects.get(clave='TITULAR')
+        e = self._empleado('JEFE DE DEPARTAMENTO', fundamento_manual=titular)
+        self.assertEqual(e.fundamento, 'Artículo 12, apartado B, fracciones I, II y III')
+        self.assertEqual(e.fundamento_origen, 'manual')
+        self.assertEqual(e.fundamento_de_su_plaza.clave, 'JEFE_DEPTO')
+
+    def test_inactivo_no_se_asigna_ni_a_mano(self):
+        FundamentoPlaza.objects.filter(clave='TITULAR').update(activo=False)
+        titular = FundamentoPlaza.objects.get(clave='TITULAR')
+        e = self._empleado('JEFE DE DEPARTAMENTO', fundamento_manual=titular)
+        self.assertEqual(e.fundamento_aplicable.clave, 'JEFE_DEPTO')
+        self.assertEqual(e.fundamento_origen, 'plaza')
+        self.assertIsNone(self._clave('TITULAR DE LA OFICINA'))
+
+    def test_texto_corregido_en_el_catalogo(self):
+        FundamentoPlaza.objects.filter(clave='JEFE_DEPTO').update(texto='Artículo 23, fracciones I a IV')
+        self.assertEqual(self._empleado('JEFE DE DEPARTAMENTO').fundamento, 'Artículo 23, fracciones I a IV')
+
+    def test_precarga_con_una_sola_consulta(self):
+        empleados = [self._empleado('JEFE DE DEPARTAMENTO'), self._empleado('REPRESENTANTE LOCAL'),
+                     self._empleado('AGENTE FEDERAL DE MIGRACIÓN "B"')]
+        with self.assertNumQueries(1):
+            precargar_fundamentos(empleados)
+            textos = [e.fundamento for e in empleados]
+        self.assertEqual(textos[1], 'Artículo 14, apartado B, fracciones I, II y III')
+        self.assertEqual(textos[2], '')
 
 
 @override_settings(**CONFIG)
@@ -445,3 +573,110 @@ class VistasTests(TestCase):
         pk = Empleado.objects.get(id_estancia=10).pk
         self.client.post(reverse('empleados:alternar_firmante', args=[pk]))
         self.assertFalse(Empleado.objects.get(pk=pk).firmante_habitual)
+
+    # ---- Fundamento ----
+
+    def test_buscar_trae_fundamento(self):
+        self.client.force_login(self.general)
+        datos = self.client.get(reverse('empleados:buscar')).json()['resultados']
+        por_numero = {r['numero_empleado']: r for r in datos}
+        self.assertEqual(por_numero['1001']['fundamento'], 'Artículo 23, fracciones I, II, III y IV')
+        self.assertEqual(por_numero['1001']['fundamento_origen'], 'plaza')
+        self.assertEqual(por_numero['1002']['fundamento'], '')
+        self.assertEqual(por_numero['1002']['fundamento_origen'], '')
+
+    def test_listado_muestra_fundamento_sin_selector_para_general(self):
+        self.client.force_login(self.general)
+        resp = self.client.get(reverse('empleados:listado'))
+        self.assertContains(resp, 'Jefe de Departamento')  # Melissa, por su plaza
+        self.assertNotContains(resp, 'A mano:')
+        self.assertNotContains(resp, 'Cambiar')
+
+    def test_sin_fundamento_solo_alerta_en_firmantes_habituales(self):
+        self.client.force_login(self.general)
+        # Carlos no trae plaza: mientras no firme, no es una alerta.
+        self.assertNotContains(self.client.get(reverse('empleados:listado')), 'Sin fundamento')
+        Empleado.objects.filter(id_estancia=11).update(firmante_habitual=True)
+        self.assertContains(self.client.get(reverse('empleados:listado')), 'Sin fundamento', count=1)
+
+    def test_listado_aeropuerto_ve_el_selector(self):
+        self.client.force_login(self.aeropuerto)
+        resp = self.client.get(reverse('empleados:listado'))
+        self.assertContains(resp, 'Según plaza: Jefe de Departamento')
+        self.assertContains(resp, 'Según plaza: sin fundamento')
+        self.assertContains(resp, 'A mano: Sub Representante Federal')
+
+    def test_asignar_y_quitar_fundamento(self):
+        self.client.force_login(self.aeropuerto)
+        carlos = Empleado.objects.get(id_estancia=11)
+        url = reverse('empleados:asignar_fundamento', args=[carlos.pk])
+        titular = FundamentoPlaza.objects.get(clave='TITULAR')
+
+        resp = self.client.post(url, {'fundamento': titular.pk, 'querystring': 'q=tello'})
+        self.assertRedirects(resp, reverse('empleados:listado') + '?q=tello',
+                             fetch_redirect_response=False)
+        self.assertEqual(Empleado.objects.get(pk=carlos.pk).fundamento, titular.texto)
+
+        resp = self.client.post(url, {'fundamento': ''}, follow=True)
+        self.assertContains(resp, 'su plaza no tiene fundamento')
+        self.assertIsNone(Empleado.objects.get(pk=carlos.pk).fundamento_manual_id)
+
+    def test_quitar_vuelve_al_de_su_plaza(self):
+        self.client.force_login(self.aeropuerto)
+        melissa = Empleado.objects.get(id_estancia=10)
+        melissa.fundamento_manual = FundamentoPlaza.objects.get(clave='TITULAR')
+        melissa.save(update_fields=['fundamento_manual'])
+        resp = self.client.post(reverse('empleados:asignar_fundamento', args=[melissa.pk]),
+                                {'fundamento': ''}, follow=True)
+        self.assertContains(resp, 'se usa el fundamento de su plaza (Jefe de Departamento)')
+        self.assertEqual(Empleado.objects.get(pk=melissa.pk).fundamento_origen, 'plaza')
+
+    def test_fundamento_invalido_o_inactivo_no_se_asigna(self):
+        self.client.force_login(self.aeropuerto)
+        pk = Empleado.objects.get(id_estancia=10).pk
+        url = reverse('empleados:asignar_fundamento', args=[pk])
+        FundamentoPlaza.objects.filter(clave='TITULAR').update(activo=False)
+        inactivo = FundamentoPlaza.objects.get(clave='TITULAR').pk
+        for valor in ['abc', '99999', str(inactivo)]:
+            with self.subTest(valor=valor):
+                resp = self.client.post(url, {'fundamento': valor}, follow=True)
+                self.assertContains(resp, 'no existe o está inactivo')
+        self.assertIsNone(Empleado.objects.get(pk=pk).fundamento_manual_id)
+
+    def test_general_no_puede_asignar_fundamento(self):
+        self.client.force_login(self.general)
+        pk = Empleado.objects.get(id_estancia=11).pk
+        titular = FundamentoPlaza.objects.get(clave='TITULAR')
+        self.client.post(reverse('empleados:asignar_fundamento', args=[pk]), {'fundamento': titular.pk})
+        self.assertIsNone(Empleado.objects.get(pk=pk).fundamento_manual_id)
+
+    def test_asignar_fundamento_solo_post(self):
+        self.client.force_login(self.aeropuerto)
+        pk = Empleado.objects.get(id_estancia=11).pk
+        url = reverse('empleados:asignar_fundamento', args=[pk])
+        self.assertEqual(self.client.get(url).status_code, 405)
+
+
+class AdminTests(TestCase):
+
+    def test_changelist_muestra_el_fundamento(self):
+        aplicar_empleados([MELISSA, CARLOS])
+        self.client.force_login(User.objects.create_superuser('su', password='x'))
+        resp = self.client.get(reverse('admin:empleados_empleado_changelist'))
+        self.assertContains(resp, 'Jefe de Departamento')
+        self.assertContains(resp, 'sin fundamento')
+
+    def test_solo_el_superuser_cambia_el_catalogo(self):
+        modelo_admin = django_admin.site._registry[FundamentoPlaza]
+        request = RequestFactory().get('/')
+        request.user = User.objects.create_user('staff', password='x', is_staff=True)
+        self.assertFalse(modelo_admin.has_change_permission(request))
+        self.assertFalse(modelo_admin.has_add_permission(request))
+        request.user = User.objects.create_superuser('su', password='x')
+        self.assertTrue(modelo_admin.has_change_permission(request))
+
+    def test_en_empleado_solo_se_editan_los_campos_de_viajes(self):
+        modelo_admin = django_admin.site._registry[Empleado]
+        self.assertNotIn('fundamento_manual', modelo_admin.readonly_fields)
+        self.assertNotIn('firmante_habitual', modelo_admin.readonly_fields)
+        self.assertIn('plaza', modelo_admin.readonly_fields)

@@ -2,14 +2,16 @@
 {# ====================================================================
    EMPLEADOS — LISTADO (réplica local del catálogo de la Estancia)
      context: page_obj, total, busqueda (q), municipio, municipios
-              [(id, nombre)], inactivos, querystring, ultima_ok,
+              [(id, nombre)], fundamentos (FundamentoPlaza activos),
+              inactivos, querystring, ultima_ok,
               ultimo_intento (SincronizacionEmpleados), puede_gestionar.
-   Los datos se corrigen en la Estancia (RRHH), no aquí.
+   Los datos se corrigen en la Estancia (RRHH), no aquí. Lo único propio de
+   Viajes es "firmante habitual" y el fundamento asignado a mano.
    ==================================================================== #}
 {% block title %}Empleados · INM Viajes{% endblock %}
 
 {% block content %}
-<div class="ds-container" style="max-width:1100px; display:flex; flex-direction:column; gap:var(--ds-sp-6);">
+<div class="ds-container" style="display:flex; flex-direction:column; gap:var(--ds-sp-6);">
 
     {% include 'uploader/_page_header.html' with titulo='Empleados' subtitulo='Catálogo replicado de la Estancia. Las correcciones se hacen allá, en Recursos Humanos.' %}
 
@@ -94,6 +96,7 @@
                     <th scope="col">Nombre</th>
                     <th scope="col">Cargo</th>
                     <th scope="col">Descripción de la plaza</th>
+                    <th scope="col">Fundamento</th>
                     <th scope="col">Municipio</th>
                     <th scope="col">Estado</th>
                     <th scope="col" style="text-align:right;">Firmante habitual</th>
@@ -102,9 +105,47 @@
                     {% for e in page_obj %}
                     <tr>
                         <td class="ds-tabular">{{ e.numero_empleado|default:"—" }}</td>
-                        <td style="font-weight:600;">{{ e.nombre_para_oficio }}</td>
+                        <td style="font-weight:600; min-width:170px;">{{ e.nombre_para_oficio }}</td>
                         <td>{{ e.cargo|default:"—" }}</td>
                         <td class="ds-small">{{ e.plaza_descripcion|default:"—" }}</td>
+                        <td style="min-width:150px;">
+                            {# El que se imprime si firma. "Sin fundamento" solo alerta en firmantes habituales: #}
+                            {# los demás (agentes, testigos) no lo necesitan. #}
+                            {% with aplicable=e.fundamento_aplicable %}
+                            <div style="display:flex; flex-direction:column; align-items:flex-start; gap:4px;">
+                                {% if aplicable %}
+                                <span class="ds-small" title="{{ aplicable.texto }}">{{ aplicable.nombre }}</span>
+                                {% if e.fundamento_origen == 'manual' %}
+                                <span class="ds-badge ds-badge-info" title="Asignado a mano en Viajes; gana sobre el de su plaza.">A mano</span>
+                                {% endif %}
+                                {% elif e.firmante_habitual %}
+                                <span class="ds-badge ds-badge-warning" title="Asígnale uno a mano para que pueda firmar oficios.">Sin fundamento</span>
+                                {% else %}
+                                <span class="ds-small" style="color:var(--ds-text-muted);">—</span>
+                                {% endif %}
+                                {% if puede_gestionar %}
+                                <details>
+                                    <summary class="ds-small" style="cursor:pointer; color:var(--ds-link);">Cambiar</summary>
+                                    {# Opción vacía = el de su plaza; las demás lo fijan a mano (gana sobre la plaza). #}
+                                    <form method="post" action="{% url 'empleados:asignar_fundamento' e.pk %}"
+                                          style="display:flex; flex-direction:column; align-items:flex-start; gap:4px; margin-top:4px;">
+                                        {% csrf_token %}
+                                        <input type="hidden" name="querystring" value="{{ request.GET.urlencode }}">
+                                        <select name="fundamento" class="ds-select"
+                                                aria-label="Fundamento de {{ e.nombre_completo }}"
+                                                style="height:32px; padding-block:0; font-size:var(--ds-text-sm);">
+                                            <option value="">Según plaza: {{ e.fundamento_de_su_plaza.nombre|default:"sin fundamento" }}</option>
+                                            {% for f in fundamentos %}
+                                            <option value="{{ f.pk }}" {% if e.fundamento_manual_id == f.pk %}selected{% endif %}>A mano: {{ f.nombre }}</option>
+                                            {% endfor %}
+                                        </select>
+                                        <button type="submit" class="ds-btn ds-btn-sm ds-btn-secondary">Guardar</button>
+                                    </form>
+                                </details>
+                                {% endif %}
+                            </div>
+                            {% endwith %}
+                        </td>
                         <td>{{ e.municipio|default:"—" }}</td>
                         <td>
                             {% if not e.activo %}
@@ -134,7 +175,7 @@
                     </tr>
                     {% empty %}
                     <tr>
-                        <td colspan="7">
+                        <td colspan="8">
                             <div class="ds-empty">
                                 <div class="ds-empty-icon"><svg class="ds-icon ds-icon-lg" aria-hidden="true" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
                                 <h3 class="ds-h3">{% if busqueda or municipio %}Sin coincidencias{% else %}Catálogo vacío{% endif %}</h3>
